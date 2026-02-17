@@ -18,6 +18,12 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<TrackerDbContext>();
     db.Database.Migrate();
+
+    // SEED seulement en DEV
+    if (app.Environment.IsDevelopment())
+    {
+        DbSeeder.SeedDevelopmentData(db);
+    }
 }
 
 // Configure the HTTP request pipeline.
@@ -27,9 +33,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Tracker.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class FirstMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,10 +18,8 @@ namespace Tracker.Api.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Type = table.Column<string>(type: "TEXT", nullable: false),
-                    ProjectCode = table.Column<string>(type: "TEXT", nullable: false),
                     ExternalKey = table.Column<string>(type: "TEXT", nullable: false),
-                    Label = table.Column<string>(type: "TEXT", nullable: false),
-                    IsArchived = table.Column<bool>(type: "INTEGER", nullable: false)
+                    Label = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -34,7 +32,7 @@ namespace Tracker.Api.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    TicketId = table.Column<int>(type: "INTEGER", nullable: false),
+                    TicketId = table.Column<int>(type: "INTEGER", nullable: true),
                     Date = table.Column<DateOnly>(type: "TEXT", nullable: false),
                     Quantity = table.Column<decimal>(type: "TEXT", precision: 5, scale: 2, nullable: false),
                     Comment = table.Column<string>(type: "TEXT", nullable: true)
@@ -46,8 +44,7 @@ namespace Tracker.Api.Migrations
                         name: "FK_TimeEntries_Tickets_TicketId",
                         column: x => x.TicketId,
                         principalTable: "Tickets",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateIndex(

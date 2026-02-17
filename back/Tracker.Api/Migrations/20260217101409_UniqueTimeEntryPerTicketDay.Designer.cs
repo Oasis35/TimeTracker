@@ -11,8 +11,8 @@ using Tracker.Api.Data;
 namespace Tracker.Api.Migrations
 {
     [DbContext(typeof(TrackerDbContext))]
-    [Migration("20260217092959_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260217101409_UniqueTimeEntryPerTicketDay")]
+    partial class UniqueTimeEntryPerTicketDay
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -30,14 +30,7 @@ namespace Tracker.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsArchived")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Label")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("ProjectCode")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -66,14 +59,13 @@ namespace Tracker.Api.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("TicketId")
+                    b.Property<int?>("TicketId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TicketId");
-
-                    b.HasIndex("Date", "TicketId");
+                    b.HasIndex("TicketId", "Date")
+                        .IsUnique();
 
                     b.ToTable("TimeEntries");
                 });
@@ -82,9 +74,7 @@ namespace Tracker.Api.Migrations
                 {
                     b.HasOne("Tracker.Api.Models.Ticket", "Ticket")
                         .WithMany()
-                        .HasForeignKey("TicketId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("TicketId");
 
                     b.Navigation("Ticket");
                 });

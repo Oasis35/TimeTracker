@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Tracker.Api.Data;
 
@@ -10,9 +11,11 @@ using Tracker.Api.Data;
 namespace Tracker.Api.Migrations
 {
     [DbContext(typeof(TrackerDbContext))]
-    partial class TrackerDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260217100219_FirstMigration")]
+    partial class FirstMigration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.3");
@@ -61,8 +64,9 @@ namespace Tracker.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TicketId", "Date")
-                        .IsUnique();
+                    b.HasIndex("TicketId");
+
+                    b.HasIndex("Date", "TicketId");
 
                     b.ToTable("TimeEntries");
                 });

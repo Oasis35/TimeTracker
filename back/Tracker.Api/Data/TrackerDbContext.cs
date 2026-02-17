@@ -6,7 +6,6 @@ namespace Tracker.Api.Data
     public class TrackerDbContext : DbContext
     {
         public TrackerDbContext(DbContextOptions<TrackerDbContext> options) : base(options) { }
-
         public DbSet<Ticket> Tickets => Set<Ticket>();
         public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
 
@@ -17,7 +16,8 @@ namespace Tracker.Api.Data
                 .HasPrecision(5, 2);
 
             modelBuilder.Entity<TimeEntry>()
-                .HasIndex(x => new { x.Date, x.TicketId });
+                .HasIndex(x => new { x.TicketId, x.Date })
+                .IsUnique();
 
             base.OnModelCreating(modelBuilder);
         }

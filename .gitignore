@@ -1,0 +1,62 @@
+# =========================
+# Visual Studio / IDE
+# =========================
+.vs/
+.idea/
+.vscode/
+
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vsidx
+
+# =========================
+# .NET build artifacts
+# =========================
+**/bin/
+**/obj/
+
+*.dll
+*.exe
+*.pdb
+
+# =========================
+# NuGet / MSBuild caches
+# =========================
+**/project.assets.json
+**/*.nuget.cache
+**/*.csproj.nuget.dgspec.json
+**/project.nuget.cache
+
+# =========================
+# SQLite (local database)
+# =========================
+*.db
+*.db-wal
+*.db-shm
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# Environment / secrets
+# =========================
+.env
+.env.*
+
+# =========================
+# Node / Angular (future frontend)
+# =========================
+**/node_modules/
+**/dist/
+**/.angular/
+**/.cache/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
