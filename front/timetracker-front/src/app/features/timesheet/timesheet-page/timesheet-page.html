@@ -1,0 +1,33 @@
+<h1>Timesheet</h1>
+
+<ng-container *ngIf="vm$ | async as vm">
+  <p>Mois : {{ vm.month }}/{{ vm.year }}</p>
+
+  <table border="1" cellpadding="4" cellspacing="0">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Ticket</th>
+        <th>Label</th>
+        <th>Total</th>
+
+        <th *ngFor="let d of vm.days; trackBy: trackDay">
+          {{ d.slice(8) }}
+        </th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let row of vm.rows; trackBy: trackRow">
+        <td>{{ row.type }}</td>
+        <td>{{ row.externalKey }}</td>
+        <td>{{ row.label }}</td>
+        <td>{{ row.total }}</td>
+
+        <td *ngFor="let d of vm.days; trackBy: trackDay">
+          {{ row.values[d] ?? '' }}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</ng-container>
