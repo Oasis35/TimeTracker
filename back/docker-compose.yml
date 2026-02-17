@@ -1,0 +1,16 @@
+services:
+  trackerapi:
+    build:
+      context: ./back/Tracker.Api
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__Main=Data Source=/data/tracker.db
+    volumes:
+      - tracker-data:/data
+
+volumes:
+  tracker-data:

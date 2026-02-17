@@ -3,36 +3,46 @@ using Tracker.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<TrackerDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Main")));
+    options.UseSqlite(
+        builder.Configuration.GetConnectionString("Main")
+    ));
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AngularDev", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:4200")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<TrackerDbContext>();
+
     db.Database.Migrate();
 
-    // SEED seulement en DEV
     if (app.Environment.IsDevelopment())
     {
         DbSeeder.SeedDevelopmentData(db);
     }
 }
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AngularDev");
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

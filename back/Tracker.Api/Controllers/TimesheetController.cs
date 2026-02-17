@@ -90,4 +90,21 @@ public class TimesheetController : ControllerBase
             TotalsByDay = totalsByDay
         });
     }
+
+    [HttpGet("metadata")]
+    public async Task<IActionResult> GetMetadata()
+    {
+        var tickets = await _db.Tickets
+            .AsNoTracking()
+            .OrderBy(t => t.Type)
+            .ThenBy(t => t.ExternalKey)
+            .ToListAsync();
+
+        return Ok(new
+        {
+            allowedQuantities = new[] { 0m, 0.25m, 0.5m, 0.75m, 1m },
+            tickets = tickets
+        });
+    }
+
 }
