@@ -1,12 +1,11 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace Tracker.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class FirstMigration : Migration
+    public partial class initialmigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,8 +17,8 @@ namespace Tracker.Api.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     Type = table.Column<string>(type: "TEXT", nullable: false),
-                    ExternalKey = table.Column<string>(type: "TEXT", nullable: false),
-                    Label = table.Column<string>(type: "TEXT", nullable: false)
+                    ExternalKey = table.Column<string>(type: "TEXT", nullable: true),
+                    Label = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -33,7 +32,7 @@ namespace Tracker.Api.Migrations
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     TicketId = table.Column<int>(type: "INTEGER", nullable: true),
-                    Date = table.Column<DateOnly>(type: "TEXT", nullable: false),
+                    Date = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
                     Quantity = table.Column<decimal>(type: "TEXT", precision: 5, scale: 2, nullable: false),
                     Comment = table.Column<string>(type: "TEXT", nullable: true)
                 },
@@ -48,14 +47,16 @@ namespace Tracker.Api.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_TimeEntries_Date_TicketId",
-                table: "TimeEntries",
-                columns: new[] { "Date", "TicketId" });
+                name: "IX_Tickets_Type_ExternalKey",
+                table: "Tickets",
+                columns: new[] { "Type", "ExternalKey" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_TimeEntries_TicketId",
+                name: "IX_TimeEntries_TicketId_Date",
                 table: "TimeEntries",
-                column: "TicketId");
+                columns: new[] { "TicketId", "Date" },
+                unique: true);
         }
 
         /// <inheritdoc />

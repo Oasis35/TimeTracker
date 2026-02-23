@@ -1,43 +1,67 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Tracker.Api.Data;
-using Tracker.Api.Dtos;
+using Tracker.Api.Dtos.Tickets;
 using Tracker.Api.Models;
 
 namespace Tracker.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
-public class TicketsController : ControllerBase
+[Route("api/tickets")]
+public sealed class TicketsController : ControllerBase
 {
     private readonly TrackerDbContext _db;
 
-    public TicketsController(TrackerDbContext db)
-    {
-        _db = db;
-    }
+    public TicketsController(TrackerDbContext db) => _db = db;
 
     [HttpGet]
-    public Task<List<Ticket>> Get()
+    public async Task<ActionResult<IReadOnlyList<TicketDto>>> GetAll()
     {
-        return _db.Tickets
+        var tickets = await _db.Tickets
             .AsNoTracking()
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
+            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
             .ToListAsync();
+
+        return Ok(tickets);
     }
 
     [HttpPost]
-    public async Task<ActionResult<Ticket>> Create([FromBody] Ticket ticket)
+    public async Task<ActionResult<TicketDto>> Create([FromBody] CreateTicketDto dto)
     {
-        var validationError = ValidateTicket(ticket);
-        if (validationError != null)
-            return BadRequest(validationError);
+        if (string.IsNullOrWhiteSpace(dto.Type))
+            return BadRequest("Type obligatoire.");
 
-        _db.Tickets.Add(ticket);
+        var type = dto.Type.Trim();
+        var externalKey = string.IsNullOrWhiteSpace(dto.ExternalKey) ? null : dto.ExternalKey.Trim();
+        var label = string.IsNullOrWhiteSpace(dto.Label) ? null : dto.Label.Trim();
+
+        if (externalKey != null && string.IsNullOrWhiteSpace(label))
+            return BadRequest("Label obligatoire si ExternalKey est renseignée.");
+
+        if (externalKey != null)
+        {
+            var existing = await _db.Tickets
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Type == type && t.ExternalKey == externalKey);
+
+            if (existing != null)
+                return Ok(new TicketDto(existing.Id, existing.Type, existing.ExternalKey, existing.Label));
+        }
+
+        var entity = new Ticket
+        {
+            Type = type,
+            ExternalKey = externalKey,
+            Label = label
+        };
+
+        _db.Tickets.Add(entity);
         await _db.SaveChangesAsync();
 
-        return Created("", ticket);
+        return CreatedAtAction(nameof(GetAll), new { id = entity.Id },
+            new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label));
     }
 
     [HttpGet("totals")]
@@ -77,17 +101,5 @@ public class TicketsController : ControllerBase
             .ToListAsync();
 
         return Ok(result);
-    }
-
-    private static string? ValidateTicket(Ticket ticket)
-    {
-        if (string.IsNullOrWhiteSpace(ticket.Type))
-            return "Le type est obligatoire";
-
-        if (!string.IsNullOrWhiteSpace(ticket.ExternalKey)
-            && string.IsNullOrWhiteSpace(ticket.Label))
-            return "Le label est obligatoire";
-
-        return null;
     }
 }

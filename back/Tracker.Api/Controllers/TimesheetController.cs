@@ -1,20 +1,19 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos;
+using Tracker.Api.Dtos.Tickets;
+using Tracker.Api.Dtos.Timesheet;
 
 namespace Tracker.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
-public class TimesheetController : ControllerBase
+[Route("api/timesheet")]
+public sealed class TimesheetController : ControllerBase
 {
     private readonly TrackerDbContext _db;
 
-    public TimesheetController(TrackerDbContext db)
-    {
-        _db = db;
-    }
+    public TimesheetController(TrackerDbContext db) => _db = db;
 
     [HttpGet]
     public async Task<ActionResult<TimesheetMonthDto>> Get(
@@ -92,19 +91,19 @@ public class TimesheetController : ControllerBase
     }
 
     [HttpGet("metadata")]
-    public async Task<IActionResult> GetMetadata()
+    public async Task<ActionResult<TimesheetMetadataDto>> GetMetadata()
     {
         var tickets = await _db.Tickets
             .AsNoTracking()
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
+            .Select(t => new Tracker.Api.Dtos.Tickets.TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
             .ToListAsync();
 
-        return Ok(new
-        {
-            allowedQuantities = new[] { 0m, 0.25m, 0.5m, 0.75m, 1m },
-            tickets = tickets
-        });
+        return Ok(new TimesheetMetadataDto(
+            AllowedQuantities: new[] { 0m, 0.25m, 0.5m, 0.75m, 1m },
+            DefaultType: "DEV",
+            Tickets: tickets
+        ));
     }
-
 }

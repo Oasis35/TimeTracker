@@ -1,4 +1,4 @@
-﻿namespace Tracker.Api.Dtos;
+﻿namespace Tracker.Api.Dtos.TimeEntries;
 
 public sealed class UpsertTimeEntryDto
 {

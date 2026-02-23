@@ -13,7 +13,7 @@ export class TrackerApiService {
 
   private readonly baseUrl = '/api';
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
   getTickets(): Observable<Ticket[]> {
     return this.http.get<Ticket[]>(`${this.baseUrl}/tickets`);
