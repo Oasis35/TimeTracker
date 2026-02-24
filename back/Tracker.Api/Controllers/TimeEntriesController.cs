@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.TimeEntries;
 using Tracker.Api.Models;
+using Tracker.Api.Options;
 
 namespace Tracker.Api.Controllers;
 
@@ -10,12 +12,25 @@ namespace Tracker.Api.Controllers;
 [Route("api/timeentries")]
 public sealed class TimeEntriesController : ControllerBase
 {
-    private static readonly decimal[] AllowedQuantities =
-        { 0m, 0.25m, 0.5m, 0.75m, 1m };
-
     private readonly TrackerDbContext _db;
+    private readonly TimeTrackingOptions _opts;
 
-    public TimeEntriesController(TrackerDbContext db) => _db = db;
+    public TimeEntriesController(TrackerDbContext db, IOptions<TimeTrackingOptions> opts)
+    {
+        _db = db;
+        _opts = opts.Value;
+    }
+
+    private int MinutesPerDay => _opts.HoursPerDay * 60;
+
+    private bool IsValidQuantityMinutes(int minutes)
+    {
+        // bornes
+        if (minutes < 0 || minutes > MinutesPerDay) return false;
+
+        // pas de 15 minutes (tu peux mettre 30 si tu veux)
+        return minutes % 15 == 0;
+    }
 
     [HttpGet("day")]
     public async Task<ActionResult<DayViewDto>> GetDay([FromQuery] DateOnly date)
@@ -36,15 +51,15 @@ public sealed class TimeEntriesController : ControllerBase
                 Type: g.Key.Type,
                 ExternalKey: g.Key.ExternalKey,
                 Label: g.Key.Label,
-                Quantity: g.Sum(x => x.te.Quantity)
+                QuantityMinutes: g.Sum(x => x.te.QuantityMinutes)
             ))
             .OrderBy(x => x.Type)
             .ThenBy(x => x.ExternalKey)
             .ToList();
 
-        var total = grouped.Sum(x => x.Quantity);
+        var totalMinutes = grouped.Sum(x => x.QuantityMinutes);
 
-        return Ok(new DayViewDto(date, grouped, total));
+        return Ok(new DayViewDto(date, grouped, totalMinutes, MinutesPerDay));
     }
 
     [HttpGet("week")]
@@ -65,29 +80,29 @@ public sealed class TimeEntriesController : ControllerBase
 
         var totalsByDay = entries
             .GroupBy(x => x.te.Date)
-            .ToDictionary(g => g.Key, g => g.Sum(x => x.te.Quantity));
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.te.QuantityMinutes));
 
         var rows = entries
             .GroupBy(x => new { x.t.Id, x.t.Type, x.t.ExternalKey, x.t.Label })
             .Select(g =>
             {
                 var values = g.GroupBy(x => x.te.Date)
-                    .ToDictionary(gg => gg.Key, gg => gg.Sum(x => x.te.Quantity));
+                    .ToDictionary(gg => gg.Key, gg => gg.Sum(x => x.te.QuantityMinutes));
 
                 return new WeekRowDto(
                     TicketId: g.Key.Id,
                     Type: g.Key.Type,
                     ExternalKey: g.Key.ExternalKey,
                     Label: g.Key.Label,
-                    Values: values,
-                    Total: values.Values.Sum()
+                    ValuesMinutes: values,
+                    TotalMinutes: values.Values.Sum()
                 );
             })
             .OrderBy(x => x.Type)
             .ThenBy(x => x.ExternalKey)
             .ToList();
 
-        return Ok(new WeekViewDto(monday, days, rows, totalsByDay));
+        return Ok(new WeekViewDto(monday, days, rows, totalsByDay, MinutesPerDay));
     }
 
     [HttpPost("upsert")]
@@ -96,8 +111,8 @@ public sealed class TimeEntriesController : ControllerBase
         if (dto.TicketId <= 0)
             return BadRequest("L'id du ticket est invalide.");
 
-        if (!AllowedQuantities.Contains(dto.Quantity))
-            return BadRequest("La quantité saisie est invalide.");
+        if (!IsValidQuantityMinutes(dto.QuantityMinutes))
+            return BadRequest($"La quantité (minutes) est invalide. Attendu: 0..{MinutesPerDay} avec un pas de 15 minutes.");
 
         var ticketExists = await _db.Tickets
             .AsNoTracking()
@@ -107,30 +122,31 @@ public sealed class TimeEntriesController : ControllerBase
             return BadRequest("Le ticket n'exixte pas.");
 
         var existing = await _db.TimeEntries
-            .SingleOrDefaultAsync(e =>
-                e.TicketId == dto.TicketId &&
-                e.Date == dto.Date);
+            .SingleOrDefaultAsync(e => e.TicketId == dto.TicketId && e.Date == dto.Date);
 
-        if (dto.Quantity == 0m)
+        // suppression si 0
+        if (dto.QuantityMinutes == 0)
         {
             if (existing is null)
                 return NoContent();
 
             _db.TimeEntries.Remove(existing);
             await _db.SaveChangesAsync();
-
             return NoContent();
         }
 
-        var sumOther = await _db.TimeEntries
-            .Where(e => e.Date == dto.Date &&
-                        e.TicketId != dto.TicketId)
-            .SumAsync(e => (decimal?)e.Quantity) ?? 0m;
+        // total jour <= MinutesPerDay (calcul robuste, en tenant compte d’un update)
+        var dayTotal = await _db.TimeEntries
+            .Where(e => e.Date == dto.Date)
+            .SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
 
-        var newTotal = sumOther + dto.Quantity;
+        var existingMinutes = existing?.QuantityMinutes ?? 0;
+        var newTotal = dayTotal - existingMinutes + dto.QuantityMinutes;
 
-        if (newTotal > 1m)
-            return BadRequest($"Total du jour dépasse 1 ({newTotal}).");
+        if (newTotal > MinutesPerDay)
+            return BadRequest($"Total du jour dépasse 1 jour ({newTotal}/{MinutesPerDay} minutes).");
+
+        var comment = string.IsNullOrWhiteSpace(dto.Comment) ? null : dto.Comment.Trim();
 
         if (existing is null)
         {
@@ -138,8 +154,8 @@ public sealed class TimeEntriesController : ControllerBase
             {
                 TicketId = dto.TicketId,
                 Date = dto.Date,
-                Quantity = dto.Quantity,
-                Comment = dto.Comment
+                QuantityMinutes = dto.QuantityMinutes,
+                Comment = comment
             };
 
             _db.TimeEntries.Add(entry);
@@ -148,9 +164,8 @@ public sealed class TimeEntriesController : ControllerBase
             return Created("", new { entry.Id });
         }
 
-        existing.Quantity = dto.Quantity;
-        existing.Comment = dto.Comment;
-
+        existing.QuantityMinutes = dto.QuantityMinutes;
+        existing.Comment = comment;
         await _db.SaveChangesAsync();
 
         return NoContent();

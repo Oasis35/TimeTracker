@@ -82,23 +82,34 @@ public sealed class TicketsController : ControllerBase
             end = start.Value.AddMonths(1);
         }
 
-        var result = await _db.Tickets
+        var rows = await _db.Tickets
             .AsNoTracking()
-            .Select(t => new TicketTotalDto
+            .Select(t => new
             {
-                TicketId = t.Id,
-                Type = t.Type,
+                t.Id,
+                t.Type,
                 ExternalKey = t.ExternalKey ?? "",
                 Label = t.Label ?? "",
-                Total = _db.TimeEntries
+                TotalMinutes = _db.TimeEntries
                     .Where(e => e.TicketId == t.Id
                                 && (!start.HasValue || (e.Date >= start.Value && e.Date < end!.Value)))
-                    .Sum(e => (decimal?)e.Quantity) ?? 0m
+                    .Sum(e => (int?)e.QuantityMinutes) ?? 0
             })
-            .OrderByDescending(x => x.Total)
+            .OrderByDescending(x => x.TotalMinutes)
             .ThenBy(x => x.Type)
             .ThenBy(x => x.ExternalKey)
             .ToListAsync();
+
+        var result = rows
+            .Select(x => new TicketTotalDto
+            {
+                TicketId = x.Id,
+                Type = x.Type,
+                ExternalKey = x.ExternalKey,
+                Label = x.Label,
+                Total = x.TotalMinutes
+            })
+            .ToList();
 
         return Ok(result);
     }

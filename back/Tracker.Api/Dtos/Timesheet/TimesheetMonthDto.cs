@@ -1,10 +1,9 @@
-﻿namespace Tracker.Api.Dtos.Timesheet;
-
-public sealed class TimesheetMonthDto
+﻿public sealed class TimesheetMonthDto
 {
-    public required int Year { get; init; }
-    public required int Month { get; init; }
-    public required List<DateOnly> Days { get; init; }
-    public required List<TimesheetRowDto> Rows { get; init; }
-    public required Dictionary<DateOnly, decimal> TotalsByDay { get; init; }
+    public int Year { get; set; }
+    public int Month { get; set; }
+
+    public List<DateOnly> Days { get; set; } = new();
+    public List<TimesheetRowDto> Rows { get; set; } = new();
+    public Dictionary<DateOnly, int> TotalsByDay { get; set; } = new();
 }

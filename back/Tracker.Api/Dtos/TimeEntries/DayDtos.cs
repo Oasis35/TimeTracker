@@ -1,15 +1,14 @@
-namespace Tracker.Api.Dtos.TimeEntries;
-
 public sealed record DayEntryDto(
     int TicketId,
     string Type,
     string? ExternalKey,
     string? Label,
-    decimal Quantity
+    int QuantityMinutes
 );
 
 public sealed record DayViewDto(
     DateOnly Date,
     IReadOnlyList<DayEntryDto> Entries,
-    decimal Total
+    int TotalMinutes,
+    int MinutesPerDay
 );

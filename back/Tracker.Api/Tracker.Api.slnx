@@ -2,5 +2,6 @@
   <Folder Name="/Solution Items/">
     <File Path="../docker-compose.yml" />
   </Folder>
+  <Project Path="../Tracker.Api.Tests/Tracker.Api.Tests.csproj" />
   <Project Path="Tracker.Api.csproj" />
 </Solution>

@@ -27,8 +27,8 @@ namespace Tracker.Api.Data
                 .IsUnique();
 
             modelBuilder.Entity<TimeEntry>()
-                .Property(x => x.Quantity)
-                .HasPrecision(5, 2);
+                .Property(x => x.QuantityMinutes)
+                .HasColumnType("INTEGER");
 
             var dateOnlyConverter = new ValueConverter<DateOnly, string>(
                 d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),

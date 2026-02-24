@@ -1,12 +1,10 @@
-﻿namespace Tracker.Api.Dtos.Timesheet
+﻿public sealed class TimesheetRowDto
 {
-    public sealed class TimesheetRowDto
-    {
-        public required int TicketId { get; init; }
-        public required string Type { get; init; }
-        public required string ExternalKey { get; init; }
-        public required string Label { get; init; }
-        public required Dictionary<DateOnly, decimal> Values { get; init; }
-        public required decimal Total { get; init; }
-    }
+    public int TicketId { get; set; }
+    public string Type { get; set; } = null!;
+    public string ExternalKey { get; set; } = "";
+    public string Label { get; set; } = "";
+
+    public Dictionary<DateOnly, int> Values { get; set; } = new();
+    public int Total { get; set; }
 }

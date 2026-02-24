@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos;
-using Tracker.Api.Dtos.Tickets;
 using Tracker.Api.Dtos.Timesheet;
+using Tracker.Api.Options;
 
 namespace Tracker.Api.Controllers;
 
@@ -12,8 +13,15 @@ namespace Tracker.Api.Controllers;
 public sealed class TimesheetController : ControllerBase
 {
     private readonly TrackerDbContext _db;
+    private readonly TimeTrackingOptions _opts;
 
-    public TimesheetController(TrackerDbContext db) => _db = db;
+    public TimesheetController(TrackerDbContext db, IOptions<TimeTrackingOptions> opts)
+    {
+        _db = db;
+        _opts = opts.Value;
+    }
+
+    private int MinutesPerDay => _opts.HoursPerDay * 60;
 
     [HttpGet]
     public async Task<ActionResult<TimesheetMonthDto>> Get(
@@ -30,14 +38,15 @@ public sealed class TimesheetController : ControllerBase
             .Select(i => start.AddDays(i))
             .ToList();
 
+        // Si tu gardes TicketId nullable, sécurise la requête
         var entries = await _db.TimeEntries
             .AsNoTracking()
-            .Where(e => e.Date >= start && e.Date < end)
+            .Where(e => e.Date >= start && e.Date < end && e.TicketId != null)
             .Select(e => new
             {
                 e.TicketId,
                 e.Date,
-                e.Quantity,
+                e.QuantityMinutes,
                 Ticket = new
                 {
                     e.Ticket!.Id,
@@ -58,7 +67,7 @@ public sealed class TimesheetController : ControllerBase
                     .GroupBy(x => x.Date)
                     .ToDictionary(
                         gg => gg.Key,
-                        gg => gg.Sum(x => x.Quantity));
+                        gg => gg.Sum(x => x.QuantityMinutes));
 
                 return new TimesheetRowDto
                 {
@@ -78,7 +87,7 @@ public sealed class TimesheetController : ControllerBase
             .GroupBy(e => e.Date)
             .ToDictionary(
                 g => g.Key,
-                g => g.Sum(x => x.Quantity));
+                g => g.Sum(x => x.QuantityMinutes));
 
         return Ok(new TimesheetMonthDto
         {
@@ -93,6 +102,31 @@ public sealed class TimesheetController : ControllerBase
     [HttpGet("metadata")]
     public async Task<ActionResult<TimesheetMetadataDto>> GetMetadata()
     {
+        if (_opts.HoursPerDay <= 0)
+            return Problem("Configuration invalide: HoursPerDay doit être > 0.");
+
+        var minutesPerDay = MinutesPerDay;
+
+        // Boutons "jour" : 0, 1/4, 1/2, 3/4, 1 jour
+        if (minutesPerDay % 4 != 0)
+            return Problem("Configuration invalide: HoursPerDay doit donner un nombre de minutes divisible par 4 pour le mode 'quart de journée'.");
+
+        var allowedDay = new[]
+        {
+            0,
+            minutesPerDay / 4,
+            minutesPerDay / 2,
+            (minutesPerDay * 3) / 4,
+            minutesPerDay
+        };
+
+        // Boutons "heure" : exemple pas de 30 minutes (ajuste si tu veux 15)
+        const int hourStepMinutes = 30;
+        var allowedHour = Enumerable
+            .Range(0, minutesPerDay / hourStepMinutes + 1)
+            .Select(i => i * hourStepMinutes)
+            .ToArray();
+
         var tickets = await _db.Tickets
             .AsNoTracking()
             .OrderBy(t => t.Type)
@@ -101,7 +135,11 @@ public sealed class TimesheetController : ControllerBase
             .ToListAsync();
 
         return Ok(new TimesheetMetadataDto(
-            AllowedQuantities: new[] { 0m, 0.25m, 0.5m, 0.75m, 1m },
+            HoursPerDay: _opts.HoursPerDay,
+            MinutesPerDay: minutesPerDay,
+            AllowedMinutesDayMode: allowedDay,
+            AllowedMinutesHourMode: allowedHour,
+            DefaultUnit: "day",
             DefaultType: "DEV",
             Tickets: tickets
         ));
