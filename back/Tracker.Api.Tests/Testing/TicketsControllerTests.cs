@@ -66,8 +66,11 @@ public sealed class TicketsControllerTests
 
         var result = await controller.Create(new CreateTicketDto(Type: "   ", ExternalKey: null, Label: null));
 
-        var bad = Assert.IsType<BadRequestObjectResult>(result.Result);
-        Assert.Equal("Type obligatoire.", bad.Value);
+        var bad = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(400, bad.StatusCode);
+        var problem = Assert.IsType<ProblemDetails>(bad.Value);
+        Assert.Equal("Type obligatoire.", problem.Title);
+        Assert.Equal("TT_TICKET_TYPE_REQUIRED", problem.Extensions["code"]);
     }
 
     [Fact]
@@ -81,8 +84,11 @@ public sealed class TicketsControllerTests
 
         var result = await controller.Create(new CreateTicketDto(Type: "JIRA", ExternalKey: "ABC-1", Label: "   "));
 
-        var bad = Assert.IsType<BadRequestObjectResult>(result.Result);
-        Assert.Equal("Label obligatoire si ExternalKey est renseignée.", bad.Value);
+        var bad = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(400, bad.StatusCode);
+        var problem = Assert.IsType<ProblemDetails>(bad.Value);
+        Assert.Equal("Label obligatoire si ExternalKey est renseignee.", problem.Title);
+        Assert.Equal("TT_TICKET_LABEL_REQUIRED", problem.Extensions["code"]);
     }
 
     [Fact]
@@ -180,10 +186,16 @@ public sealed class TicketsControllerTests
         var controller = new TicketsController(db);
 
         var r1 = await controller.GetTotals(year: 2026, month: null);
-        Assert.IsType<BadRequestObjectResult>(r1.Result);
+        var bad1 = Assert.IsType<ObjectResult>(r1.Result);
+        Assert.Equal(400, bad1.StatusCode);
+        var p1 = Assert.IsType<ProblemDetails>(bad1.Value);
+        Assert.Equal("TT_FILTER_YEAR_MONTH_REQUIRED", p1.Extensions["code"]);
 
         var r2 = await controller.GetTotals(year: null, month: 2);
-        Assert.IsType<BadRequestObjectResult>(r2.Result);
+        var bad2 = Assert.IsType<ObjectResult>(r2.Result);
+        Assert.Equal(400, bad2.StatusCode);
+        var p2 = Assert.IsType<ProblemDetails>(bad2.Value);
+        Assert.Equal("TT_FILTER_YEAR_MONTH_REQUIRED", p2.Extensions["code"]);
     }
 
     [Theory]
@@ -198,8 +210,11 @@ public sealed class TicketsControllerTests
         var controller = new TicketsController(db);
 
         var r = await controller.GetTotals(year: 2026, month: month);
-        var bad = Assert.IsType<BadRequestObjectResult>(r.Result);
-        Assert.Equal("month invalide.", bad.Value);
+        var bad = Assert.IsType<ObjectResult>(r.Result);
+        Assert.Equal(400, bad.StatusCode);
+        var problem = Assert.IsType<ProblemDetails>(bad.Value);
+        Assert.Equal("month invalide.", problem.Title);
+        Assert.Equal("TT_MONTH_INVALID", problem.Extensions["code"]);
     }
 
     [Fact]

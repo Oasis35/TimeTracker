@@ -1,5 +1,7 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 using Tracker.Api.Tests.Testing;
 using Xunit;
 
@@ -19,19 +21,15 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
     {
         var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "U-1", "U-1");
 
-        // Create 120
         var c = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-23", 120, "A");
         Assert.Equal(HttpStatusCode.Created, c.StatusCode);
 
-        // Update 240
         var u = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-23", 240, "B");
         Assert.Equal(HttpStatusCode.NoContent, u.StatusCode);
 
-        // Delete 0
         var d = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-23", 0, null);
         Assert.Equal(HttpStatusCode.NoContent, d.StatusCode);
 
-        // Check day is empty
         var day = await _client.GetAsync("/api/timeentries/day?date=2026-02-23");
         day.EnsureSuccessStatusCode();
         var payload = await day.Content.ReadFromJsonAsync<DayViewDto>();
@@ -48,11 +46,13 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
         var t1 = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "U-2", "U-2");
         var t2 = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "U-3", "U-3");
 
-        var r1 = await ApiTestHelpers.UpsertAsync(_client, t1, "2026-02-24", 360); // 0.75j
+        var r1 = await ApiTestHelpers.UpsertAsync(_client, t1, "2026-02-24", 360);
         Assert.True(r1.StatusCode is HttpStatusCode.Created or HttpStatusCode.NoContent);
 
-        var r2 = await ApiTestHelpers.UpsertAsync(_client, t2, "2026-02-24", 180); // 0.375j => total 540
+        var r2 = await ApiTestHelpers.UpsertAsync(_client, t2, "2026-02-24", 180);
         Assert.Equal(HttpStatusCode.BadRequest, r2.StatusCode);
+        var p2 = await ReadProblemAsync(r2);
+        Assert.Equal("TT_OVERFLOW_DAY", GetCode(p2));
     }
 
     [Fact]
@@ -61,15 +61,12 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
         var t1 = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "U-4", "U-4");
         var t2 = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "U-5", "U-5");
 
-        // Day total: t1=240, t2=240 => 480 (max)
         (await ApiTestHelpers.UpsertAsync(_client, t1, "2026-02-25", 240)).EnsureSuccessStatusCode();
         (await ApiTestHelpers.UpsertAsync(_client, t2, "2026-02-25", 240)).EnsureSuccessStatusCode();
 
-        // Update t1 from 240 to 120 => still ok
         var upd = await ApiTestHelpers.UpsertAsync(_client, t1, "2026-02-25", 120);
         Assert.Equal(HttpStatusCode.NoContent, upd.StatusCode);
 
-        // Now we can increase t2 to 360 (total 480)
         var upd2 = await ApiTestHelpers.UpsertAsync(_client, t2, "2026-02-25", 360);
         Assert.Equal(HttpStatusCode.NoContent, upd2.StatusCode);
     }
@@ -84,6 +81,39 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
 
         var r = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-26", minutes);
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        var p = await ReadProblemAsync(r);
+        var expectedCode = minutes < 0 || minutes > 480
+            ? "TT_MINUTES_OUT_OF_RANGE"
+            : "TT_STEP_15";
+        Assert.Equal(expectedCode, GetCode(p));
+    }
+
+    [Fact]
+    public async Task Upsert_Should_Return_ProblemDetails_When_Ticket_Not_Found()
+    {
+        var r = await ApiTestHelpers.UpsertAsync(_client, ticketId: 999999, date: "2026-02-27", minutes: 120);
+
+        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        var p = await ReadProblemAsync(r);
+        Assert.Equal("TT_TICKET_NOT_FOUND", GetCode(p));
+    }
+
+    private static async Task<ProblemDetails> ReadProblemAsync(HttpResponseMessage response)
+    {
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        Assert.NotNull(problem);
+        return problem!;
+    }
+
+    private static string GetCode(ProblemDetails problem)
+    {
+        Assert.True(problem.Extensions.TryGetValue("code", out var raw));
+        return raw switch
+        {
+            string s => s,
+            JsonElement e when e.ValueKind == JsonValueKind.String => e.GetString()!,
+            _ => throw new Xunit.Sdk.XunitException("ProblemDetails.extensions.code is missing or invalid.")
+        };
     }
 
     private sealed record DayViewDto(

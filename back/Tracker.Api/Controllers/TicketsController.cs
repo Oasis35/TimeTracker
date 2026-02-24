@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.Tickets;
+using Tracker.Api.Infrastructure;
 using Tracker.Api.Models;
 
 namespace Tracker.Api.Controllers;
@@ -31,14 +32,14 @@ public sealed class TicketsController : ControllerBase
     public async Task<ActionResult<TicketDto>> Create([FromBody] CreateTicketDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Type))
-            return BadRequest("Type obligatoire.");
+            return ApiProblems.BadRequest(this, "TT_TICKET_TYPE_REQUIRED", "Type obligatoire.");
 
         var type = dto.Type.Trim();
         var externalKey = string.IsNullOrWhiteSpace(dto.ExternalKey) ? null : dto.ExternalKey.Trim();
         var label = string.IsNullOrWhiteSpace(dto.Label) ? null : dto.Label.Trim();
 
         if (externalKey != null && string.IsNullOrWhiteSpace(label))
-            return BadRequest("Label obligatoire si ExternalKey est renseignée.");
+            return ApiProblems.BadRequest(this, "TT_TICKET_LABEL_REQUIRED", "Label obligatoire si ExternalKey est renseignee.");
 
         if (externalKey != null)
         {
@@ -73,10 +74,10 @@ public sealed class TicketsController : ControllerBase
         if (year.HasValue || month.HasValue)
         {
             if (!year.HasValue || !month.HasValue)
-                return BadRequest("Si tu filtres, il faut year ET month.");
+                return ApiProblems.BadRequest(this, "TT_FILTER_YEAR_MONTH_REQUIRED", "Si tu filtres, il faut year ET month.");
 
             if (month < 1 || month > 12)
-                return BadRequest("month invalide.");
+                return ApiProblems.BadRequest(this, "TT_MONTH_INVALID", "month invalide.");
 
             start = new DateOnly(year.Value, month.Value, 1);
             end = start.Value.AddMonths(1);

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos;
 using Tracker.Api.Dtos.Timesheet;
+using Tracker.Api.Infrastructure;
 using Tracker.Api.Options;
 
 namespace Tracker.Api.Controllers;
@@ -29,7 +30,7 @@ public sealed class TimesheetController : ControllerBase
         [FromQuery] int month)
     {
         if (month < 1 || month > 12)
-            return BadRequest("Le mois est invalide");
+            return ApiProblems.BadRequest(this, "TT_MONTH_INVALID", "Le mois est invalide");
 
         var start = new DateOnly(year, month, 1);
         var end = start.AddMonths(1);
@@ -38,7 +39,6 @@ public sealed class TimesheetController : ControllerBase
             .Select(i => start.AddDays(i))
             .ToList();
 
-        // Si tu gardes TicketId nullable, sécurise la requête
         var entries = await _db.TimeEntries
             .AsNoTracking()
             .Where(e => e.Date >= start && e.Date < end && e.TicketId != null)
@@ -62,21 +62,30 @@ public sealed class TimesheetController : ControllerBase
             .Select(g =>
             {
                 var t = g.First().Ticket;
-
-                var values = g
+                var valuesByDate = g
                     .GroupBy(x => x.Date)
                     .ToDictionary(
                         gg => gg.Key,
                         gg => gg.Sum(x => x.QuantityMinutes));
 
+                var completeValues = days.ToDictionary(
+                    d => d,
+                    d => valuesByDate.TryGetValue(d, out var v) ? v : 0);
+
+                var externalKey = t.ExternalKey ?? "";
+                var ticketKey = string.IsNullOrWhiteSpace(externalKey)
+                    ? t.Type
+                    : $"{t.Type}-{externalKey}";
+
                 return new TimesheetRowDto
                 {
                     TicketId = t.Id,
                     Type = t.Type,
-                    ExternalKey = t.ExternalKey ?? "",
+                    ExternalKey = externalKey,
                     Label = t.Label ?? "",
-                    Values = values,
-                    Total = values.Values.Sum()
+                    TicketKey = ticketKey,
+                    Values = completeValues,
+                    Total = completeValues.Values.Sum()
                 };
             })
             .OrderBy(r => r.Type)
@@ -93,6 +102,7 @@ public sealed class TimesheetController : ControllerBase
         {
             Year = year,
             Month = month,
+            MinutesPerDay = MinutesPerDay,
             Days = days,
             Rows = rows,
             TotalsByDay = totalsByDay
@@ -103,13 +113,12 @@ public sealed class TimesheetController : ControllerBase
     public async Task<ActionResult<TimesheetMetadataDto>> GetMetadata()
     {
         if (_opts.HoursPerDay <= 0)
-            return Problem("Configuration invalide: HoursPerDay doit être > 0.");
+            return Problem("Configuration invalide: HoursPerDay doit etre > 0.");
 
         var minutesPerDay = MinutesPerDay;
 
-        // Boutons "jour" : 0, 1/4, 1/2, 3/4, 1 jour
         if (minutesPerDay % 4 != 0)
-            return Problem("Configuration invalide: HoursPerDay doit donner un nombre de minutes divisible par 4 pour le mode 'quart de journée'.");
+            return Problem("Configuration invalide: HoursPerDay doit donner un nombre de minutes divisible par 4 pour le mode quart de journee.");
 
         var allowedDay = new[]
         {
@@ -120,7 +129,6 @@ public sealed class TimesheetController : ControllerBase
             minutesPerDay
         };
 
-        // Boutons "heure" : exemple pas de 30 minutes (ajuste si tu veux 15)
         const int hourStepMinutes = 30;
         var allowedHour = Enumerable
             .Range(0, minutesPerDay / hourStepMinutes + 1)

@@ -3,8 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.TimeEntries;
+using Tracker.Api.Infrastructure;
 using Tracker.Api.Models;
 using Tracker.Api.Options;
+using Tracker.Api.Services;
 
 namespace Tracker.Api.Controllers;
 
@@ -22,15 +24,6 @@ public sealed class TimeEntriesController : ControllerBase
     }
 
     private int MinutesPerDay => _opts.HoursPerDay * 60;
-
-    private bool IsValidQuantityMinutes(int minutes)
-    {
-        // bornes
-        if (minutes < 0 || minutes > MinutesPerDay) return false;
-
-        // pas de 15 minutes (tu peux mettre 30 si tu veux)
-        return minutes % 15 == 0;
-    }
 
     [HttpGet("day")]
     public async Task<ActionResult<DayViewDto>> GetDay([FromQuery] DateOnly date)
@@ -109,22 +102,33 @@ public sealed class TimeEntriesController : ControllerBase
     public async Task<IActionResult> Upsert([FromBody] UpsertTimeEntryDto dto)
     {
         if (dto.TicketId <= 0)
-            return BadRequest("L'id du ticket est invalide.");
-
-        if (!IsValidQuantityMinutes(dto.QuantityMinutes))
-            return BadRequest($"La quantité (minutes) est invalide. Attendu: 0..{MinutesPerDay} avec un pas de 15 minutes.");
+            return ApiProblems.BadRequest(this, "TT_TICKET_ID_INVALID", "L'id du ticket est invalide.");
 
         var ticketExists = await _db.Tickets
             .AsNoTracking()
             .AnyAsync(t => t.Id == dto.TicketId);
 
         if (!ticketExists)
-            return BadRequest("Le ticket n'exixte pas.");
+            return ApiProblems.BadRequest(this, "TT_TICKET_NOT_FOUND", "Le ticket n'existe pas.");
 
         var existing = await _db.TimeEntries
             .SingleOrDefaultAsync(e => e.TicketId == dto.TicketId && e.Date == dto.Date);
 
-        // suppression si 0
+        var dayTotal = await _db.TimeEntries
+            .Where(e => e.Date == dto.Date)
+            .SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
+
+        var existingMinutes = existing?.QuantityMinutes ?? 0;
+        var ruleError = TimeEntryRules.Validate(
+            ticketId: dto.TicketId,
+            quantityMinutes: dto.QuantityMinutes,
+            minutesPerDay: MinutesPerDay,
+            dayTotalMinutes: dayTotal,
+            existingMinutes: existingMinutes);
+
+        if (ruleError is not null)
+            return ApiProblems.BadRequest(this, ruleError.Code, ruleError.Title, ruleError.Detail, ruleError.Meta);
+
         if (dto.QuantityMinutes == 0)
         {
             if (existing is null)
@@ -134,17 +138,6 @@ public sealed class TimeEntriesController : ControllerBase
             await _db.SaveChangesAsync();
             return NoContent();
         }
-
-        // total jour <= MinutesPerDay (calcul robuste, en tenant compte d’un update)
-        var dayTotal = await _db.TimeEntries
-            .Where(e => e.Date == dto.Date)
-            .SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
-
-        var existingMinutes = existing?.QuantityMinutes ?? 0;
-        var newTotal = dayTotal - existingMinutes + dto.QuantityMinutes;
-
-        if (newTotal > MinutesPerDay)
-            return BadRequest($"Total du jour dépasse 1 jour ({newTotal}/{MinutesPerDay} minutes).");
 
         var comment = string.IsNullOrWhiteSpace(dto.Comment) ? null : dto.Comment.Trim();
 
