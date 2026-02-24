@@ -19,11 +19,12 @@
       <div class="panel">
         <h3>Ajouter un ticket</h3>
         <div class="ticket-form">
-          <input
-            placeholder="Type (ex: DEV)"
+          <select
             [value]="newTicketType()"
             (input)="onTicketTypeInput($event)"
-          />
+          >
+            <option *ngFor="let type of ticketTypeOptions" [value]="type">{{ type }}</option>
+          </select>
           <input
             placeholder="Cle externe (optionnel)"
             [value]="newTicketExternalKey()"

@@ -32,6 +32,7 @@ export class TimesheetPageComponent {
   readonly month = signal<number>(this.now.getMonth() + 1);
   readonly unitMode = signal<UnitMode>('day');
   readonly selectedDay = signal<string>('');
+  readonly ticketTypeOptions = ['DEV', 'SUPPORT', 'CONGES'];
 
   readonly newTicketType = signal<string>('');
   readonly newTicketExternalKey = signal<string>('');
@@ -98,7 +99,10 @@ export class TimesheetPageComponent {
       }
 
       if (!this.newTicketType().trim()) {
-        this.newTicketType.set(meta.defaultType ?? '');
+        const defaultType = (meta.defaultType ?? '').toUpperCase();
+        this.newTicketType.set(
+          this.ticketTypeOptions.includes(defaultType) ? defaultType : this.ticketTypeOptions[0],
+        );
       }
     });
 
@@ -139,7 +143,7 @@ export class TimesheetPageComponent {
   }
 
   onTicketTypeInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value ?? '';
+    const value = (event.target as HTMLSelectElement).value ?? '';
     this.newTicketType.set(value);
   }
 

@@ -113,12 +113,18 @@ public sealed class TimesheetController : ControllerBase
     public async Task<ActionResult<TimesheetMetadataDto>> GetMetadata()
     {
         if (_opts.HoursPerDay <= 0)
-            return Problem("Configuration invalide: HoursPerDay doit etre > 0.");
+            return ApiProblems.BadRequest(
+                this,
+                "TT_CONFIG_HOURS_PER_DAY_INVALID",
+                "Configuration invalide: HoursPerDay doit etre > 0.");
 
         var minutesPerDay = MinutesPerDay;
 
         if (minutesPerDay % 4 != 0)
-            return Problem("Configuration invalide: HoursPerDay doit donner un nombre de minutes divisible par 4 pour le mode quart de journee.");
+            return ApiProblems.BadRequest(
+                this,
+                "TT_CONFIG_MINUTES_PER_DAY_INVALID",
+                "Configuration invalide: HoursPerDay doit donner un nombre de minutes divisible par 4 pour le mode quart de journee.");
 
         var allowedDay = new[]
         {

@@ -246,10 +246,10 @@ public sealed class TicketsControllerTests
 
         // tri: Total desc => t2 (60) puis t1 (45)
         Assert.Equal(t2.Id, list[0].TicketId);
-        Assert.Equal(60m, list[0].Total);
+        Assert.Equal(60, list[0].Total);
 
         Assert.Equal(t1.Id, list[1].TicketId);
-        Assert.Equal(45m, list[1].Total);
+        Assert.Equal(45, list[1].Total);
     }
 
     [Fact]
@@ -277,7 +277,7 @@ public sealed class TicketsControllerTests
         var list = Assert.IsType<List<TicketTotalDto>>(ok.Value);
 
         Assert.Single(list);
-        Assert.Equal(45m, list[0].Total);
+        Assert.Equal(45, list[0].Total);
     }
 
     [Fact]
@@ -298,6 +298,6 @@ public sealed class TicketsControllerTests
         var list = Assert.IsType<List<TicketTotalDto>>(ok.Value);
 
         Assert.Single(list);
-        Assert.Equal(0m, list[0].Total);
+        Assert.Equal(0, list[0].Total);
     }
 }
