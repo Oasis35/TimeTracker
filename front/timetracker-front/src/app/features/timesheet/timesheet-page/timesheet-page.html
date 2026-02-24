@@ -1,33 +1,102 @@
-<h1>Timesheet</h1>
+<div *ngIf="loading()">Chargement...</div>
+<div *ngIf="error() as err" class="error">{{ err }}</div>
 
-<ng-container *ngIf="vm$ | async as vm">
-  <p>Mois : {{ vm.month }}/{{ vm.year }}</p>
+<ng-container *ngIf="!loading()">
+  <ng-container *ngIf="monthRes.value() as m">
+    <ng-container *ngIf="metadataRes.value() as meta">
+      <div class="toolbar">
+        <button (click)="prevMonth()">&larr;</button>
+        <h2>Timesheet {{ title() }}</h2>
+        <button (click)="nextMonth()">&rarr;</button>
 
-  <table border="1" cellpadding="4" cellspacing="0">
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Ticket</th>
-        <th>Label</th>
-        <th>Total</th>
+        <div class="spacer"></div>
 
-        <th *ngFor="let d of vm.days; trackBy: trackDay">
-          {{ d.slice(8) }}
-        </th>
-      </tr>
-    </thead>
+        <span class="muted">Minutes/jour: {{ meta.minutesPerDay }}</span>
+        <button (click)="unitMode.set('day')" [disabled]="unitMode() === 'day'">Jour</button>
+        <button (click)="unitMode.set('hour')" [disabled]="unitMode() === 'hour'">Heure</button>
+      </div>
 
-    <tbody>
-      <tr *ngFor="let row of vm.rows; trackBy: trackRow">
-        <td>{{ row.type }}</td>
-        <td>{{ row.externalKey }}</td>
-        <td>{{ row.label }}</td>
-        <td>{{ row.total }}</td>
+      <div class="panel">
+        <h3>Ajouter un ticket</h3>
+        <div class="ticket-form">
+          <input
+            placeholder="Type (ex: DEV)"
+            [value]="newTicketType()"
+            (input)="onTicketTypeInput($event)"
+          />
+          <input
+            placeholder="Cle externe (optionnel)"
+            [value]="newTicketExternalKey()"
+            (input)="onTicketExternalInput($event)"
+          />
+          <input
+            placeholder="Label (optionnel)"
+            [value]="newTicketLabel()"
+            (input)="onTicketLabelInput($event)"
+          />
+          <button (click)="addTicket()" [disabled]="busy()">Ajouter</button>
+        </div>
+      </div>
 
-        <td *ngFor="let d of vm.days; trackBy: trackDay">
-          {{ row.values[d] ?? '' }}
-        </td>
-      </tr>
-    </tbody>
-  </table>
+      <div class="panel">
+        <h3>Pointer le temps</h3>
+        <div class="days">
+          <button
+            *ngFor="let d of m.days"
+            (click)="setSelectedDay(d)"
+            [class.selected]="selectedDay() === d"
+          >
+            {{ d.slice(8, 10) }}
+          </button>
+        </div>
+
+        <p class="muted">Jour selectionne: {{ selectedDay() || '-' }}</p>
+
+        <div *ngIf="actionMessage()" class="ok">{{ actionMessage() }}</div>
+        <div *ngIf="actionError()" class="error">{{ actionError() }}</div>
+
+        <div class="table-wrap">
+          <table class="grid">
+            <thead>
+              <tr>
+                <th>Ticket</th>
+                <th>Valeur jour selectionne</th>
+                <th>Pointer</th>
+                <th>Total mois</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of displayRows()">
+                <td class="ticket-cell">
+                  <div><b>{{ r.type }}</b> {{ r.externalKey }}</div>
+                  <div class="muted">{{ r.label }}</div>
+                </td>
+                <td class="num">
+                  {{ minutesToDisplay(getCellMinutes(r, selectedDay())) }}
+                </td>
+                <td class="actions">
+                  <button (click)="pointDay(r.ticketId, 1)" [disabled]="busy() || !selectedDay()">
+                    1
+                  </button>
+                  <button (click)="pointDay(r.ticketId, 0.75)" [disabled]="busy() || !selectedDay()">
+                    0,75
+                  </button>
+                  <button (click)="pointDay(r.ticketId, 0.5)" [disabled]="busy() || !selectedDay()">
+                    0,5
+                  </button>
+                  <button (click)="pointDay(r.ticketId, 0.25)" [disabled]="busy() || !selectedDay()">
+                    0,25
+                  </button>
+                  <button (click)="pointDay(r.ticketId, 0)" [disabled]="busy() || !selectedDay()">
+                    0
+                  </button>
+                </td>
+                <td class="num">{{ minutesToDisplay(r.total) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </ng-container>
+  </ng-container>
 </ng-container>

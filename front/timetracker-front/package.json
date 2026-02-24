@@ -39,5 +39,6 @@
     "jsdom": "^27.1.0",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"
-  }
+  },
+  "start": "ng serve --proxy-config proxy.conf.json"
 }

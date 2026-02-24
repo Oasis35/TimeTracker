@@ -1,39 +1,32 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import {
-  MetadataDto,
-  TimesheetMonthDto,
-  Ticket,
-  UpsertTimeEntryDto
-} from '../models/dtos';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import {
+  CreateTicketDto,
+  TicketDto,
+  TimesheetMetadataDto,
+  TimesheetMonthDto,
+  UpsertTimeEntryDto,
+} from './models';
 
 @Injectable({ providedIn: 'root' })
-export class TrackerApiService {
+export class TrackerApi {
+  constructor(private http: HttpClient) {}
 
-  private readonly baseUrl = '/api';
-
-  constructor(private readonly http: HttpClient) {}
-
-  getTickets(): Observable<Ticket[]> {
-    return this.http.get<Ticket[]>(`${this.baseUrl}/tickets`);
+  getMetadata(): Observable<TimesheetMetadataDto> {
+    return this.http.get<TimesheetMetadataDto>('/api/timesheet/metadata');
   }
 
-  getMetadata(): Observable<MetadataDto> {
-    return this.http.get<MetadataDto>(`${this.baseUrl}/timesheet/metadata`);
+  getMonth(year: number, month: number): Observable<TimesheetMonthDto> {
+    const params = new HttpParams().set('year', year).set('month', month);
+    return this.http.get<TimesheetMonthDto>('/api/timesheet', { params });
   }
 
-  getTimesheet(year: number, month: number): Observable<TimesheetMonthDto> {
-    return this.http.get<TimesheetMonthDto>(
-      `${this.baseUrl}/timesheet`,
-      { params: { year, month } }
-    );
+  createTicket(dto: CreateTicketDto): Observable<TicketDto> {
+    return this.http.post<TicketDto>('/api/tickets', dto);
   }
 
-  upsert(dto: UpsertTimeEntryDto): Observable<void> {
-    return this.http.post<void>(
-      `${this.baseUrl}/timeentries/upsert`,
-      dto
-    );
+  upsertTimeEntry(dto: UpsertTimeEntryDto): Observable<void> {
+    return this.http.post<void>('/api/timeentries/upsert', dto);
   }
 }

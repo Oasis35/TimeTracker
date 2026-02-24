@@ -31,11 +31,11 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<TrackerDbContext>();
-
-    if (!db.Database.CanConnect())
-        return;
-
-    db.Database.Migrate();
+    var hasMigrations = db.Database.GetMigrations().Any();
+    if (hasMigrations)
+        db.Database.Migrate();
+    else
+        db.Database.EnsureCreated();
 
     // ✅ Seed seulement en dev
     if (app.Environment.IsDevelopment())
