@@ -8,10 +8,11 @@
 }
 
 .topbar {
+  height: 78px;
   min-height: 78px;
   padding: 0 1rem;
-  justify-content: space-between;
-  gap: 0.75rem;
+  position: relative;
+  display: block;
   color: var(--mat-sys-on-primary);
   background: linear-gradient(
     120deg,
@@ -22,27 +23,30 @@
 }
 
 .brand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 1;
   font-size: 1.6rem;
   font-weight: 500;
   letter-spacing: 0.01em;
 }
 
-.title-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.15rem;
-}
-
-.title-nav button {
-  color: inherit;
-}
-
-.period-title {
-  font-size: 1.5rem;
-  font-weight: 450;
+.lang-toggle {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
 }
 
 .unit-toggle {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
   --mat-standard-button-toggle-height: 38px;
   --mat-standard-button-toggle-selected-state-background-color: color-mix(
     in srgb,
@@ -117,6 +121,35 @@
 
 .days-row {
   padding: 0 1.1rem 0.25rem;
+  display: flex;
+  justify-content: center;
+}
+
+.day-picker-field {
+  width: clamp(140px, 32vw, 230px);
+  margin: 0;
+}
+
+.day-nav {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.day-shift-btn {
+  min-height: 36px;
+  min-width: 0;
+  padding-inline: 0.5rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+:host ::ng-deep .day-picker-field .mat-mdc-form-field-subscript-wrapper {
+  display: none;
 }
 
 .rows {
@@ -209,17 +242,6 @@
     font-size: 1.25rem;
   }
 
-  .period-title {
-    font-size: 1.05rem;
-  }
-
-  .topbar {
-    min-height: 70px;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 0.45rem 0.6rem 0.8rem;
-  }
-
   .card-header {
     flex-direction: column;
     align-items: stretch;
@@ -227,6 +249,19 @@
 
   .insights-strip {
     grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .day-picker-field {
+    width: clamp(120px, 44vw, 220px);
+  }
+
+  .days-row {
+    justify-content: stretch;
+  }
+
+  .day-nav {
+    width: 100%;
+    gap: 0.35rem;
   }
 
   .row.ticket-row {

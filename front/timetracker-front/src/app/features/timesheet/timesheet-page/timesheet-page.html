@@ -1,34 +1,32 @@
 <div class="page-shell">
   <mat-toolbar class="topbar">
     <span class="brand">TimeTracker</span>
-    <div class="title-nav">
-      <button mat-icon-button type="button" (click)="prevMonth()" aria-label="Mois precedent">
-        &lsaquo;
-      </button>
-      <span class="period-title">{{ titleLong() }}</span>
-      <button mat-icon-button type="button" (click)="nextMonth()" aria-label="Mois suivant">
-        &rsaquo;
-      </button>
-    </div>
+    <mat-button-toggle-group
+      class="lang-toggle"
+      [value]="currentLanguage()"
+      (change)="onLanguageChange($event.value)"
+      aria-label="Language"
+    >
+      <mat-button-toggle value="fr">FR</mat-button-toggle>
+      <mat-button-toggle value="en">EN</mat-button-toggle>
+    </mat-button-toggle-group>
     <mat-button-toggle-group
       class="unit-toggle"
       [value]="unitMode()"
       (change)="unitMode.set($event.value)"
-      aria-label="Unite d'affichage"
+      [attr.aria-label]="tr('unit_display')"
     >
-      <mat-button-toggle value="day">Jour</mat-button-toggle>
-      <mat-button-toggle value="hour">Heure</mat-button-toggle>
+      <mat-button-toggle value="day">{{ tr('day') }}</mat-button-toggle>
+      <mat-button-toggle value="hour">{{ tr('hour') }}</mat-button-toggle>
     </mat-button-toggle-group>
   </mat-toolbar>
 
   <section class="content" *ngIf="!loading(); else loadingTpl">
-    <ng-container *ngIf="monthRes.value() as m">
-      <ng-container *ngIf="metadataRes.value() as meta">
-        <mat-card class="timesheet-card">
+    <ng-container *ngIf="metadataRes.value() as meta">
+      <mat-card class="timesheet-card">
           <div class="card-header">
             <div>
-              <h2>Tickets pointes ce mois</h2>
-              <p>Jour selectionne: {{ selectedDay() || '-' }}</p>
+              <h2>{{ tr('tickets_month_title', { month: monthYearLabel() }) }}</h2>
             </div>
           </div>
 
@@ -36,39 +34,62 @@
 
           <div class="insights-strip">
             <div class="kpi">
-              <span>Tickets</span>
+              <span>{{ tr('kpi_tickets') }}</span>
               <strong>{{ displayRows().length }}</strong>
             </div>
             <div class="kpi">
-              <span>Total mois</span>
+              <span>{{ tr('kpi_total_month') }}</span>
               <strong>{{ formatEntryValue(monthTotalMinutes()) }}</strong>
             </div>
             <div class="kpi">
-              <span>Jours saisis</span>
+              <span>{{ tr('kpi_days_logged') }}</span>
               <strong>{{ workedDaysCount() }}</strong>
             </div>
             <button mat-flat-button type="button" class="open-ticket-dialog" (click)="openAddTicketDialog()">
-              Nouveau ticket
+              {{ tr('new_ticket') }}
             </button>
           </div>
 
           <div class="days-row">
-            <mat-chip-set>
-              <mat-chip-option
-                *ngFor="let d of m.days"
-                [selected]="selectedDay() === d"
-                (click)="setSelectedDay(d)"
+            <div class="day-nav">
+              <button
+                mat-stroked-button
+                type="button"
+                class="day-shift-btn"
+                (click)="prevWorkday()"
+                [attr.aria-label]="tr('day_previous')"
               >
-                {{ d.slice(8, 10) }}
-              </mat-chip-option>
-            </mat-chip-set>
+                {{ tr('day_previous') }}
+              </button>
+              <mat-form-field appearance="outline" class="day-picker-field">
+                <mat-label>{{ tr('day_label') }}</mat-label>
+                <input
+                  matInput
+                  [matDatepicker]="picker"
+                  [value]="selectedDateValue()"
+                  [matDatepickerFilter]="weekdayOnlyFilter"
+                  (dateChange)="onDatePicked($event)"
+                />
+                <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                <mat-datepicker #picker></mat-datepicker>
+              </mat-form-field>
+              <button
+                mat-stroked-button
+                type="button"
+                class="day-shift-btn"
+                (click)="nextWorkday()"
+                [attr.aria-label]="tr('day_next')"
+              >
+                {{ tr('day_next') }}
+              </button>
+            </div>
           </div>
 
           <div *ngIf="actionMessage()" class="ok">{{ actionMessage() }}</div>
           <div *ngIf="actionError() as err" class="error">{{ err }}</div>
           <div *ngIf="error() as err" class="error">{{ err }}</div>
 
-          <div class="rows" role="table" aria-label="Saisie des tickets">
+          <div class="rows" role="table" [attr.aria-label]="tr('rows_aria')">
             <div class="row ticket-row" *ngFor="let r of displayRows()">
               <div class="ticket-main">
                 <span class="ticket-title">{{ r.type }} {{ r.externalKey }}</span>
@@ -87,7 +108,9 @@
                     </mat-option>
                   </mat-select>
                 </mat-form-field>
-                <div class="week-total">Total mois: {{ formatEntryValue(r.total) }}</div>
+                <div class="week-total">
+                  {{ tr('total_month_row', { value: formatEntryValue(r.total) }) }}
+                </div>
               </div>
             </div>
           </div>
@@ -96,12 +119,15 @@
 
           <div class="totals-footer">
             <span>
-              Total du jour: {{ formatEntryValue(selectedDayTotalMinutes()) }} /
-              {{ formatEntryValue(meta.minutesPerDay) }}
+              {{
+                tr('total_day_footer', {
+                  current: formatEntryValue(selectedDayTotalMinutes()),
+                  max: formatEntryValue(meta.minutesPerDay),
+                })
+              }}
             </span>
           </div>
-        </mat-card>
-      </ng-container>
+      </mat-card>
     </ng-container>
   </section>
 </div>
@@ -109,35 +135,37 @@
 <ng-template #loadingTpl>
   <div class="loading-wrap">
     <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
-    <span>Chargement...</span>
+    <span>{{ tr('loading') }}</span>
   </div>
 </ng-template>
 
 <ng-template #ticketDialogTpl>
-  <h2 mat-dialog-title>Ajouter un ticket</h2>
+  <h2 mat-dialog-title>{{ tr('add_ticket_title') }}</h2>
   <mat-dialog-content>
     <div class="ticket-dialog-form">
       <mat-form-field appearance="outline">
-        <mat-label>Type</mat-label>
+        <mat-label>{{ tr('type') }}</mat-label>
         <mat-select [value]="newTicketType()" (selectionChange)="onTicketTypeChange($event)">
           <mat-option *ngFor="let type of ticketTypeOptions" [value]="type">{{ type }}</mat-option>
         </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Cle externe</mat-label>
+        <mat-label>{{ tr('external_key') }}</mat-label>
         <input matInput [value]="newTicketExternalKey()" (input)="onTicketExternalInput($event)" />
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Label</mat-label>
+        <mat-label>{{ tr('label') }}</mat-label>
         <input matInput [value]="newTicketLabel()" (input)="onTicketLabelInput($event)" />
       </mat-form-field>
     </div>
     <div *ngIf="actionError()" class="error dialog-error">{{ actionError() }}</div>
   </mat-dialog-content>
   <mat-dialog-actions align="end">
-    <button mat-button type="button" (click)="closeAddTicketDialog()">Annuler</button>
-    <button mat-flat-button type="button" (click)="submitTicketDialog()" [disabled]="busy()">Ajouter</button>
+    <button mat-button type="button" (click)="closeAddTicketDialog()">{{ tr('cancel') }}</button>
+    <button mat-flat-button type="button" (click)="submitTicketDialog()" [disabled]="busy()">
+      {{ tr('add') }}
+    </button>
   </mat-dialog-actions>
 </ng-template>

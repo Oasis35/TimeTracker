@@ -1,22 +1,31 @@
 import { CommonModule } from '@angular/common';
-import { Component, TemplateRef, ViewChild, computed, effect, resource, signal } from '@angular/core';
+import { Component, Injectable, TemplateRef, ViewChild, computed, effect, resource, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule, NativeDateAdapter } from '@angular/material/core';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { firstValueFrom } from 'rxjs';
 import { TrackerApi } from '../../../core/api/tracker-api';
+import { AppLanguage, I18nService, TranslationKey } from '../../../core/i18n/i18n.service';
 import { TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto, UnitMode } from '../../../core/api/models';
 
 type MonthRequest = { y: number; m: number };
 type QuickPickOption = { minutes: number; label: string };
+
+@Injectable()
+class IsoMondayDateAdapter extends NativeDateAdapter {
+  override getFirstDayOfWeek(): number {
+    return 1;
+  }
+}
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
@@ -37,14 +46,19 @@ function toIsoDate(date: Date): string {
     MatButtonModule,
     MatButtonToggleModule,
     MatCardModule,
-    MatChipsModule,
+    MatDatepickerModule,
     MatDividerModule,
     MatDialogModule,
     MatFormFieldModule,
+    MatNativeDateModule,
     MatInputModule,
     MatProgressSpinnerModule,
     MatSelectModule,
     MatToolbarModule,
+  ],
+  providers: [
+    { provide: MAT_DATE_LOCALE, useValue: 'fr-FR' },
+    { provide: DateAdapter, useClass: IsoMondayDateAdapter },
   ],
   templateUrl: './timesheet-page.html',
   styleUrl: './timesheet-page.scss',
@@ -81,8 +95,15 @@ export class TimesheetPageComponent {
   });
 
   readonly loading = computed(() => this.metadataRes.isLoading() || this.monthRes.isLoading());
-  readonly title = computed(() => `${this.year()}-${pad2(this.month())}`);
-  readonly titleLong = computed(() => `Mois du ${this.title()}`);
+  readonly currentLanguage = computed<AppLanguage>(() => this.i18n.language());
+  readonly monthYearLabel = computed(() => {
+    const date = new Date(this.year(), this.month() - 1, 1);
+    const label = new Intl.DateTimeFormat(this.i18n.dateLocale(), {
+      month: 'long',
+      year: 'numeric',
+    }).format(date);
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  });
   readonly displayRows = computed<TimesheetRowDto[]>(() => {
     const meta = this.metadataRes.value();
     const month = this.monthRes.value();
@@ -115,7 +136,7 @@ export class TimesheetPageComponent {
 
   readonly error = computed(() => {
     const e = this.metadataRes.error() ?? this.monthRes.error();
-    return e ? 'Impossible de charger les donnees.' : null;
+    return e ? this.tr('cannot_load_data') : null;
   });
   readonly selectedDayTotalMinutes = computed<number>(() => {
     const month = this.monthRes.value();
@@ -145,11 +166,21 @@ export class TimesheetPageComponent {
       label: this.formatEntryValue(minutes),
     }));
   });
+  readonly selectedDateValue = computed<Date | null>(() => {
+    const iso = this.selectedDay();
+    return iso ? new Date(`${iso}T00:00:00`) : null;
+  });
 
   constructor(
     private readonly api: TrackerApi,
     private readonly dialog: MatDialog,
+    private readonly dateAdapter: DateAdapter<Date>,
+    private readonly i18n: I18nService,
   ) {
+    effect(() => {
+      this.dateAdapter.setLocale(this.i18n.dateLocale());
+    });
+
     effect(() => {
       const meta = this.metadataRes.value();
       if (!meta) return;
@@ -173,37 +204,21 @@ export class TimesheetPageComponent {
       const selected = this.selectedDay();
       if (selected && month.days.includes(selected)) return;
 
-      const defaultDay = month.days.includes(this.todayIso) ? this.todayIso : month.days[0];
+      const firstWeekday = month.days.find((day) => !this.isWeekendIso(day)) ?? month.days[0];
+      const defaultDay =
+        month.days.includes(this.todayIso) && !this.isWeekendIso(this.todayIso)
+          ? this.todayIso
+          : firstWeekday;
       this.selectedDay.set(defaultDay);
     });
   }
 
-  prevMonth(): void {
-    const m = this.month();
-    const y = this.year();
-
-    if (m === 1) {
-      this.month.set(12);
-      this.year.set(y - 1);
-    } else {
-      this.month.set(m - 1);
-    }
-  }
-
-  nextMonth(): void {
-    const m = this.month();
-    const y = this.year();
-
-    if (m === 12) {
-      this.month.set(1);
-      this.year.set(y + 1);
-    } else {
-      this.month.set(m + 1);
-    }
-  }
-
   onTicketTypeChange(event: MatSelectChange): void {
     this.newTicketType.set((event.value ?? '').toString());
+  }
+
+  onLanguageChange(language: AppLanguage): void {
+    this.i18n.setLanguage(language);
   }
 
   onTicketExternalInput(event: Event): void {
@@ -218,6 +233,42 @@ export class TimesheetPageComponent {
 
   setSelectedDay(day: string): void {
     this.selectedDay.set(day);
+  }
+
+  prevWorkday(): void {
+    this.shiftWorkday(-1);
+  }
+
+  nextWorkday(): void {
+    this.shiftWorkday(1);
+  }
+
+  readonly weekdayOnlyFilter = (date: Date | null): boolean => {
+    if (!date) return false;
+    const iso = toIsoDate(date);
+    return !this.isWeekendIso(iso);
+  };
+
+  onDatePicked(event: MatDatepickerInputEvent<Date>): void {
+    const date = event.value;
+    if (!date || !this.weekdayOnlyFilter(date)) return;
+
+    this.year.set(date.getFullYear());
+    this.month.set(date.getMonth() + 1);
+    this.setSelectedDay(toIsoDate(date));
+  }
+
+  private shiftWorkday(delta: -1 | 1): void {
+    const startIso = this.selectedDay() || this.todayIso;
+    let cursor = new Date(`${startIso}T00:00:00`);
+
+    do {
+      cursor.setDate(cursor.getDate() + delta);
+    } while (this.isWeekendIso(toIsoDate(cursor)));
+
+    this.year.set(cursor.getFullYear());
+    this.month.set(cursor.getMonth() + 1);
+    this.setSelectedDay(toIsoDate(cursor));
   }
 
   private clearActionState(): void {
@@ -251,7 +302,7 @@ export class TimesheetPageComponent {
     this.clearActionState();
 
     if (!date) {
-      this.actionError.set('Selectionne un jour avant de pointer.');
+      this.actionError.set(this.tr('day_required_before_log'));
       return;
     }
 
@@ -265,10 +316,10 @@ export class TimesheetPageComponent {
           comment: null,
         }),
       );
-      this.actionMessage.set('Temps enregistre.');
+      this.actionMessage.set(this.tr('time_saved'));
       this.monthRes.reload();
     } catch {
-      this.actionError.set('Impossible de pointer le temps.');
+      this.actionError.set(this.tr('cannot_log_time'));
     } finally {
       this.busy.set(false);
     }
@@ -282,12 +333,12 @@ export class TimesheetPageComponent {
     this.clearActionState();
 
     if (!type) {
-      this.actionError.set('Le type est obligatoire.');
+      this.actionError.set(this.tr('type_required'));
       return false;
     }
 
     if (externalKey && !label) {
-      this.actionError.set('Le label est obligatoire si une cle externe est renseignee.');
+      this.actionError.set(this.tr('label_required_with_external'));
       return false;
     }
 
@@ -303,16 +354,25 @@ export class TimesheetPageComponent {
 
       this.newTicketExternalKey.set('');
       this.newTicketLabel.set('');
-      this.actionMessage.set('Ticket enregistre.');
+      this.actionMessage.set(this.tr('ticket_saved'));
       this.metadataRes.reload();
       this.monthRes.reload();
       return true;
     } catch {
-      this.actionError.set('Impossible de creer le ticket.');
+      this.actionError.set(this.tr('cannot_create_ticket'));
       return false;
     } finally {
       this.busy.set(false);
     }
+  }
+
+  private isWeekendIso(isoDate: string): boolean {
+    const day = new Date(`${isoDate}T00:00:00`).getDay();
+    return day === 0 || day === 6;
+  }
+
+  tr(key: TranslationKey, params?: Record<string, string | number>): string {
+    return this.i18n.t(key, params);
   }
 
   formatEntryValue(minutes: number): string {
