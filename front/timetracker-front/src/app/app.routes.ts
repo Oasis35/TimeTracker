@@ -1,7 +1,12 @@
 import { Routes } from '@angular/router';
-import { TimesheetPageComponent } from './features/timesheet/timesheet-page/timesheet-page';
 
 export const routes: Routes = [
-    { path: '', component: TimesheetPageComponent },
+  {
+    path: '',
+    loadComponent: () =>
+      import('./features/timesheet/timesheet-page/timesheet-page').then(
+        (m) => m.TimesheetPageComponent,
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

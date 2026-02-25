@@ -52,14 +52,14 @@ describe('TimesheetPageComponent', () => {
     return { fixture, component: fixture.componentInstance, getCapturedUpsert: () => capturedUpsert };
   }
 
-  it('renders the ticket type dropdown', async () => {
+  it('renders the new ticket dialog trigger', async () => {
     const { fixture } = setup();
     fixture.detectChanges();
     await fixture.whenStable();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    const select = compiled.querySelector('.ticket-form select');
-    expect(select).not.toBeNull();
+    const button = compiled.querySelector('.open-ticket-dialog');
+    expect(button).not.toBeNull();
   });
 
   it('shows validation error when external key is set without label', async () => {
@@ -73,13 +73,13 @@ describe('TimesheetPageComponent', () => {
     expect(component.actionError()).toContain('label');
   });
 
-  it('converts day fraction to minutes when pointing time', async () => {
+  it('sends selected minutes when pointing time', async () => {
     const { fixture, component, getCapturedUpsert } = setup();
     fixture.detectChanges();
     await fixture.whenStable();
 
     component.setSelectedDay('2026-02-02');
-    await component.pointDay(1, 0.75);
+    await component.pointMinutes(1, 360);
 
     const dto = getCapturedUpsert() as { quantityMinutes: number; ticketId: number; date: string } | null;
     expect(dto).not.toBeNull();

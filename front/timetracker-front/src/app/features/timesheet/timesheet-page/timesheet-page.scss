@@ -1,0 +1,244 @@
+.page-shell {
+  min-height: 100vh;
+  background: radial-gradient(
+    circle at top,
+    color-mix(in srgb, var(--mat-sys-primary) 12%, var(--mat-sys-surface)) 0%,
+    var(--mat-sys-surface) 58%
+  );
+}
+
+.topbar {
+  min-height: 78px;
+  padding: 0 1rem;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: var(--mat-sys-on-primary);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--mat-sys-primary) 92%, #000) 0%,
+    color-mix(in srgb, var(--mat-sys-primary) 78%, #fff) 100%
+  );
+  box-shadow: var(--mat-sys-level2);
+}
+
+.brand {
+  font-size: 1.6rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.title-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.title-nav button {
+  color: inherit;
+}
+
+.period-title {
+  font-size: 1.5rem;
+  font-weight: 450;
+}
+
+.unit-toggle {
+  --mat-standard-button-toggle-height: 38px;
+  --mat-standard-button-toggle-selected-state-background-color: color-mix(
+    in srgb,
+    var(--mat-sys-primary-container) 72%,
+    #fff
+  );
+  --mat-standard-button-toggle-selected-state-text-color: var(--mat-sys-on-primary-container);
+}
+
+.content {
+  max-width: 1160px;
+  margin: 1.35rem auto;
+  padding: 0 0.8rem 1.4rem;
+}
+
+.timesheet-card {
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 84%, #fff);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 0.9rem 1.1rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.card-header p {
+  margin: 0.1rem 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.88rem;
+}
+
+.insights-strip {
+  padding: 0.7rem 1.1rem 0.3rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr)) auto;
+  gap: 0.45rem;
+}
+
+.kpi {
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 45%, transparent);
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 64%, #fff);
+}
+
+.kpi span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.kpi strong {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.95rem;
+  line-height: 1.05;
+}
+
+.open-ticket-dialog {
+  align-self: stretch;
+  min-height: 64px;
+}
+
+.days-row {
+  padding: 0 1.1rem 0.25rem;
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row.ticket-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.6rem 1.1rem;
+  border-top: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 40%, transparent);
+}
+
+.ticket-main {
+  min-width: 280px;
+}
+
+.ticket-title {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--mat-sys-on-surface);
+}
+
+.line-2 {
+  margin-top: 0.12rem;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.88rem;
+}
+
+.ticket-action {
+  width: 190px;
+}
+
+.ticket-action mat-form-field {
+  width: 100%;
+  margin-bottom: -1.2rem;
+}
+
+.week-total {
+  text-align: right;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.84rem;
+}
+
+.totals-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.8rem 1.1rem;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.error {
+  margin: 0.35rem 1.1rem;
+  color: var(--mat-sys-error);
+  font-size: 0.85rem;
+}
+
+.ok {
+  margin: 0.35rem 1.1rem;
+  color: color-mix(in srgb, var(--mat-sys-primary) 65%, #147a3f);
+  font-size: 0.85rem;
+}
+
+.loading-wrap {
+  min-height: 40vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ticket-dialog-form {
+  padding-top: 0.3rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.dialog-error {
+  margin: 0.2rem 0 0;
+}
+
+@media (max-width: 1050px) {
+  .brand {
+    font-size: 1.25rem;
+  }
+
+  .period-title {
+    font-size: 1.05rem;
+  }
+
+  .topbar {
+    min-height: 70px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0.45rem 0.6rem 0.8rem;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .insights-strip {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .row.ticket-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ticket-action {
+    width: 100%;
+  }
+
+  .week-total {
+    text-align: left;
+  }
+}

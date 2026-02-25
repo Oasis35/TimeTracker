@@ -1,103 +1,143 @@
-<div *ngIf="loading()">Chargement...</div>
-<div *ngIf="error() as err" class="error">{{ err }}</div>
+<div class="page-shell">
+  <mat-toolbar class="topbar">
+    <span class="brand">TimeTracker</span>
+    <div class="title-nav">
+      <button mat-icon-button type="button" (click)="prevMonth()" aria-label="Mois precedent">
+        &lsaquo;
+      </button>
+      <span class="period-title">{{ titleLong() }}</span>
+      <button mat-icon-button type="button" (click)="nextMonth()" aria-label="Mois suivant">
+        &rsaquo;
+      </button>
+    </div>
+    <mat-button-toggle-group
+      class="unit-toggle"
+      [value]="unitMode()"
+      (change)="unitMode.set($event.value)"
+      aria-label="Unite d'affichage"
+    >
+      <mat-button-toggle value="day">Jour</mat-button-toggle>
+      <mat-button-toggle value="hour">Heure</mat-button-toggle>
+    </mat-button-toggle-group>
+  </mat-toolbar>
 
-<ng-container *ngIf="!loading()">
-  <ng-container *ngIf="monthRes.value() as m">
-    <ng-container *ngIf="metadataRes.value() as meta">
-      <div class="toolbar">
-        <button (click)="prevMonth()">&larr;</button>
-        <h2>Timesheet {{ title() }}</h2>
-        <button (click)="nextMonth()">&rarr;</button>
+  <section class="content" *ngIf="!loading(); else loadingTpl">
+    <ng-container *ngIf="monthRes.value() as m">
+      <ng-container *ngIf="metadataRes.value() as meta">
+        <mat-card class="timesheet-card">
+          <div class="card-header">
+            <div>
+              <h2>Tickets pointes ce mois</h2>
+              <p>Jour selectionne: {{ selectedDay() || '-' }}</p>
+            </div>
+          </div>
 
-        <div class="spacer"></div>
+          <mat-divider></mat-divider>
 
-        <span class="muted">Minutes/jour: {{ meta.minutesPerDay }}</span>
-        <button (click)="unitMode.set('day')" [disabled]="unitMode() === 'day'">Jour</button>
-        <button (click)="unitMode.set('hour')" [disabled]="unitMode() === 'hour'">Heure</button>
-      </div>
+          <div class="insights-strip">
+            <div class="kpi">
+              <span>Tickets</span>
+              <strong>{{ displayRows().length }}</strong>
+            </div>
+            <div class="kpi">
+              <span>Total mois</span>
+              <strong>{{ formatEntryValue(monthTotalMinutes()) }}</strong>
+            </div>
+            <div class="kpi">
+              <span>Jours saisis</span>
+              <strong>{{ workedDaysCount() }}</strong>
+            </div>
+            <button mat-flat-button type="button" class="open-ticket-dialog" (click)="openAddTicketDialog()">
+              Nouveau ticket
+            </button>
+          </div>
 
-      <div class="panel">
-        <h3>Ajouter un ticket</h3>
-        <div class="ticket-form">
-          <select
-            [value]="newTicketType()"
-            (input)="onTicketTypeInput($event)"
-          >
-            <option *ngFor="let type of ticketTypeOptions" [value]="type">{{ type }}</option>
-          </select>
-          <input
-            placeholder="Cle externe (optionnel)"
-            [value]="newTicketExternalKey()"
-            (input)="onTicketExternalInput($event)"
-          />
-          <input
-            placeholder="Label (optionnel)"
-            [value]="newTicketLabel()"
-            (input)="onTicketLabelInput($event)"
-          />
-          <button (click)="addTicket()" [disabled]="busy()">Ajouter</button>
-        </div>
-      </div>
+          <div class="days-row">
+            <mat-chip-set>
+              <mat-chip-option
+                *ngFor="let d of m.days"
+                [selected]="selectedDay() === d"
+                (click)="setSelectedDay(d)"
+              >
+                {{ d.slice(8, 10) }}
+              </mat-chip-option>
+            </mat-chip-set>
+          </div>
 
-      <div class="panel">
-        <h3>Pointer le temps</h3>
-        <div class="days">
-          <button
-            *ngFor="let d of m.days"
-            (click)="setSelectedDay(d)"
-            [class.selected]="selectedDay() === d"
-          >
-            {{ d.slice(8, 10) }}
-          </button>
-        </div>
+          <div *ngIf="actionMessage()" class="ok">{{ actionMessage() }}</div>
+          <div *ngIf="actionError() as err" class="error">{{ err }}</div>
+          <div *ngIf="error() as err" class="error">{{ err }}</div>
 
-        <p class="muted">Jour selectionne: {{ selectedDay() || '-' }}</p>
+          <div class="rows" role="table" aria-label="Saisie des tickets">
+            <div class="row ticket-row" *ngFor="let r of displayRows()">
+              <div class="ticket-main">
+                <span class="ticket-title">{{ r.type }} {{ r.externalKey }}</span>
+                <div class="line-2">{{ r.label }}</div>
+              </div>
 
-        <div *ngIf="actionMessage()" class="ok">{{ actionMessage() }}</div>
-        <div *ngIf="actionError()" class="error">{{ actionError() }}</div>
+              <div class="ticket-action">
+                <mat-form-field appearance="outline">
+                  <mat-select
+                    [value]="getCellMinutes(r, selectedDay())"
+                    (selectionChange)="pointMinutes(r.ticketId, $event.value)"
+                    [disabled]="busy() || !selectedDay()"
+                  >
+                    <mat-option *ngFor="let option of quickPickOptions()" [value]="option.minutes">
+                      {{ option.label }}
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+                <div class="week-total">Total mois: {{ formatEntryValue(r.total) }}</div>
+              </div>
+            </div>
+          </div>
 
-        <div class="table-wrap">
-          <table class="grid">
-            <thead>
-              <tr>
-                <th>Ticket</th>
-                <th>Valeur jour selectionne</th>
-                <th>Pointer</th>
-                <th>Total mois</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let r of displayRows()">
-                <td class="ticket-cell">
-                  <div><b>{{ r.type }}</b> {{ r.externalKey }}</div>
-                  <div class="muted">{{ r.label }}</div>
-                </td>
-                <td class="num">
-                  {{ minutesToDisplay(getCellMinutes(r, selectedDay())) }}
-                </td>
-                <td class="actions">
-                  <button (click)="pointDay(r.ticketId, 1)" [disabled]="busy() || !selectedDay()">
-                    1
-                  </button>
-                  <button (click)="pointDay(r.ticketId, 0.75)" [disabled]="busy() || !selectedDay()">
-                    0,75
-                  </button>
-                  <button (click)="pointDay(r.ticketId, 0.5)" [disabled]="busy() || !selectedDay()">
-                    0,5
-                  </button>
-                  <button (click)="pointDay(r.ticketId, 0.25)" [disabled]="busy() || !selectedDay()">
-                    0,25
-                  </button>
-                  <button (click)="pointDay(r.ticketId, 0)" [disabled]="busy() || !selectedDay()">
-                    0
-                  </button>
-                </td>
-                <td class="num">{{ minutesToDisplay(r.total) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+          <mat-divider></mat-divider>
+
+          <div class="totals-footer">
+            <span>
+              Total du jour: {{ formatEntryValue(selectedDayTotalMinutes()) }} /
+              {{ formatEntryValue(meta.minutesPerDay) }}
+            </span>
+          </div>
+        </mat-card>
+      </ng-container>
     </ng-container>
-  </ng-container>
-</ng-container>
+  </section>
+</div>
+
+<ng-template #loadingTpl>
+  <div class="loading-wrap">
+    <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+    <span>Chargement...</span>
+  </div>
+</ng-template>
+
+<ng-template #ticketDialogTpl>
+  <h2 mat-dialog-title>Ajouter un ticket</h2>
+  <mat-dialog-content>
+    <div class="ticket-dialog-form">
+      <mat-form-field appearance="outline">
+        <mat-label>Type</mat-label>
+        <mat-select [value]="newTicketType()" (selectionChange)="onTicketTypeChange($event)">
+          <mat-option *ngFor="let type of ticketTypeOptions" [value]="type">{{ type }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Cle externe</mat-label>
+        <input matInput [value]="newTicketExternalKey()" (input)="onTicketExternalInput($event)" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Label</mat-label>
+        <input matInput [value]="newTicketLabel()" (input)="onTicketLabelInput($event)" />
+      </mat-form-field>
+    </div>
+    <div *ngIf="actionError()" class="error dialog-error">{{ actionError() }}</div>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" (click)="closeAddTicketDialog()">Annuler</button>
+    <button mat-flat-button type="button" (click)="submitTicketDialog()" [disabled]="busy()">Ajouter</button>
+  </mat-dialog-actions>
+</ng-template>

@@ -1,10 +1,22 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, effect, resource, signal } from '@angular/core';
+import { Component, TemplateRef, ViewChild, computed, effect, resource, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectChange, MatSelectModule } from '@angular/material/select';
+import { MatToolbarModule } from '@angular/material/toolbar';
 import { firstValueFrom } from 'rxjs';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto, UnitMode } from '../../../core/api/models';
 
 type MonthRequest = { y: number; m: number };
+type QuickPickOption = { minutes: number; label: string };
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
@@ -20,13 +32,29 @@ function toIsoDate(date: Date): string {
 @Component({
   selector: 'app-timesheet-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatButtonToggleModule,
+    MatCardModule,
+    MatChipsModule,
+    MatDividerModule,
+    MatDialogModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatProgressSpinnerModule,
+    MatSelectModule,
+    MatToolbarModule,
+  ],
   templateUrl: './timesheet-page.html',
-  styleUrl: './timesheet-page.css',
+  styleUrl: './timesheet-page.scss',
 })
 export class TimesheetPageComponent {
+  @ViewChild('ticketDialogTpl') ticketDialogTpl?: TemplateRef<unknown>;
+
   private readonly now = new Date();
   private readonly todayIso = toIsoDate(this.now);
+  private ticketDialogRef?: MatDialogRef<unknown>;
 
   readonly year = signal<number>(this.now.getFullYear());
   readonly month = signal<number>(this.now.getMonth() + 1);
@@ -54,6 +82,7 @@ export class TimesheetPageComponent {
 
   readonly loading = computed(() => this.metadataRes.isLoading() || this.monthRes.isLoading());
   readonly title = computed(() => `${this.year()}-${pad2(this.month())}`);
+  readonly titleLong = computed(() => `Mois du ${this.title()}`);
   readonly displayRows = computed<TimesheetRowDto[]>(() => {
     const meta = this.metadataRes.value();
     const month = this.monthRes.value();
@@ -88,8 +117,39 @@ export class TimesheetPageComponent {
     const e = this.metadataRes.error() ?? this.monthRes.error();
     return e ? 'Impossible de charger les donnees.' : null;
   });
+  readonly selectedDayTotalMinutes = computed<number>(() => {
+    const month = this.monthRes.value();
+    const day = this.selectedDay();
+    if (!month || !day) return 0;
+    return month.totalsByDay?.[day] ?? 0;
+  });
+  readonly monthTotalMinutes = computed<number>(() => {
+    const month = this.monthRes.value();
+    if (!month) return 0;
+    return Object.values(month.totalsByDay ?? {}).reduce((sum, value) => sum + value, 0);
+  });
+  readonly workedDaysCount = computed<number>(() => {
+    const month = this.monthRes.value();
+    if (!month) return 0;
+    return Object.values(month.totalsByDay ?? {}).filter((value) => value > 0).length;
+  });
+  readonly quickPickOptions = computed(() => {
+    const meta = this.metadataRes.value();
+    if (!meta) return [] as QuickPickOption[];
 
-  constructor(private readonly api: TrackerApi) {
+    const allowed =
+      this.unitMode() === 'hour' ? meta.allowedMinutesHourMode : meta.allowedMinutesDayMode;
+
+    return allowed.map((minutes) => ({
+      minutes,
+      label: this.formatEntryValue(minutes),
+    }));
+  });
+
+  constructor(
+    private readonly api: TrackerApi,
+    private readonly dialog: MatDialog,
+  ) {
     effect(() => {
       const meta = this.metadataRes.value();
       if (!meta) return;
@@ -142,9 +202,8 @@ export class TimesheetPageComponent {
     }
   }
 
-  onTicketTypeInput(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value ?? '';
-    this.newTicketType.set(value);
+  onTicketTypeChange(event: MatSelectChange): void {
+    this.newTicketType.set((event.value ?? '').toString());
   }
 
   onTicketExternalInput(event: Event): void {
@@ -161,59 +220,40 @@ export class TimesheetPageComponent {
     this.selectedDay.set(day);
   }
 
-  async addTicket(): Promise<void> {
-    const type = this.newTicketType().trim();
-    const externalKey = this.newTicketExternalKey().trim();
-    const label = this.newTicketLabel().trim();
-
+  private clearActionState(): void {
     this.actionMessage.set('');
     this.actionError.set('');
+  }
 
-    if (!type) {
-      this.actionError.set('Le type est obligatoire.');
-      return;
-    }
+  openAddTicketDialog(): void {
+    if (!this.ticketDialogTpl) return;
+    this.actionError.set('');
+    this.ticketDialogRef = this.dialog.open(this.ticketDialogTpl, {
+      width: '560px',
+      maxWidth: '95vw',
+    });
+  }
 
-    if (externalKey && !label) {
-      this.actionError.set('Le label est obligatoire si une cle externe est renseignee.');
-      return;
-    }
+  closeAddTicketDialog(): void {
+    this.ticketDialogRef?.close();
+  }
 
-    this.busy.set(true);
-    try {
-      await firstValueFrom(
-        this.api.createTicket({
-          type,
-          externalKey: externalKey || null,
-          label: label || null,
-        }),
-      );
-
-      this.newTicketExternalKey.set('');
-      this.newTicketLabel.set('');
-      this.actionMessage.set('Ticket enregistre.');
-      this.metadataRes.reload();
-      this.monthRes.reload();
-    } catch {
-      this.actionError.set('Impossible de creer le ticket.');
-    } finally {
-      this.busy.set(false);
+  async submitTicketDialog(): Promise<void> {
+    const success = await this.addTicket();
+    if (success) {
+      this.ticketDialogRef?.close();
     }
   }
 
-  async pointDay(ticketId: number, dayFraction: number): Promise<void> {
-    const meta = this.metadataRes.value();
+  async pointMinutes(ticketId: number, quantityMinutes: number): Promise<void> {
     const date = this.selectedDay();
 
-    this.actionMessage.set('');
-    this.actionError.set('');
+    this.clearActionState();
 
-    if (!meta || !date) {
+    if (!date) {
       this.actionError.set('Selectionne un jour avant de pointer.');
       return;
     }
-
-    const quantityMinutes = Math.round(meta.minutesPerDay * dayFraction);
 
     this.busy.set(true);
     try {
@@ -234,15 +274,58 @@ export class TimesheetPageComponent {
     }
   }
 
-  minutesToDisplay(minutes: number): string {
-    const meta = this.metadataRes.value();
-    if (!meta) return '';
+  async addTicket(): Promise<boolean> {
+    const type = this.newTicketType().trim();
+    const externalKey = this.newTicketExternalKey().trim();
+    const label = this.newTicketLabel().trim();
 
-    if (this.unitMode() === 'hour') {
-      return (minutes / 60).toFixed(2).replace('.', ',');
+    this.clearActionState();
+
+    if (!type) {
+      this.actionError.set('Le type est obligatoire.');
+      return false;
     }
 
-    return (minutes / meta.minutesPerDay).toFixed(2).replace('.', ',');
+    if (externalKey && !label) {
+      this.actionError.set('Le label est obligatoire si une cle externe est renseignee.');
+      return false;
+    }
+
+    this.busy.set(true);
+    try {
+      await firstValueFrom(
+        this.api.createTicket({
+          type,
+          externalKey: externalKey || null,
+          label: label || null,
+        }),
+      );
+
+      this.newTicketExternalKey.set('');
+      this.newTicketLabel.set('');
+      this.actionMessage.set('Ticket enregistre.');
+      this.metadataRes.reload();
+      this.monthRes.reload();
+      return true;
+    } catch {
+      this.actionError.set('Impossible de creer le ticket.');
+      return false;
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  formatEntryValue(minutes: number): string {
+    const meta = this.metadataRes.value();
+    if (!meta) return `${minutes} min`;
+
+    if (this.unitMode() === 'hour') {
+      const value = (minutes / 60).toFixed(2).replace('.', ',');
+      return `${value} h`;
+    }
+
+    const value = (minutes / meta.minutesPerDay).toFixed(2).replace('.', ',');
+    return `${value} j`;
   }
 
   getCellMinutes(row: { values: Record<string, number> }, dayIso: string): number {
