@@ -175,6 +175,84 @@ public sealed class TicketsControllerTests
     // GET /api/tickets/totals
     // -------------------------
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(13)]
+    public async Task GetUsedByMonth_Should_Return_BadRequest_When_Month_Invalid(int month)
+    {
+        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
+        await using var _ = db;
+        await using var __ = conn;
+
+        var controller = new TicketsController(db);
+
+        var r = await controller.GetUsedByMonth(year: 2026, month: month);
+        var bad = Assert.IsType<ObjectResult>(r.Result);
+        Assert.Equal(400, bad.StatusCode);
+        var error = Assert.IsType<ApiErrorResponse>(bad.Value);
+        Assert.Equal(ApiErrorCodes.MonthInvalid, error.Code);
+    }
+
+    [Fact]
+    public async Task GetUsedByMonth_Should_Return_Only_Tickets_With_TimeEntries_In_Selected_Month()
+    {
+        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
+        await using var _ = db;
+        await using var __ = conn;
+
+        var t1 = new Ticket { Type = "B", ExternalKey = "2", Label = "B2" };
+        var t2 = new Ticket { Type = "A", ExternalKey = "1", Label = "A1" };
+        var t3 = new Ticket { Type = "A", ExternalKey = "9", Label = "A9" };
+        db.Tickets.AddRange(t1, t2, t3);
+        await db.SaveChangesAsync();
+
+        db.TimeEntries.AddRange(
+            new TimeEntry { TicketId = t1.Id, Date = new DateOnly(2026, 2, 3), QuantityMinutes = 60 },
+            new TimeEntry { TicketId = t1.Id, Date = new DateOnly(2026, 2, 4), QuantityMinutes = 30 },
+            new TimeEntry { TicketId = t2.Id, Date = new DateOnly(2026, 2, 10), QuantityMinutes = 90 },
+            new TimeEntry { TicketId = t3.Id, Date = new DateOnly(2026, 3, 1), QuantityMinutes = 45 }
+        );
+        await db.SaveChangesAsync();
+
+        var controller = new TicketsController(db);
+
+        var result = await controller.GetUsedByMonth(year: 2026, month: 2);
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
+
+        Assert.Equal(2, list.Count);
+        Assert.Equal(t2.Id, list[0].Id); // ordered by Type then ExternalKey
+        Assert.Equal(t1.Id, list[1].Id);
+    }
+
+    [Fact]
+    public async Task GetUsedByMonth_Should_Return_Empty_When_No_TimeEntries_In_Selected_Month()
+    {
+        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
+        await using var _ = db;
+        await using var __ = conn;
+
+        var t1 = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "X1" };
+        db.Tickets.Add(t1);
+        await db.SaveChangesAsync();
+
+        db.TimeEntries.Add(new TimeEntry
+        {
+            TicketId = t1.Id,
+            Date = new DateOnly(2026, 3, 1),
+            QuantityMinutes = 60
+        });
+        await db.SaveChangesAsync();
+
+        var controller = new TicketsController(db);
+
+        var result = await controller.GetUsedByMonth(year: 2026, month: 2);
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
+
+        Assert.Empty(list);
+    }
+
     [Fact]
     public async Task GetTotals_Should_Return_BadRequest_When_Only_Year_Or_Only_Month()
     {

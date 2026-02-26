@@ -29,7 +29,12 @@ import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messa
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { I18nService } from '../../../core/services/i18n.service';
 import { UnitService } from '../../../core/services/unit.service';
-import { TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
+import {
+  TicketDto,
+  TimesheetMetadataDto,
+  TimesheetMonthDto,
+  TimesheetRowDto,
+} from '../../../core/api/models';
 
 type MonthRequest = { y: number; m: number };
 type QuickPickOption = { minutes: number; label: string };
@@ -105,7 +110,14 @@ export class TimesheetPageComponent {
     loader: ({ params }) => firstValueFrom(this.api.getMonth(params.y, params.m)),
   });
 
-  readonly loading = computed(() => this.metadataRes.isLoading() || this.monthRes.isLoading());
+  readonly usedTicketsRes = resource<TicketDto[], MonthRequest>({
+    params: () => ({ y: this.year(), m: this.month() }),
+    loader: ({ params }) => firstValueFrom(this.api.getUsedByMonth(params.y, params.m)),
+  });
+
+  readonly loading = computed(
+    () => this.metadataRes.isLoading() || this.monthRes.isLoading() || this.usedTicketsRes.isLoading(),
+  );
   readonly monthYearLabel = computed(() => {
     const date = new Date(this.year(), this.month() - 1, 1);
     const label = new Intl.DateTimeFormat(this.i18n.dateLocale(), {
@@ -116,37 +128,34 @@ export class TimesheetPageComponent {
   });
   
   readonly displayRows = computed<TimesheetRowDto[]>(() => {
-    const meta = this.metadataRes.value();
+    const usedTickets = this.usedTicketsRes.value();
     const month = this.monthRes.value();
-    if (!meta || !month) return [];
+    if (!usedTickets || !month) return [];
 
     const rowsByTicketId = new Map<number, TimesheetRowDto>();
     for (const row of month.rows) {
       rowsByTicketId.set(row.ticketId, row);
     }
 
-    const merged: TimesheetRowDto[] = [];
-    for (const ticket of meta.tickets) {
+    return usedTickets.map((ticket) => {
       const existing = rowsByTicketId.get(ticket.id);
       if (existing) {
-        merged.push(existing);
-      } else {
-        merged.push({
-          ticketId: ticket.id,
-          type: ticket.type,
-          externalKey: ticket.externalKey ?? '',
-          label: ticket.label ?? '',
-          values: {},
-          total: 0,
-        });
+        return existing;
       }
-    }
 
-    return merged;
+      return {
+        ticketId: ticket.id,
+        type: ticket.type,
+        externalKey: ticket.externalKey ?? '',
+        label: ticket.label ?? '',
+        values: {},
+        total: 0,
+      };
+    });
   });
 
   readonly error = computed(() => {
-    const e = this.metadataRes.error() ?? this.monthRes.error();
+    const e = this.metadataRes.error() ?? this.monthRes.error() ?? this.usedTicketsRes.error();
     return e ? this.i18n.tr('cannot_load_data') : null;
   });
 
@@ -326,6 +335,7 @@ export class TimesheetPageComponent {
       );
       this.actionMessage.set(this.i18n.tr('time_saved'));
       this.monthRes.reload();
+      this.usedTicketsRes.reload();
     } catch (error: unknown) {
       this.actionError.set(this.i18n.tr(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
     } finally {

@@ -28,6 +28,35 @@ public sealed class TicketsController : ControllerBase
         return Ok(tickets);
     }
 
+    [HttpGet("used")]
+    public async Task<ActionResult<IReadOnlyList<TicketDto>>> GetUsedByMonth(
+        [FromQuery] int year,
+        [FromQuery] int month)
+    {
+        if (month < 1 || month > 12)
+            return ApiProblems.BadRequest(this, ApiErrorCodes.MonthInvalid);
+
+        var start = new DateOnly(year, month, 1);
+        var end = start.AddMonths(1);
+
+        var tickets = await _db.TimeEntries
+            .AsNoTracking()
+            .Where(e => e.TicketId != null && e.Date >= start && e.Date < end)
+            .Select(e => e.TicketId!.Value)
+            .Distinct()
+            .Join(
+                _db.Tickets.AsNoTracking(),
+                ticketId => ticketId,
+                t => t.Id,
+                (_, t) => t)
+            .OrderBy(t => t.Type)
+            .ThenBy(t => t.ExternalKey)
+            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
+            .ToListAsync();
+
+        return Ok(tickets);
+    }
+
     [HttpPost]
     public async Task<ActionResult<TicketDto>> Create([FromBody] CreateTicketDto dto)
     {

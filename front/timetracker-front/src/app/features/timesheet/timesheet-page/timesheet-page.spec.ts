@@ -35,9 +35,14 @@ describe('TimesheetPageComponent', () => {
   function setup() {
     let capturedUpsert: unknown = null;
     let capturedCreateTicket: unknown = null;
+    const usedByMonthCalls: Array<{ year: number; month: number }> = [];
     const apiMock = {
       getMetadata: () => of(metadata),
       getMonth: () => of(month),
+      getUsedByMonth: (year: number, month: number) => {
+        usedByMonthCalls.push({ year, month });
+        return of(metadata.tickets);
+      },
       createTicket: (dto: unknown) => {
         capturedCreateTicket = dto;
         return of({ id: 99, type: 'DEV', externalKey: null, label: null });
@@ -61,6 +66,7 @@ describe('TimesheetPageComponent', () => {
       unit,
       getCapturedUpsert: () => capturedUpsert,
       getCapturedCreateTicket: () => capturedCreateTicket,
+      getUsedByMonthCalls: () => usedByMonthCalls,
     };
   }
 
@@ -122,5 +128,18 @@ describe('TimesheetPageComponent', () => {
     expect(component.quickPickOptions().map((o) => o.minutes)).toEqual(
       metadata.allowedMinutesHourMode,
     );
+  });
+
+  it('reloads used tickets for the new month when month changes', async () => {
+    const { fixture, component, getUsedByMonthCalls } = setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.month.set(3);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(getUsedByMonthCalls()).toContainEqual({ year: 2026, month: 2 });
+    expect(getUsedByMonthCalls()).toContainEqual({ year: 2026, month: 3 });
   });
 });
