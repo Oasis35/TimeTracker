@@ -1,6 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Tracker.Api.Data;
+using Tracker.Api.Infrastructure;
 using Tracker.Api.Options;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,8 +19,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AngularDev", policy =>
     {
         policy.WithOrigins("http://localhost:4200")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
@@ -26,7 +29,36 @@ builder.Services.Configure<TimeTrackingOptions>(
 
 var app = builder.Build();
 
-// ✅ Ne rien faire en tests (factory contrôle la DB)
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        var exceptionFeature = context.Features.Get<IExceptionHandlerFeature>();
+        var errorCode = ApiErrorCodes.UnknownError;
+        var errorDetail = exceptionFeature?.Error?.ToString();
+        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("GlobalExceptionHandler");
+
+        logger.LogError(
+            exceptionFeature?.Error,
+            "Unhandled exception. Code={Code} Detail={Detail} Method={Method} Path={Path} Query={Query} TraceId={TraceId}",
+            errorCode,
+            errorDetail,
+            context.Request.Method,
+            context.Request.Path,
+            context.Request.QueryString.Value,
+            context.TraceIdentifier);
+
+        context.Response.Clear();
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+
+        var payload = JsonSerializer.Serialize(new ApiErrorResponse(errorCode));
+        await context.Response.WriteAsync(payload);
+    });
+});
+
+// Ne rien faire en tests (factory controle la DB)
 if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
@@ -37,7 +69,7 @@ if (!app.Environment.IsEnvironment("Testing"))
     else
         db.Database.EnsureCreated();
 
-    // ✅ Seed seulement en dev
+    // Seed seulement en dev
     if (app.Environment.IsDevelopment())
     {
         var opts = scope.ServiceProvider.GetRequiredService<IOptions<TimeTrackingOptions>>().Value;
@@ -52,8 +84,8 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // En docker/prod, souvent HTTP only derrière reverse-proxy
-    // Si tu veux forcer HTTPS, fais-le via le reverse proxy (Traefik/Nginx) plutôt.
+    // En docker/prod, souvent HTTP only derriere reverse-proxy
+    // Si tu veux forcer HTTPS, fais-le via le reverse proxy (Traefik/Nginx) plutot.
 }
 
 app.UseCors("AngularDev");

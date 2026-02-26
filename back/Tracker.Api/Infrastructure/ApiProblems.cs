@@ -2,32 +2,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Tracker.Api.Infrastructure;
 
+public sealed record ApiErrorResponse(string Code);
+
 public static class ApiProblems
 {
-    public static ObjectResult BadRequest(
-        ControllerBase controller,
-        string code,
-        string title,
-        string? detail = null,
-        IReadOnlyDictionary<string, object?>? meta = null)
+    public static ObjectResult BadRequest(ControllerBase _, string code)
     {
-        var problem = new ProblemDetails
-        {
-            Status = StatusCodes.Status400BadRequest,
-            Title = title,
-            Detail = detail,
-            Type = "https://httpstatuses.com/400",
-            Instance = controller.HttpContext?.Request?.Path.Value
-        };
-
-        problem.Extensions["code"] = code;
-
-        if (meta is not null)
-        {
-            foreach (var item in meta)
-                problem.Extensions[item.Key] = item.Value;
-        }
-
-        return new ObjectResult(problem) { StatusCode = StatusCodes.Status400BadRequest };
+        var payload = new ApiErrorResponse(code);
+        return new ObjectResult(payload) { StatusCode = StatusCodes.Status400BadRequest };
     }
 }

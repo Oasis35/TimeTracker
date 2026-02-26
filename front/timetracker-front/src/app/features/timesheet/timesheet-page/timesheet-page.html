@@ -1,32 +1,10 @@
 <div class="page-shell">
-  <mat-toolbar class="topbar">
-    <span class="brand">TimeTracker</span>
-    <mat-button-toggle-group
-      class="lang-toggle"
-      [value]="currentLanguage()"
-      (change)="onLanguageChange($event.value)"
-      aria-label="Language"
-    >
-      <mat-button-toggle value="fr">FR</mat-button-toggle>
-      <mat-button-toggle value="en">EN</mat-button-toggle>
-    </mat-button-toggle-group>
-    <mat-button-toggle-group
-      class="unit-toggle"
-      [value]="unitMode()"
-      (change)="unitMode.set($event.value)"
-      [attr.aria-label]="tr('unit_display')"
-    >
-      <mat-button-toggle value="day">{{ tr('day') }}</mat-button-toggle>
-      <mat-button-toggle value="hour">{{ tr('hour') }}</mat-button-toggle>
-    </mat-button-toggle-group>
-  </mat-toolbar>
-
   <section class="content" *ngIf="!loading(); else loadingTpl">
     <ng-container *ngIf="metadataRes.value() as meta">
       <mat-card class="timesheet-card">
           <div class="card-header">
             <div>
-              <h2>{{ tr('tickets_month_title', { month: monthYearLabel() }) }}</h2>
+              <h2>{{ i18n.tr('tickets_month_title', { month: monthYearLabel() }) }}</h2>
             </div>
           </div>
 
@@ -34,19 +12,19 @@
 
           <div class="insights-strip">
             <div class="kpi">
-              <span>{{ tr('kpi_tickets') }}</span>
+              <span>{{ i18n.tr('kpi_tickets') }}</span>
               <strong>{{ displayRows().length }}</strong>
             </div>
             <div class="kpi">
-              <span>{{ tr('kpi_total_month') }}</span>
+              <span>{{ i18n.tr('kpi_total_month') }}</span>
               <strong>{{ formatEntryValue(monthTotalMinutes()) }}</strong>
             </div>
             <div class="kpi">
-              <span>{{ tr('kpi_days_logged') }}</span>
+              <span>{{ i18n.tr('kpi_days_logged') }}</span>
               <strong>{{ workedDaysCount() }}</strong>
             </div>
             <button mat-flat-button type="button" class="open-ticket-dialog" (click)="openAddTicketDialog()">
-              {{ tr('new_ticket') }}
+              {{ i18n.tr('new_ticket') }}
             </button>
           </div>
 
@@ -57,12 +35,12 @@
                 type="button"
                 class="day-shift-btn"
                 (click)="prevWorkday()"
-                [attr.aria-label]="tr('day_previous')"
+                [attr.aria-label]="i18n.tr('day_previous')"
               >
-                {{ tr('day_previous') }}
+                {{ i18n.tr('day_previous') }}
               </button>
               <mat-form-field appearance="outline" class="day-picker-field">
-                <mat-label>{{ tr('day_label') }}</mat-label>
+                <mat-label>{{ i18n.tr('day_label') }}</mat-label>
                 <input
                   matInput
                   [matDatepicker]="picker"
@@ -78,9 +56,9 @@
                 type="button"
                 class="day-shift-btn"
                 (click)="nextWorkday()"
-                [attr.aria-label]="tr('day_next')"
+                [attr.aria-label]="i18n.tr('day_next')"
               >
-                {{ tr('day_next') }}
+                {{ i18n.tr('day_next') }}
               </button>
             </div>
           </div>
@@ -89,7 +67,7 @@
           <div *ngIf="actionError() as err" class="error">{{ err }}</div>
           <div *ngIf="error() as err" class="error">{{ err }}</div>
 
-          <div class="rows" role="table" [attr.aria-label]="tr('rows_aria')">
+          <div class="rows" [attr.aria-label]="i18n.tr('rows_aria')">
             <div class="row ticket-row" *ngFor="let r of displayRows()">
               <div class="ticket-main">
                 <span class="ticket-title">{{ r.type }} {{ r.externalKey }}</span>
@@ -109,7 +87,7 @@
                   </mat-select>
                 </mat-form-field>
                 <div class="week-total">
-                  {{ tr('total_month_row', { value: formatEntryValue(r.total) }) }}
+                  {{ i18n.tr('total_month_row', { value: formatEntryValue(r.total) }) }}
                 </div>
               </div>
             </div>
@@ -120,7 +98,7 @@
           <div class="totals-footer">
             <span>
               {{
-                tr('total_day_footer', {
+                i18n.tr('total_day_footer', {
                   current: formatEntryValue(selectedDayTotalMinutes()),
                   max: formatEntryValue(meta.minutesPerDay),
                 })
@@ -135,37 +113,37 @@
 <ng-template #loadingTpl>
   <div class="loading-wrap">
     <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
-    <span>{{ tr('loading') }}</span>
+    <span>{{ i18n.tr('loading') }}</span>
   </div>
 </ng-template>
 
 <ng-template #ticketDialogTpl>
-  <h2 mat-dialog-title>{{ tr('add_ticket_title') }}</h2>
+  <h2 mat-dialog-title>{{ i18n.tr('add_ticket_title') }}</h2>
   <mat-dialog-content>
     <div class="ticket-dialog-form">
       <mat-form-field appearance="outline">
-        <mat-label>{{ tr('type') }}</mat-label>
+        <mat-label>{{ i18n.tr('type') }}</mat-label>
         <mat-select [value]="newTicketType()" (selectionChange)="onTicketTypeChange($event)">
           <mat-option *ngFor="let type of ticketTypeOptions" [value]="type">{{ type }}</mat-option>
         </mat-select>
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ tr('external_key') }}</mat-label>
+        <mat-label>{{ i18n.tr('external_key') }}</mat-label>
         <input matInput [value]="newTicketExternalKey()" (input)="onTicketExternalInput($event)" />
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>{{ tr('label') }}</mat-label>
+        <mat-label>{{ i18n.tr('label') }}</mat-label>
         <input matInput [value]="newTicketLabel()" (input)="onTicketLabelInput($event)" />
       </mat-form-field>
     </div>
     <div *ngIf="actionError()" class="error dialog-error">{{ actionError() }}</div>
   </mat-dialog-content>
   <mat-dialog-actions align="end">
-    <button mat-button type="button" (click)="closeAddTicketDialog()">{{ tr('cancel') }}</button>
+    <button mat-button type="button" (click)="closeAddTicketDialog()">{{ i18n.tr('cancel') }}</button>
     <button mat-flat-button type="button" (click)="submitTicketDialog()" [disabled]="busy()">
-      {{ tr('add') }}
+      {{ i18n.tr('add') }}
     </button>
   </mat-dialog-actions>
 </ng-template>

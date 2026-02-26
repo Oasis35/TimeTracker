@@ -1,6 +1,6 @@
 import { Injectable, Signal, computed, signal } from '@angular/core';
-import { TRANSLATIONS, TranslationKey } from './translations';
-export type { TranslationKey } from './translations';
+import { TRANSLATIONS, TranslationKey } from '../i18n/translations';
+export type { TranslationKey } from '../i18n/translations';
 
 export type AppLanguage = 'fr' | 'en';
 
@@ -24,5 +24,9 @@ export class I18nService {
     }
 
     return value;
+  }
+
+  tr(key: TranslationKey, params?: Record<string, string | number>): string {
+    return this.t(key, params);
   }
 }

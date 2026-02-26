@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { TrackerApi } from '../../../core/api/tracker-api';
+import { UnitService } from '../../../core/services/unit.service';
 import { TimesheetPageComponent } from './timesheet-page';
 
 describe('TimesheetPageComponent', () => {
@@ -33,10 +34,14 @@ describe('TimesheetPageComponent', () => {
 
   function setup() {
     let capturedUpsert: unknown = null;
+    let capturedCreateTicket: unknown = null;
     const apiMock = {
       getMetadata: () => of(metadata),
       getMonth: () => of(month),
-      createTicket: () => of({ id: 99, type: 'DEV', externalKey: null, label: null }),
+      createTicket: (dto: unknown) => {
+        capturedCreateTicket = dto;
+        return of({ id: 99, type: 'DEV', externalKey: null, label: null });
+      },
       upsertTimeEntry: (dto: unknown) => {
         capturedUpsert = dto;
         return of(void 0);
@@ -49,7 +54,14 @@ describe('TimesheetPageComponent', () => {
     });
 
     const fixture = TestBed.createComponent(TimesheetPageComponent);
-    return { fixture, component: fixture.componentInstance, getCapturedUpsert: () => capturedUpsert };
+    const unit = TestBed.inject(UnitService);
+    return {
+      fixture,
+      component: fixture.componentInstance,
+      unit,
+      getCapturedUpsert: () => capturedUpsert,
+      getCapturedCreateTicket: () => capturedCreateTicket,
+    };
   }
 
   it('renders the new ticket dialog trigger', async () => {
@@ -62,15 +74,16 @@ describe('TimesheetPageComponent', () => {
     expect(button).not.toBeNull();
   });
 
-  it('shows validation error when external key is set without label', async () => {
-    const { component } = setup();
+  it('submits ticket creation and lets backend validate payload', async () => {
+    const { component, getCapturedCreateTicket } = setup();
     component.newTicketType.set('DEV');
     component.newTicketExternalKey.set('ABC-9');
     component.newTicketLabel.set('');
 
     await component.addTicket();
 
-    expect(component.actionError()).toContain('label');
+    const dto = getCapturedCreateTicket() as { type: string; externalKey: string | null; label: string | null };
+    expect(dto).toEqual({ type: 'DEV', externalKey: 'ABC-9', label: null });
   });
 
   it('sends selected minutes when pointing time', async () => {
@@ -86,5 +99,28 @@ describe('TimesheetPageComponent', () => {
     expect(dto?.ticketId).toBe(1);
     expect(dto?.date).toBe('2026-02-02');
     expect(dto?.quantityMinutes).toBe(360);
+  });
+
+  it('uses hour options and formatting when global unit mode is hour', async () => {
+    const { fixture, component, unit } = setup();
+    unit.setUnitMode('hour');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const options = component.quickPickOptions().map((o) => o.minutes);
+    expect(options).toEqual(metadata.allowedMinutesHourMode);
+    expect(component.formatEntryValue(60)).toContain('h');
+  });
+
+  it('does not override selected global unit mode from metadata default', async () => {
+    const { fixture, component, unit } = setup();
+    unit.setUnitMode('hour');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(unit.unitMode()).toBe('hour');
+    expect(component.quickPickOptions().map((o) => o.minutes)).toEqual(
+      metadata.allowedMinutesHourMode,
+    );
   });
 });

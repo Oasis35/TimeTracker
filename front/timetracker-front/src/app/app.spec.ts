@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
+import { UnitService } from './core/services/unit.service';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -19,5 +20,15 @@ describe('App', () => {
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
+  });
+
+  it('should propagate unit mode changes through UnitService', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    const unit = TestBed.inject(UnitService);
+
+    app.onTimeChange('hour');
+
+    expect(unit.unitMode()).toBe('hour');
   });
 });

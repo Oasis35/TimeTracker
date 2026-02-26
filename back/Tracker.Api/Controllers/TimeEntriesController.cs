@@ -102,14 +102,14 @@ public sealed class TimeEntriesController : ControllerBase
     public async Task<IActionResult> Upsert([FromBody] UpsertTimeEntryDto dto)
     {
         if (dto.TicketId <= 0)
-            return ApiProblems.BadRequest(this, "TT_TICKET_ID_INVALID", "L'id du ticket est invalide.");
+            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketIdInvalid);
 
         var ticketExists = await _db.Tickets
             .AsNoTracking()
             .AnyAsync(t => t.Id == dto.TicketId);
 
         if (!ticketExists)
-            return ApiProblems.BadRequest(this, "TT_TICKET_NOT_FOUND", "Le ticket n'existe pas.");
+            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNotFound);
 
         var existing = await _db.TimeEntries
             .SingleOrDefaultAsync(e => e.TicketId == dto.TicketId && e.Date == dto.Date);
@@ -127,7 +127,7 @@ public sealed class TimeEntriesController : ControllerBase
             existingMinutes: existingMinutes);
 
         if (ruleError is not null)
-            return ApiProblems.BadRequest(this, ruleError.Code, ruleError.Title, ruleError.Detail, ruleError.Meta);
+            return ApiProblems.BadRequest(this, ruleError.Code);
 
         if (dto.QuantityMinutes == 0)
         {

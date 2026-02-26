@@ -1,1 +1,22 @@
+<mat-toolbar class="app-topbar">
+  <span class="brand">TimeTracker</span>
+  <mat-button-toggle-group
+    class="lang-toggle"
+    [value]="currentLanguage()"
+    (change)="onLanguageChange($event.value)"
+    aria-label="Language"
+  >
+    <mat-button-toggle value="fr">FR</mat-button-toggle>
+    <mat-button-toggle value="en">EN</mat-button-toggle>
+  </mat-button-toggle-group>
+  <mat-button-toggle-group
+    class="unit-toggle"
+    [value]="unit.unitMode()"
+    (change)="onTimeChange($event.value)"
+    [attr.aria-label]="i18n.tr('unit_display')"
+  >
+    <mat-button-toggle value="day">{{ i18n.tr('day') }}</mat-button-toggle>
+    <mat-button-toggle value="hour">{{ i18n.tr('hour') }}</mat-button-toggle>
+  </mat-button-toggle-group>
+</mat-toolbar>
 <router-outlet />

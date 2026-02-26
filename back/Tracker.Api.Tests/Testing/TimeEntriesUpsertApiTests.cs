@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
-using Microsoft.AspNetCore.Mvc;
+using Tracker.Api.Infrastructure;
 using Tracker.Api.Tests.Testing;
 using Xunit;
 
@@ -52,7 +51,7 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
         var r2 = await ApiTestHelpers.UpsertAsync(_client, t2, "2026-02-24", 180);
         Assert.Equal(HttpStatusCode.BadRequest, r2.StatusCode);
         var p2 = await ReadProblemAsync(r2);
-        Assert.Equal("TT_OVERFLOW_DAY", GetCode(p2));
+        Assert.Equal(ApiErrorCodes.OverflowDay, GetCode(p2));
     }
 
     [Fact]
@@ -83,38 +82,29 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
         var p = await ReadProblemAsync(r);
         var expectedCode = minutes < 0 || minutes > 480
-            ? "TT_MINUTES_OUT_OF_RANGE"
-            : "TT_STEP_15";
+            ? ApiErrorCodes.MinutesOutOfRange
+            : ApiErrorCodes.Step15;
         Assert.Equal(expectedCode, GetCode(p));
     }
 
     [Fact]
-    public async Task Upsert_Should_Return_ProblemDetails_When_Ticket_Not_Found()
+    public async Task Upsert_Should_Return_ErrorCode_When_Ticket_Not_Found()
     {
         var r = await ApiTestHelpers.UpsertAsync(_client, ticketId: 999999, date: "2026-02-27", minutes: 120);
 
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
         var p = await ReadProblemAsync(r);
-        Assert.Equal("TT_TICKET_NOT_FOUND", GetCode(p));
+        Assert.Equal(ApiErrorCodes.TicketNotFound, GetCode(p));
     }
 
-    private static async Task<ProblemDetails> ReadProblemAsync(HttpResponseMessage response)
+    private static async Task<ApiErrorResponse> ReadProblemAsync(HttpResponseMessage response)
     {
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        var problem = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();
         Assert.NotNull(problem);
         return problem!;
     }
 
-    private static string GetCode(ProblemDetails problem)
-    {
-        Assert.True(problem.Extensions.TryGetValue("code", out var raw));
-        return raw switch
-        {
-            string s => s,
-            JsonElement e when e.ValueKind == JsonValueKind.String => e.GetString()!,
-            _ => throw new Xunit.Sdk.XunitException("ProblemDetails.extensions.code is missing or invalid.")
-        };
-    }
+    private static string GetCode(ApiErrorResponse problem) => problem.Code;
 
     private sealed record DayViewDto(
         string Date,

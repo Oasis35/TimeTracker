@@ -1,21 +1,35 @@
 import { CommonModule } from '@angular/common';
-import { Component, Injectable, TemplateRef, ViewChild, computed, effect, resource, signal } from '@angular/core';
+import {
+  Component,
+  Injectable,
+  TemplateRef,
+  ViewChild,
+  computed,
+  effect,
+  resource,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule, NativeDateAdapter } from '@angular/material/core';
+import {
+  DateAdapter,
+  MAT_DATE_LOCALE,
+  MatNativeDateModule,
+  NativeDateAdapter,
+} from '@angular/material/core';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { firstValueFrom } from 'rxjs';
+import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { TrackerApi } from '../../../core/api/tracker-api';
-import { AppLanguage, I18nService, TranslationKey } from '../../../core/i18n/i18n.service';
-import { TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto, UnitMode } from '../../../core/api/models';
+import { I18nService } from '../../../core/services/i18n.service';
+import { UnitService } from '../../../core/services/unit.service';
+import { TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
 
 type MonthRequest = { y: number; m: number };
 type QuickPickOption = { minutes: number; label: string };
@@ -44,7 +58,6 @@ function toIsoDate(date: Date): string {
   imports: [
     CommonModule,
     MatButtonModule,
-    MatButtonToggleModule,
     MatCardModule,
     MatDatepickerModule,
     MatDividerModule,
@@ -54,7 +67,6 @@ function toIsoDate(date: Date): string {
     MatInputModule,
     MatProgressSpinnerModule,
     MatSelectModule,
-    MatToolbarModule,
   ],
   providers: [
     { provide: MAT_DATE_LOCALE, useValue: 'fr-FR' },
@@ -72,7 +84,6 @@ export class TimesheetPageComponent {
 
   readonly year = signal<number>(this.now.getFullYear());
   readonly month = signal<number>(this.now.getMonth() + 1);
-  readonly unitMode = signal<UnitMode>('day');
   readonly selectedDay = signal<string>('');
   readonly ticketTypeOptions = ['DEV', 'SUPPORT', 'CONGES'];
 
@@ -95,7 +106,6 @@ export class TimesheetPageComponent {
   });
 
   readonly loading = computed(() => this.metadataRes.isLoading() || this.monthRes.isLoading());
-  readonly currentLanguage = computed<AppLanguage>(() => this.i18n.language());
   readonly monthYearLabel = computed(() => {
     const date = new Date(this.year(), this.month() - 1, 1);
     const label = new Intl.DateTimeFormat(this.i18n.dateLocale(), {
@@ -104,6 +114,7 @@ export class TimesheetPageComponent {
     }).format(date);
     return label.charAt(0).toUpperCase() + label.slice(1);
   });
+  
   readonly displayRows = computed<TimesheetRowDto[]>(() => {
     const meta = this.metadataRes.value();
     const month = this.monthRes.value();
@@ -136,30 +147,34 @@ export class TimesheetPageComponent {
 
   readonly error = computed(() => {
     const e = this.metadataRes.error() ?? this.monthRes.error();
-    return e ? this.tr('cannot_load_data') : null;
+    return e ? this.i18n.tr('cannot_load_data') : null;
   });
+
   readonly selectedDayTotalMinutes = computed<number>(() => {
     const month = this.monthRes.value();
     const day = this.selectedDay();
     if (!month || !day) return 0;
     return month.totalsByDay?.[day] ?? 0;
   });
+
   readonly monthTotalMinutes = computed<number>(() => {
     const month = this.monthRes.value();
     if (!month) return 0;
     return Object.values(month.totalsByDay ?? {}).reduce((sum, value) => sum + value, 0);
   });
+
   readonly workedDaysCount = computed<number>(() => {
     const month = this.monthRes.value();
     if (!month) return 0;
     return Object.values(month.totalsByDay ?? {}).filter((value) => value > 0).length;
   });
+
   readonly quickPickOptions = computed(() => {
     const meta = this.metadataRes.value();
     if (!meta) return [] as QuickPickOption[];
 
     const allowed =
-      this.unitMode() === 'hour' ? meta.allowedMinutesHourMode : meta.allowedMinutesDayMode;
+      this.unit.unitMode() === 'hour' ? meta.allowedMinutesHourMode : meta.allowedMinutesDayMode;
 
     return allowed.map((minutes) => ({
       minutes,
@@ -175,7 +190,8 @@ export class TimesheetPageComponent {
     private readonly api: TrackerApi,
     private readonly dialog: MatDialog,
     private readonly dateAdapter: DateAdapter<Date>,
-    private readonly i18n: I18nService,
+    readonly i18n: I18nService,
+    readonly unit: UnitService,
   ) {
     effect(() => {
       this.dateAdapter.setLocale(this.i18n.dateLocale());
@@ -184,10 +200,6 @@ export class TimesheetPageComponent {
     effect(() => {
       const meta = this.metadataRes.value();
       if (!meta) return;
-
-      if (this.unitMode() !== meta.defaultUnit) {
-        this.unitMode.set(meta.defaultUnit);
-      }
 
       if (!this.newTicketType().trim()) {
         const defaultType = (meta.defaultType ?? '').toUpperCase();
@@ -215,10 +227,6 @@ export class TimesheetPageComponent {
 
   onTicketTypeChange(event: MatSelectChange): void {
     this.newTicketType.set((event.value ?? '').toString());
-  }
-
-  onLanguageChange(language: AppLanguage): void {
-    this.i18n.setLanguage(language);
   }
 
   onTicketExternalInput(event: Event): void {
@@ -302,7 +310,7 @@ export class TimesheetPageComponent {
     this.clearActionState();
 
     if (!date) {
-      this.actionError.set(this.tr('day_required_before_log'));
+      this.actionError.set(this.i18n.tr('day_required_before_log'));
       return;
     }
 
@@ -316,10 +324,10 @@ export class TimesheetPageComponent {
           comment: null,
         }),
       );
-      this.actionMessage.set(this.tr('time_saved'));
+      this.actionMessage.set(this.i18n.tr('time_saved'));
       this.monthRes.reload();
-    } catch {
-      this.actionError.set(this.tr('cannot_log_time'));
+    } catch (error: unknown) {
+      this.actionError.set(this.i18n.tr(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
     } finally {
       this.busy.set(false);
     }
@@ -331,16 +339,6 @@ export class TimesheetPageComponent {
     const label = this.newTicketLabel().trim();
 
     this.clearActionState();
-
-    if (!type) {
-      this.actionError.set(this.tr('type_required'));
-      return false;
-    }
-
-    if (externalKey && !label) {
-      this.actionError.set(this.tr('label_required_with_external'));
-      return false;
-    }
 
     this.busy.set(true);
     try {
@@ -354,12 +352,14 @@ export class TimesheetPageComponent {
 
       this.newTicketExternalKey.set('');
       this.newTicketLabel.set('');
-      this.actionMessage.set(this.tr('ticket_saved'));
+      this.actionMessage.set(this.i18n.tr('ticket_saved'));
       this.metadataRes.reload();
       this.monthRes.reload();
       return true;
-    } catch {
-      this.actionError.set(this.tr('cannot_create_ticket'));
+    } catch (error: unknown) {
+      this.actionError.set(
+        this.i18n.tr(resolveApiErrorTranslationKey(error, 'cannot_create_ticket')),
+      );
       return false;
     } finally {
       this.busy.set(false);
@@ -371,15 +371,11 @@ export class TimesheetPageComponent {
     return day === 0 || day === 6;
   }
 
-  tr(key: TranslationKey, params?: Record<string, string | number>): string {
-    return this.i18n.t(key, params);
-  }
-
   formatEntryValue(minutes: number): string {
     const meta = this.metadataRes.value();
     if (!meta) return `${minutes} min`;
 
-    if (this.unitMode() === 'hour') {
+    if (this.unit.unitMode() === 'hour') {
       const value = (minutes / 60).toFixed(2).replace('.', ',');
       return `${value} h`;
     }

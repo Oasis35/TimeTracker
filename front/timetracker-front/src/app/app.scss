@@ -1,0 +1,54 @@
+.app-topbar {
+  height: 78px;
+  min-height: 78px;
+  padding: 0 1rem;
+  position: relative;
+  display: block;
+  color: var(--mat-sys-on-primary);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--mat-sys-primary) 92%, #000) 0%,
+    color-mix(in srgb, var(--mat-sys-primary) 78%, #fff) 100%
+  );
+  box-shadow: var(--mat-sys-level2);
+}
+
+.brand {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 1;
+  font-size: 1.6rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.lang-toggle {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+}
+
+.unit-toggle {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  --mat-standard-button-toggle-height: 38px;
+  --mat-standard-button-toggle-selected-state-background-color: color-mix(
+    in srgb,
+    var(--mat-sys-primary-container) 72%,
+    #fff
+  );
+  --mat-standard-button-toggle-selected-state-text-color: var(--mat-sys-on-primary-container);
+}
+
+@media (max-width: 1050px) {
+  .brand {
+    font-size: 1.25rem;
+  }
+}

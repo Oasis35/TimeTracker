@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Tracker.Api.Controllers;
 using Tracker.Api.Dtos.Tickets;
+using Tracker.Api.Infrastructure;
 using Tracker.Api.Models;
 using Tracker.Api.Tests.Testing;
 using Xunit;
@@ -68,9 +69,8 @@ public sealed class TicketsControllerTests
 
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
-        var problem = Assert.IsType<ProblemDetails>(bad.Value);
-        Assert.Equal("Type obligatoire.", problem.Title);
-        Assert.Equal("TT_TICKET_TYPE_REQUIRED", problem.Extensions["code"]);
+        var error = Assert.IsType<ApiErrorResponse>(bad.Value);
+        Assert.Equal(ApiErrorCodes.TicketTypeRequired, error.Code);
     }
 
     [Fact]
@@ -86,9 +86,8 @@ public sealed class TicketsControllerTests
 
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
-        var problem = Assert.IsType<ProblemDetails>(bad.Value);
-        Assert.Equal("Label obligatoire si ExternalKey est renseignee.", problem.Title);
-        Assert.Equal("TT_TICKET_LABEL_REQUIRED", problem.Extensions["code"]);
+        var error = Assert.IsType<ApiErrorResponse>(bad.Value);
+        Assert.Equal(ApiErrorCodes.TicketLabelRequired, error.Code);
     }
 
     [Fact]
@@ -188,14 +187,14 @@ public sealed class TicketsControllerTests
         var r1 = await controller.GetTotals(year: 2026, month: null);
         var bad1 = Assert.IsType<ObjectResult>(r1.Result);
         Assert.Equal(400, bad1.StatusCode);
-        var p1 = Assert.IsType<ProblemDetails>(bad1.Value);
-        Assert.Equal("TT_FILTER_YEAR_MONTH_REQUIRED", p1.Extensions["code"]);
+        var p1 = Assert.IsType<ApiErrorResponse>(bad1.Value);
+        Assert.Equal(ApiErrorCodes.FilterYearMonthRequired, p1.Code);
 
         var r2 = await controller.GetTotals(year: null, month: 2);
         var bad2 = Assert.IsType<ObjectResult>(r2.Result);
         Assert.Equal(400, bad2.StatusCode);
-        var p2 = Assert.IsType<ProblemDetails>(bad2.Value);
-        Assert.Equal("TT_FILTER_YEAR_MONTH_REQUIRED", p2.Extensions["code"]);
+        var p2 = Assert.IsType<ApiErrorResponse>(bad2.Value);
+        Assert.Equal(ApiErrorCodes.FilterYearMonthRequired, p2.Code);
     }
 
     [Theory]
@@ -212,9 +211,8 @@ public sealed class TicketsControllerTests
         var r = await controller.GetTotals(year: 2026, month: month);
         var bad = Assert.IsType<ObjectResult>(r.Result);
         Assert.Equal(400, bad.StatusCode);
-        var problem = Assert.IsType<ProblemDetails>(bad.Value);
-        Assert.Equal("month invalide.", problem.Title);
-        Assert.Equal("TT_MONTH_INVALID", problem.Extensions["code"]);
+        var error = Assert.IsType<ApiErrorResponse>(bad.Value);
+        Assert.Equal(ApiErrorCodes.MonthInvalid, error.Code);
     }
 
     [Fact]

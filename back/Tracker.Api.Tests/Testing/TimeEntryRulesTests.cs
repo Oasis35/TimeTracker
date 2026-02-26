@@ -1,4 +1,5 @@
 using Tracker.Api.Services;
+using Tracker.Api.Infrastructure;
 using Xunit;
 
 namespace Tracker.Api.Tests;
@@ -29,7 +30,7 @@ public sealed class TimeEntryRulesTests
             existingMinutes: 0);
 
         Assert.NotNull(error);
-        Assert.Equal("TT_TICKET_ID_INVALID", error!.Code);
+        Assert.Equal(ApiErrorCodes.TicketIdInvalid, error!.Code);
     }
 
     [Fact]
@@ -43,7 +44,7 @@ public sealed class TimeEntryRulesTests
             existingMinutes: 0);
 
         Assert.NotNull(error);
-        Assert.Equal("TT_STEP_15", error!.Code);
+        Assert.Equal(ApiErrorCodes.Step15, error!.Code);
     }
 
     [Fact]
@@ -57,6 +58,6 @@ public sealed class TimeEntryRulesTests
             existingMinutes: 0);
 
         Assert.NotNull(error);
-        Assert.Equal("TT_OVERFLOW_DAY", error!.Code);
+        Assert.Equal(ApiErrorCodes.OverflowDay, error!.Code);
     }
 }
