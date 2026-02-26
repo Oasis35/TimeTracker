@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { UnitService } from '../../../core/services/unit.service';
@@ -34,14 +35,16 @@ describe('TimesheetPageComponent', () => {
 
   function setup() {
     let capturedUpsert: unknown = null;
-    let capturedCreateTicket: unknown = null;
+    const usedByMonthCalls: Array<{ year: number; month: number }> = [];
     const apiMock = {
       getMetadata: () => of(metadata),
       getMonth: () => of(month),
-      createTicket: (dto: unknown) => {
-        capturedCreateTicket = dto;
-        return of({ id: 99, type: 'DEV', externalKey: null, label: null });
+      getUsedByMonth: (year: number, month: number) => {
+        usedByMonthCalls.push({ year, month });
+        return of(metadata.tickets);
       },
+      getTicketTotals: () =>
+        of([{ ticketId: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1', total: 120 }]),
       upsertTimeEntry: (dto: unknown) => {
         capturedUpsert = dto;
         return of(void 0);
@@ -49,7 +52,10 @@ describe('TimesheetPageComponent', () => {
     };
 
     TestBed.configureTestingModule({
-      imports: [TimesheetPageComponent],
+      imports: [
+        TimesheetPageComponent,
+        TranslateModule.forRoot(),
+      ],
       providers: [{ provide: TrackerApi, useValue: apiMock }],
     });
 
@@ -60,7 +66,7 @@ describe('TimesheetPageComponent', () => {
       component: fixture.componentInstance,
       unit,
       getCapturedUpsert: () => capturedUpsert,
-      getCapturedCreateTicket: () => capturedCreateTicket,
+      getUsedByMonthCalls: () => usedByMonthCalls,
     };
   }
 
@@ -72,18 +78,6 @@ describe('TimesheetPageComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const button = compiled.querySelector('.open-ticket-dialog');
     expect(button).not.toBeNull();
-  });
-
-  it('submits ticket creation and lets backend validate payload', async () => {
-    const { component, getCapturedCreateTicket } = setup();
-    component.newTicketType.set('DEV');
-    component.newTicketExternalKey.set('ABC-9');
-    component.newTicketLabel.set('');
-
-    await component.addTicket();
-
-    const dto = getCapturedCreateTicket() as { type: string; externalKey: string | null; label: string | null };
-    expect(dto).toEqual({ type: 'DEV', externalKey: 'ABC-9', label: null });
   });
 
   it('sends selected minutes when pointing time', async () => {
@@ -122,5 +116,18 @@ describe('TimesheetPageComponent', () => {
     expect(component.quickPickOptions().map((o) => o.minutes)).toEqual(
       metadata.allowedMinutesHourMode,
     );
+  });
+
+  it('reloads used tickets for the new month when month changes', async () => {
+    const { fixture, component, getUsedByMonthCalls } = setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.month.set(3);
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(getUsedByMonthCalls()).toContainEqual({ year: 2026, month: 2 });
+    expect(getUsedByMonthCalls()).toContainEqual({ year: 2026, month: 3 });
   });
 });

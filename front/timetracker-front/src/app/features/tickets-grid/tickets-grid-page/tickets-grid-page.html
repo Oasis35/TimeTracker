@@ -1,0 +1,220 @@
+<div class="page-shell">
+  <mat-card class="grid-card">
+    <div class="header-row">
+      <div>
+        <h2>{{ 'grid_title' | translate }}</h2>
+      </div>
+      <div class="header-actions">
+        @if (!loading() && !error()) {
+          <mat-form-field appearance="outline" class="completion-filter">
+            <mat-label>{{ 'completed_filter' | translate }}</mat-label>
+            <mat-select
+              [value]="completionFilter()"
+              (valueChange)="onCompletionFilterChange($event)"
+            >
+              <mat-option value="open">{{ 'completed_filter_open' | translate }}</mat-option>
+              <mat-option value="completed">{{ 'completed_filter_completed' | translate }}</mat-option>
+              <mat-option value="all">{{ 'completed_filter_all' | translate }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="grid-filter">
+            <mat-label>{{ 'filter' | translate }}</mat-label>
+            <input matInput (input)="onFilterInput($event)" />
+          </mat-form-field>
+        }
+        <button
+          mat-icon-button
+          type="button"
+          class="create-ticket-btn"
+          (click)="openAddTicketDialog()"
+          [attr.aria-label]="'new_ticket' | translate"
+          [matTooltip]="'new_ticket' | translate"
+        >
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-wrap">
+        <mat-progress-spinner mode="indeterminate" diameter="36"></mat-progress-spinner>
+        <span>{{ 'loading' | translate }}</span>
+      </div>
+    } @else if (error()) {
+      <div class="error">{{ error() }}</div>
+    } @else {
+      @if (actionMessage()) {
+        <div class="ok">{{ actionMessage() }}</div>
+      }
+      @if (actionError()) {
+        <div class="error">{{ actionError() }}</div>
+      }
+
+      <div class="table-wrap">
+        <table mat-table [dataSource]="tableDataSource" matSort>
+          <ng-container matColumnDef="externalKey">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'external_key' | translate }}</th>
+            <td mat-cell *matCellDef="let row">
+              @if (isEditing(row.id)) {
+                <input
+                  class="inline-editor"
+                  [value]="editDraft().externalKey"
+                  (input)="onInlineEditInput('externalKey', $event)"
+                />
+              } @else {
+                {{ row.externalKey || '-' }}
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'type' | translate }}</th>
+            <td mat-cell *matCellDef="let row">
+              @if (isEditing(row.id)) {
+                <select
+                  class="inline-editor"
+                  [value]="editDraft().type"
+                  (change)="onInlineEditInput('type', $event)"
+                >
+                  @for (type of typeOptions(); track type) {
+                    <option [value]="type">{{ type }}</option>
+                  }
+                </select>
+              } @else {
+                {{ row.type }}
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="label">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ 'label' | translate }}</th>
+            <td mat-cell *matCellDef="let row">
+              @if (isEditing(row.id)) {
+                <input
+                  class="inline-editor inline-editor-label"
+                  [value]="editDraft().label"
+                  (input)="onInlineEditInput('label', $event)"
+                />
+              } @else {
+                {{ row.label || '-' }}
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="loggedTime">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ loggedTimeHeader() }}</th>
+            <td mat-cell *matCellDef="let row">{{ formatLoggedTime(row.totalMinutes) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="completed">
+            <th mat-header-cell *matHeaderCellDef>{{ 'completed' | translate }}</th>
+            <td mat-cell *matCellDef="let row">
+              <button
+                mat-icon-button
+                type="button"
+                class="action-btn"
+                [class.action-completed]="row.isCompleted"
+                [class.action-open]="!row.isCompleted"
+                [matTooltip]="(row.isCompleted ? 'mark_open' : 'mark_completed') | translate"
+                [attr.aria-label]="(row.isCompleted ? 'mark_open' : 'mark_completed') | translate"
+                (click)="toggleCompletion(row)"
+                [disabled]="
+                  completionTicketId() === row.id ||
+                  deletingTicketId() === row.id ||
+                  isEditing(row.id) ||
+                  (!row.isCompleted && row.totalMinutes <= 0)
+                "
+              >
+                <mat-icon>{{ row.isCompleted ? 'task_alt' : 'radio_button_unchecked' }}</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let row">
+              <div class="row-actions">
+                @if (isEditing(row.id)) {
+                  <button
+                    mat-icon-button
+                    type="button"
+                    class="action-btn action-save"
+                    [matTooltip]="'save_ticket' | translate"
+                    [attr.aria-label]="'save_ticket' | translate"
+                    (click)="saveInlineEdit(row)"
+                    [disabled]="savingTicketId() === row.id"
+                  >
+                    <mat-icon>check</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    type="button"
+                    class="action-btn action-cancel"
+                    [matTooltip]="'cancel_edit' | translate"
+                    [attr.aria-label]="'cancel_edit' | translate"
+                    (click)="cancelInlineEdit()"
+                    [disabled]="savingTicketId() === row.id"
+                  >
+                    <mat-icon>close</mat-icon>
+                  </button>
+                } @else {
+                  <button
+                    mat-icon-button
+                    type="button"
+                    class="action-btn action-edit"
+                    [matTooltip]="
+                      row.isCompleted ? ('ticket_completed_locked' | translate) : ('edit_ticket' | translate)
+                    "
+                    [attr.aria-label]="'edit_ticket' | translate"
+                    (click)="startInlineEdit(row)"
+                    [disabled]="
+                      row.isCompleted || deletingTicketId() === row.id || completionTicketId() === row.id
+                    "
+                  >
+                    <mat-icon>edit</mat-icon>
+                  </button>
+
+                  <span
+                    class="delete-btn-wrap"
+                    [matTooltip]="
+                      row.isCompleted
+                        ? ('ticket_completed_locked' | translate)
+                        : row.totalMinutes > 0
+                          ? ('delete_disabled_has_time' | translate)
+                          : ''
+                    "
+                    [matTooltipDisabled]="!row.isCompleted && row.totalMinutes <= 0"
+                  >
+                    <button
+                      mat-icon-button
+                      type="button"
+                      class="action-btn action-delete"
+                      (click)="deleteTicket(row)"
+                      [disabled]="
+                        deletingTicketId() === row.id ||
+                        completionTicketId() === row.id ||
+                        row.totalMinutes > 0 ||
+                        row.isCompleted
+                      "
+                      [attr.aria-label]="'delete_ticket' | translate"
+                    >
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </span>
+                }
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+      <mat-paginator
+        [pageSize]="10"
+        [pageSizeOptions]="pageSizeOptions"
+        [showFirstLastButtons]="true"
+      ></mat-paginator>
+    }
+  </mat-card>
+</div>

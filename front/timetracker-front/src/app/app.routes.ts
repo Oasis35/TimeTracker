@@ -8,5 +8,12 @@ export const routes: Routes = [
         (m) => m.TimesheetPageComponent,
       ),
   },
+  {
+    path: 'tickets-grid',
+    loadComponent: () =>
+      import('./features/tickets-grid/tickets-grid-page/tickets-grid-page').then(
+        (m) => m.TicketsGridPageComponent,
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];

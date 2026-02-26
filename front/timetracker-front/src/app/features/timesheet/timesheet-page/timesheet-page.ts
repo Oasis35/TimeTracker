@@ -1,19 +1,10 @@
 import { CommonModule } from '@angular/common';
-import {
-  Component,
-  Injectable,
-  TemplateRef,
-  ViewChild,
-  computed,
-  effect,
-  resource,
-  signal,
-} from '@angular/core';
+import { Component, Injectable, computed, effect, resource, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import {
   DateAdapter,
@@ -23,16 +14,26 @@ import {
 } from '@angular/material/core';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectChange, MatSelectModule } from '@angular/material/select';
+import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { TrackerApi } from '../../../core/api/tracker-api';
-import { I18nService } from '../../../core/services/i18n.service';
+import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
+import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
-import { TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
+import {
+  TicketDto,
+  TicketTotalDto,
+  TimesheetMetadataDto,
+  TimesheetMonthDto,
+  TimesheetRowDto,
+} from '../../../core/api/models';
 
 type MonthRequest = { y: number; m: number };
 type QuickPickOption = { minutes: number; label: string };
+type DisplayRow = TimesheetRowDto & { ticketTotal: number; isCompleted: boolean };
 
 @Injectable()
 class IsoMondayDateAdapter extends NativeDateAdapter {
@@ -67,6 +68,8 @@ function toIsoDate(date: Date): string {
     MatInputModule,
     MatProgressSpinnerModule,
     MatSelectModule,
+    MatTooltipModule,
+    TranslateModule,
   ],
   providers: [
     { provide: MAT_DATE_LOCALE, useValue: 'fr-FR' },
@@ -76,24 +79,17 @@ function toIsoDate(date: Date): string {
   styleUrl: './timesheet-page.scss',
 })
 export class TimesheetPageComponent {
-  @ViewChild('ticketDialogTpl') ticketDialogTpl?: TemplateRef<unknown>;
-
   private readonly now = new Date();
   private readonly todayIso = toIsoDate(this.now);
-  private ticketDialogRef?: MatDialogRef<unknown>;
 
   readonly year = signal<number>(this.now.getFullYear());
   readonly month = signal<number>(this.now.getMonth() + 1);
   readonly selectedDay = signal<string>('');
-  readonly ticketTypeOptions = ['DEV', 'SUPPORT', 'CONGES'];
-
-  readonly newTicketType = signal<string>('');
-  readonly newTicketExternalKey = signal<string>('');
-  readonly newTicketLabel = signal<string>('');
 
   readonly actionMessage = signal<string>('');
   readonly actionError = signal<string>('');
   readonly busy = signal<boolean>(false);
+  readonly language = signal<AppLanguage>('fr');
 
   readonly metadataRes = resource<TimesheetMetadataDto, number>({
     params: () => 0,
@@ -105,49 +101,73 @@ export class TimesheetPageComponent {
     loader: ({ params }) => firstValueFrom(this.api.getMonth(params.y, params.m)),
   });
 
-  readonly loading = computed(() => this.metadataRes.isLoading() || this.monthRes.isLoading());
+  readonly usedTicketsRes = resource<TicketDto[], MonthRequest>({
+    params: () => ({ y: this.year(), m: this.month() }),
+    loader: ({ params }) => firstValueFrom(this.api.getUsedByMonth(params.y, params.m)),
+  });
+
+  readonly ticketTotalsRes = resource<TicketTotalDto[], number>({
+    params: () => 0,
+    loader: () => firstValueFrom(this.api.getTicketTotals()),
+  });
+
+  readonly loading = computed(() =>
+    this.metadataRes.isLoading() ||
+    this.monthRes.isLoading() ||
+    this.usedTicketsRes.isLoading() ||
+    this.ticketTotalsRes.isLoading(),
+  );
   readonly monthYearLabel = computed(() => {
     const date = new Date(this.year(), this.month() - 1, 1);
-    const label = new Intl.DateTimeFormat(this.i18n.dateLocale(), {
+    const label = new Intl.DateTimeFormat(this.dateLocale(), {
       month: 'long',
       year: 'numeric',
     }).format(date);
     return label.charAt(0).toUpperCase() + label.slice(1);
   });
-  
-  readonly displayRows = computed<TimesheetRowDto[]>(() => {
-    const meta = this.metadataRes.value();
+
+  readonly displayRows = computed<DisplayRow[]>(() => {
+    const usedTickets = this.usedTicketsRes.value();
     const month = this.monthRes.value();
-    if (!meta || !month) return [];
+    const totals = this.ticketTotalsRes.value();
+    if (!usedTickets || !month) return [];
+
+    const totalsByTicketId = new Map<number, number>();
+    for (const row of totals ?? []) {
+      totalsByTicketId.set(row.ticketId, row.total);
+    }
 
     const rowsByTicketId = new Map<number, TimesheetRowDto>();
     for (const row of month.rows) {
       rowsByTicketId.set(row.ticketId, row);
     }
 
-    const merged: TimesheetRowDto[] = [];
-    for (const ticket of meta.tickets) {
+    return usedTickets.map((ticket) => {
       const existing = rowsByTicketId.get(ticket.id);
       if (existing) {
-        merged.push(existing);
-      } else {
-        merged.push({
-          ticketId: ticket.id,
-          type: ticket.type,
-          externalKey: ticket.externalKey ?? '',
-          label: ticket.label ?? '',
-          values: {},
-          total: 0,
-        });
+        return {
+          ...existing,
+          ticketTotal: totalsByTicketId.get(ticket.id) ?? 0,
+          isCompleted: ticket.isCompleted,
+        };
       }
-    }
 
-    return merged;
+      return {
+        ticketId: ticket.id,
+        type: ticket.type,
+        externalKey: ticket.externalKey ?? '',
+        label: ticket.label ?? '',
+        values: {},
+        ticketTotal: totalsByTicketId.get(ticket.id) ?? 0,
+        isCompleted: ticket.isCompleted,
+      };
+    });
   });
 
   readonly error = computed(() => {
-    const e = this.metadataRes.error() ?? this.monthRes.error();
-    return e ? this.i18n.tr('cannot_load_data') : null;
+    this.language();
+    const e = this.metadataRes.error() ?? this.monthRes.error() ?? this.usedTicketsRes.error();
+    return e ? this.translate.instant('cannot_load_data') : null;
   });
 
   readonly selectedDayTotalMinutes = computed<number>(() => {
@@ -169,9 +189,9 @@ export class TimesheetPageComponent {
     return Object.values(month.totalsByDay ?? {}).filter((value) => value > 0).length;
   });
 
-  readonly quickPickOptions = computed(() => {
+  readonly quickPickOptions = computed<QuickPickOption[]>(() => {
     const meta = this.metadataRes.value();
-    if (!meta) return [] as QuickPickOption[];
+    if (!meta) return [];
 
     const allowed =
       this.unit.unitMode() === 'hour' ? meta.allowedMinutesHourMode : meta.allowedMinutesDayMode;
@@ -190,23 +210,18 @@ export class TimesheetPageComponent {
     private readonly api: TrackerApi,
     private readonly dialog: MatDialog,
     private readonly dateAdapter: DateAdapter<Date>,
-    readonly i18n: I18nService,
+    private readonly translate: TranslateService,
     readonly unit: UnitService,
   ) {
-    effect(() => {
-      this.dateAdapter.setLocale(this.i18n.dateLocale());
+    const initial =
+      (this.translate.currentLang || this.translate.defaultLang || 'fr') as AppLanguage;
+    this.language.set(initial);
+    this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
+      this.language.set(event.lang as AppLanguage);
     });
 
     effect(() => {
-      const meta = this.metadataRes.value();
-      if (!meta) return;
-
-      if (!this.newTicketType().trim()) {
-        const defaultType = (meta.defaultType ?? '').toUpperCase();
-        this.newTicketType.set(
-          this.ticketTypeOptions.includes(defaultType) ? defaultType : this.ticketTypeOptions[0],
-        );
-      }
+      this.dateAdapter.setLocale(this.dateLocale());
     });
 
     effect(() => {
@@ -223,20 +238,6 @@ export class TimesheetPageComponent {
           : firstWeekday;
       this.selectedDay.set(defaultDay);
     });
-  }
-
-  onTicketTypeChange(event: MatSelectChange): void {
-    this.newTicketType.set((event.value ?? '').toString());
-  }
-
-  onTicketExternalInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value ?? '';
-    this.newTicketExternalKey.set(value);
-  }
-
-  onTicketLabelInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value ?? '';
-    this.newTicketLabel.set(value);
   }
 
   setSelectedDay(day: string): void {
@@ -285,23 +286,18 @@ export class TimesheetPageComponent {
   }
 
   openAddTicketDialog(): void {
-    if (!this.ticketDialogTpl) return;
-    this.actionError.set('');
-    this.ticketDialogRef = this.dialog.open(this.ticketDialogTpl, {
+    const dialogRef = this.dialog.open(AddTicketDialogComponent, {
       width: '560px',
       maxWidth: '95vw',
     });
-  }
-
-  closeAddTicketDialog(): void {
-    this.ticketDialogRef?.close();
-  }
-
-  async submitTicketDialog(): Promise<void> {
-    const success = await this.addTicket();
-    if (success) {
-      this.ticketDialogRef?.close();
-    }
+    dialogRef.afterClosed().subscribe((created) => {
+      if (!created) return;
+      this.actionMessage.set(this.translate.instant('ticket_saved'));
+      this.metadataRes.reload();
+      this.monthRes.reload();
+      this.usedTicketsRes.reload();
+      this.ticketTotalsRes.reload();
+    });
   }
 
   async pointMinutes(ticketId: number, quantityMinutes: number): Promise<void> {
@@ -310,7 +306,7 @@ export class TimesheetPageComponent {
     this.clearActionState();
 
     if (!date) {
-      this.actionError.set(this.i18n.tr('day_required_before_log'));
+      this.actionError.set(this.translate.instant('day_required_before_log'));
       return;
     }
 
@@ -324,43 +320,14 @@ export class TimesheetPageComponent {
           comment: null,
         }),
       );
-      this.actionMessage.set(this.i18n.tr('time_saved'));
+      this.actionMessage.set(this.translate.instant('time_saved'));
       this.monthRes.reload();
-    } catch (error: unknown) {
-      this.actionError.set(this.i18n.tr(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
-    } finally {
-      this.busy.set(false);
-    }
-  }
-
-  async addTicket(): Promise<boolean> {
-    const type = this.newTicketType().trim();
-    const externalKey = this.newTicketExternalKey().trim();
-    const label = this.newTicketLabel().trim();
-
-    this.clearActionState();
-
-    this.busy.set(true);
-    try {
-      await firstValueFrom(
-        this.api.createTicket({
-          type,
-          externalKey: externalKey || null,
-          label: label || null,
-        }),
-      );
-
-      this.newTicketExternalKey.set('');
-      this.newTicketLabel.set('');
-      this.actionMessage.set(this.i18n.tr('ticket_saved'));
-      this.metadataRes.reload();
-      this.monthRes.reload();
-      return true;
+      this.usedTicketsRes.reload();
+      this.ticketTotalsRes.reload();
     } catch (error: unknown) {
       this.actionError.set(
-        this.i18n.tr(resolveApiErrorTranslationKey(error, 'cannot_create_ticket')),
+        this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')),
       );
-      return false;
     } finally {
       this.busy.set(false);
     }
@@ -386,5 +353,9 @@ export class TimesheetPageComponent {
 
   getCellMinutes(row: { values: Record<string, number> }, dayIso: string): number {
     return row.values?.[dayIso] ?? 0;
+  }
+
+  private dateLocale(): string {
+    return this.language() === 'fr' ? 'fr-FR' : 'en-US';
   }
 }

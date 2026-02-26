@@ -84,8 +84,7 @@ public sealed class TimesheetController : ControllerBase
                     ExternalKey = externalKey,
                     Label = t.Label ?? "",
                     TicketKey = ticketKey,
-                    Values = completeValues,
-                    Total = completeValues.Values.Sum()
+                    Values = completeValues
                 };
             })
             .OrderBy(r => r.Type)
@@ -139,7 +138,7 @@ public sealed class TimesheetController : ControllerBase
             .AsNoTracking()
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
-            .Select(t => new Tracker.Api.Dtos.Tickets.TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
+            .Select(t => new Tracker.Api.Dtos.Tickets.TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
             .ToListAsync();
 
         return Ok(new TimesheetMetadataDto(

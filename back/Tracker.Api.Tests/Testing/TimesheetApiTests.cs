@@ -58,6 +58,5 @@ public sealed class TimesheetApiTests : IClassFixture<TrackerApiFactory>
         string ExternalKey,
         string Label,
         string TicketKey,
-        Dictionary<string, int> Values,
-        int Total);
+        Dictionary<string, int> Values);
 }

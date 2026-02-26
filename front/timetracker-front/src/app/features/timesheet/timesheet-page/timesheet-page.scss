@@ -7,55 +7,6 @@
   );
 }
 
-.topbar {
-  height: 78px;
-  min-height: 78px;
-  padding: 0 1rem;
-  position: relative;
-  display: block;
-  color: var(--mat-sys-on-primary);
-  background: linear-gradient(
-    120deg,
-    color-mix(in srgb, var(--mat-sys-primary) 92%, #000) 0%,
-    color-mix(in srgb, var(--mat-sys-primary) 78%, #fff) 100%
-  );
-  box-shadow: var(--mat-sys-level2);
-}
-
-.brand {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  line-height: 1;
-  font-size: 1.6rem;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-}
-
-.lang-toggle {
-  position: absolute;
-  left: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  margin: 0;
-}
-
-.unit-toggle {
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  margin: 0;
-  --mat-standard-button-toggle-height: 38px;
-  --mat-standard-button-toggle-selected-state-background-color: color-mix(
-    in srgb,
-    var(--mat-sys-primary-container) 72%,
-    #fff
-  );
-  --mat-standard-button-toggle-selected-state-text-color: var(--mat-sys-on-primary-container);
-}
-
 .content {
   max-width: 1160px;
   margin: 1.35rem auto;
@@ -141,7 +92,8 @@
 }
 
 .day-shift-btn {
-  min-height: 36px;
+  height: 56px;
+  min-height: 56px;
   min-width: 0;
   padding-inline: 0.5rem;
   font-size: 0.82rem;
@@ -224,17 +176,6 @@
   justify-content: center;
   align-items: center;
   gap: 0.75rem;
-}
-
-.ticket-dialog-form {
-  padding-top: 0.3rem;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.5rem;
-}
-
-.dialog-error {
-  margin: 0.2rem 0 0;
 }
 
 @media (max-width: 1050px) {

@@ -5,6 +5,15 @@ export interface TicketDto {
   type: string;
   externalKey?: string | null;
   label?: string | null;
+  isCompleted: boolean;
+}
+
+export interface TicketTotalDto {
+  ticketId: number;
+  type: string;
+  externalKey: string;
+  label: string;
+  total: number;
 }
 
 export interface CreateTicketDto {
@@ -29,7 +38,6 @@ export interface TimesheetRowDto {
   externalKey: string;
   label: string;
   values: Record<string, number>;
-  total: number;
 }
 
 export interface TimesheetMonthDto {

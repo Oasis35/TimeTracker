@@ -7,5 +7,4 @@ public sealed class TimesheetRowDto
     public string TicketKey { get; set; } = "";
 
     public Dictionary<DateOnly, int> Values { get; set; } = new();
-    public int Total { get; set; }
 }

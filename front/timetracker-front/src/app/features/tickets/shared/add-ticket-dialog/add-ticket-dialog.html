@@ -1,0 +1,44 @@
+<h2 mat-dialog-title>{{ 'add_ticket_title' | translate }}</h2>
+<mat-dialog-content>
+  <div class="ticket-dialog-form">
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'type' | translate }}</mat-label>
+      <mat-select
+        [value]="newTicketType()"
+        (selectionChange)="onTicketTypeChange($event)"
+      >
+        @for (type of ticketTypeOptions; track type) {
+          <mat-option [value]="type">{{ type }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'external_key' | translate }}</mat-label>
+      <input
+        matInput
+        [value]="newTicketExternalKey()"
+        (input)="onTicketExternalInput($event)"
+      />
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'label' | translate }}</mat-label>
+      <input
+        matInput
+        [value]="newTicketLabel()"
+        (input)="onTicketLabelInput($event)"
+      />
+    </mat-form-field>
+  </div>
+
+  @if (actionError()) {
+    <div class="error dialog-error">{{ actionError() }}</div>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="close()">{{ 'cancel' | translate }}</button>
+  <button mat-flat-button type="button" (click)="submit()" [disabled]="busy()">
+    {{ 'add' | translate }}
+  </button>
+</mat-dialog-actions>

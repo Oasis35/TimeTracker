@@ -1,5 +1,7 @@
 namespace Tracker.Api.Dtos.Tickets;
 
-public sealed record TicketDto(int Id, string Type, string? ExternalKey, string? Label);
+public sealed record TicketDto(int Id, string Type, string? ExternalKey, string? Label, bool IsCompleted);
 
 public sealed record CreateTicketDto(string Type, string? ExternalKey, string? Label);
+
+public sealed record SetTicketCompletionDto(bool IsCompleted);

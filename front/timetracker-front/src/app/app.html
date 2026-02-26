@@ -5,6 +5,7 @@
     [value]="currentLanguage()"
     (change)="onLanguageChange($event.value)"
     aria-label="Language"
+    hideSingleSelectionIndicator
   >
     <mat-button-toggle value="fr">FR</mat-button-toggle>
     <mat-button-toggle value="en">EN</mat-button-toggle>
@@ -13,10 +14,19 @@
     class="unit-toggle"
     [value]="unit.unitMode()"
     (change)="onTimeChange($event.value)"
-    [attr.aria-label]="i18n.tr('unit_display')"
+    [attr.aria-label]="'unit_display' | translate"
+    hideSingleSelectionIndicator
   >
-    <mat-button-toggle value="day">{{ i18n.tr('day') }}</mat-button-toggle>
-    <mat-button-toggle value="hour">{{ i18n.tr('hour') }}</mat-button-toggle>
+    <mat-button-toggle value="day">{{ 'day' | translate }}</mat-button-toggle>
+    <mat-button-toggle value="hour">{{ 'hour' | translate }}</mat-button-toggle>
   </mat-button-toggle-group>
+  <div class="nav-links">
+    <a mat-stroked-button class="nav-link" routerLink="/">
+      {{ 'timesheet_nav' | translate }}
+    </a>
+    <a mat-stroked-button class="nav-link" routerLink="/tickets-grid">
+      {{ 'grid_view' | translate }}
+    </a>
+  </div>
 </mat-toolbar>
 <router-outlet />
