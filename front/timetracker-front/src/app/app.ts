@@ -1,13 +1,13 @@
 import { Component, computed } from '@angular/core';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { RouterOutlet } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AppLanguage, I18nService } from './core/services/i18n.service';
 import { UnitService, TimeUnit } from './core/services/unit.service';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, MatToolbarModule, MatButtonToggleModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatToolbarModule, MatButtonToggleModule],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

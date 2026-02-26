@@ -1,0 +1,249 @@
+.page-shell {
+  min-height: 100vh;
+  background: radial-gradient(
+    circle at top,
+    color-mix(in srgb, var(--mat-sys-primary) 12%, var(--mat-sys-surface)) 0%,
+    var(--mat-sys-surface) 58%
+  );
+}
+
+.content {
+  max-width: 1160px;
+  margin: 1.35rem auto;
+  padding: 0 0.8rem 1.4rem;
+}
+
+.monthly-card {
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 84%, #fff);
+  padding: 1rem;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.month-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.summary-strip {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 0.45rem;
+}
+
+.kpi {
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 45%, transparent);
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 64%, #fff);
+}
+
+.kpi span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.kpi strong {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.95rem;
+}
+
+.table-toolbar {
+  margin-top: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.filter-box {
+  flex: 1 1 auto;
+}
+
+.filter-box input {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 52%, transparent);
+  border-radius: 8px;
+  background: var(--mat-sys-surface);
+  color: inherit;
+  min-height: 2.15rem;
+  padding: 0 0.65rem;
+  font-size: 0.88rem;
+}
+
+.filter-box input:focus {
+  outline: 2px solid color-mix(in srgb, var(--mat-sys-primary) 32%, transparent);
+  outline-offset: 1px;
+}
+
+.ticket-count {
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.excel-wrap {
+  margin-top: 1rem;
+  overflow-x: auto;
+  border-radius: 10px;
+}
+
+.excel-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+  background: var(--mat-sys-surface);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 55%, transparent);
+}
+
+.excel-table th,
+.excel-table td {
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 50%, transparent);
+  padding: 0.45rem 0.55rem;
+  vertical-align: top;
+  font-size: 0.84rem;
+}
+
+.excel-table th {
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 70%, #fff);
+  text-align: left;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.excel-row:nth-child(even) td {
+  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 52%, #fff);
+}
+
+.excel-row:hover td {
+  background: color-mix(in srgb, var(--mat-sys-primary) 8%, var(--mat-sys-surface));
+}
+
+.ticket-col {
+  min-width: 280px;
+  font-weight: 600;
+}
+
+.total-col {
+  width: 110px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.ticket-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.day-time {
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 45%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 65%, #fff);
+  padding: 0.18rem 0.38rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: inherit;
+}
+
+.day-time:hover {
+  border-color: color-mix(in srgb, var(--mat-sys-primary) 40%, var(--mat-sys-outline-variant));
+  background: color-mix(in srgb, var(--mat-sys-primary) 11%, var(--mat-sys-surface-container-high));
+}
+
+.day-badge {
+  font-variant-numeric: tabular-nums;
+  color: var(--mat-sys-primary);
+  font-weight: 600;
+}
+
+.day-minutes {
+  flex: 0 0 auto;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ticket-empty {
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0.75;
+}
+
+.empty-row {
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  padding: 1rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.loading-wrap {
+  min-height: 40vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.error {
+  margin-top: 0.75rem;
+  color: var(--mat-sys-error);
+}
+
+@media (max-width: 900px) {
+  .card-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .month-actions {
+    justify-content: stretch;
+  }
+
+  .month-actions button {
+    flex: 1 1 0;
+  }
+
+  .summary-strip {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .table-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .filter-box {
+    flex: 1 0 100%;
+  }
+
+  .excel-table {
+    min-width: 620px;
+  }
+}

@@ -135,21 +135,13 @@ public sealed class TimesheetController : ControllerBase
             .Select(i => i * hourStepMinutes)
             .ToArray();
 
-        var tickets = await _db.Tickets
-            .AsNoTracking()
-            .OrderBy(t => t.Type)
-            .ThenBy(t => t.ExternalKey)
-            .Select(t => new Tracker.Api.Dtos.Tickets.TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
-            .ToListAsync();
-
         return Ok(new TimesheetMetadataDto(
             HoursPerDay: _opts.HoursPerDay,
             MinutesPerDay: minutesPerDay,
             AllowedMinutesDayMode: allowedDay,
             AllowedMinutesHourMode: allowedHour,
             DefaultUnit: "day",
-            DefaultType: "DEV",
-            Tickets: tickets
+            DefaultType: "DEV"
         ));
     }
 }

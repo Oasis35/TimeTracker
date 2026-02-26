@@ -1,0 +1,103 @@
+<div class="page-shell">
+  @if (!loading()) {
+    <section class="content">
+      <mat-card class="monthly-card">
+        <div class="card-header">
+          <h2>{{ i18n.tr('monthly_view_title', { month: monthYearLabel() }) }}</h2>
+          <div class="month-actions">
+            <button mat-stroked-button type="button" (click)="prevMonth()">
+              {{ i18n.tr('month_previous') }}
+            </button>
+            <button mat-stroked-button type="button" (click)="jumpToCurrentMonth()">
+              {{ i18n.tr('month_current') }}
+            </button>
+            <button mat-stroked-button type="button" (click)="nextMonth()">
+              {{ i18n.tr('month_next') }}
+            </button>
+          </div>
+        </div>
+
+        @if (error(); as err) {
+          <div class="error">{{ err }}</div>
+        } @else {
+          <div class="summary-strip">
+            <div class="kpi">
+              <span>{{ i18n.tr('kpi_total_month') }}</span>
+              <strong>{{ formatEntryValue(monthTotalMinutes()) }}</strong>
+            </div>
+            <div class="kpi">
+              <span>{{ i18n.tr('kpi_days_logged') }}</span>
+              <strong>{{ workedDaysCount() }}</strong>
+            </div>
+            <div class="kpi">
+              <span>{{ i18n.tr('monthly_total_days') }}</span>
+              <strong>{{ monthDays().length }}</strong>
+            </div>
+          </div>
+
+          <div class="table-toolbar">
+            <label class="filter-box">
+              <span class="visually-hidden">{{ i18n.tr('kpi_tickets') }}</span>
+              <input
+                type="text"
+                [value]="ticketFilter()"
+                (input)="updateTicketFilter($any($event.target).value)"
+                [placeholder]="i18n.tr('monthly_filter_placeholder')"
+              />
+            </label>
+            <button mat-stroked-button type="button" (click)="clearTicketFilter()">
+              {{ i18n.tr('monthly_clear_filter') }}
+            </button>
+            <span class="ticket-count">
+              {{ i18n.tr('monthly_tickets_count', { count: filteredMonthTickets().length }) }}
+            </span>
+          </div>
+
+          <div class="excel-wrap">
+            <table class="excel-table">
+              <thead>
+                <tr>
+                  <th>{{ i18n.tr('kpi_tickets') }}</th>
+                  <th>{{ i18n.tr('kpi_total_month') }}</th>
+                  <th>{{ i18n.tr('kpi_days_logged') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (ticket of filteredMonthTickets(); track trackByTicket($index, ticket)) {
+                  <tr class="excel-row">
+                    <td class="ticket-col">{{ ticket.title }}</td>
+                    <td class="total-col">{{ formatEntryValue(ticket.totalMinutes) }}</td>
+                    <td class="days-col">
+                      @if (ticket.entries.length > 0) {
+                        <span class="ticket-days">
+                          @for (entry of ticket.entries; track trackByTicketEntry($index, entry)) {
+                            <button class="day-time" type="button" [title]="entry.iso" (click)="openDayDetails(entry.iso)">
+                              <span class="day-badge">D{{ entry.day }}</span>
+                              <span class="day-minutes">{{ formatEntryValue(entry.minutes) }}</span>
+                            </button>
+                          }
+                        </span>
+                      } @else {
+                        <span class="ticket-empty">{{ i18n.tr('tickets_empty') }}</span>
+                      }
+                    </td>
+                  </tr>
+                }
+                @if (filteredMonthTickets().length === 0) {
+                  <tr>
+                    <td class="empty-row" colspan="3">{{ i18n.tr('monthly_no_ticket_match') }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </mat-card>
+    </section>
+  } @else {
+    <div class="loading-wrap">
+      <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+      <span>{{ i18n.tr('loading') }}</span>
+    </div>
+  }
+</div>

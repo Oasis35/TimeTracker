@@ -20,7 +20,6 @@ export interface TimesheetMetadataDto {
   allowedMinutesHourMode: number[];
   defaultUnit: UnitMode;
   defaultType: string;
-  tickets: TicketDto[];
 }
 
 export interface TimesheetRowDto {

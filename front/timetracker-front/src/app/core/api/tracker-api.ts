@@ -27,6 +27,10 @@ export class TrackerApi {
     return this.http.get<TicketDto[]>('/api/tickets/used', { params });
   }
 
+  getTickets(): Observable<TicketDto[]> {
+    return this.http.get<TicketDto[]>('/api/tickets');
+  }
+
   createTicket(dto: CreateTicketDto): Observable<TicketDto> {
     return this.http.post<TicketDto>('/api/tickets', dto);
   }

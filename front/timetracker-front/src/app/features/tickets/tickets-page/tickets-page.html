@@ -1,0 +1,86 @@
+<div class="page-shell">
+  @if (!loading()) {
+    <section class="content">
+      <mat-card class="tickets-card">
+        <h2>{{ i18n.tr('tickets_list_title') }}</h2>
+
+        @if (error(); as err) {
+          <div class="error">{{ err }}</div>
+        } @else if (ticketsRes.value(); as tickets) {
+          @if (tickets.length === 0) {
+            <div class="empty">{{ i18n.tr('tickets_empty') }}</div>
+          } @else {
+            <div class="filters-row">
+              <mat-form-field appearance="outline">
+                <mat-label>{{ i18n.tr('ticket_id_header') }}</mat-label>
+                <input matInput [value]="idFilter()" (input)="onIdFilterInput($event)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ i18n.tr('type') }}</mat-label>
+                <input matInput [value]="typeFilter()" (input)="onTypeFilterInput($event)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ i18n.tr('external_key') }}</mat-label>
+                <input
+                  matInput
+                  [value]="externalKeyFilter()"
+                  (input)="onExternalKeyFilterInput($event)"
+                />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>{{ i18n.tr('label') }}</mat-label>
+                <input matInput [value]="labelFilter()" (input)="onLabelFilterInput($event)" />
+              </mat-form-field>
+            </div>
+
+            <div class="table-wrap">
+              <table
+                mat-table
+                [dataSource]="filteredTickets()"
+                class="tickets-table"
+                [attr.aria-label]="i18n.tr('tickets_grid_aria')"
+              >
+                <caption class="sr-only">
+                  {{ i18n.tr('tickets_grid_aria') }}
+                </caption>
+
+                <ng-container matColumnDef="id">
+                  <th mat-header-cell *matHeaderCellDef>{{ i18n.tr('ticket_id_header') }}</th>
+                  <td mat-cell *matCellDef="let ticket">{{ ticket.id }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="type">
+                  <th mat-header-cell *matHeaderCellDef>{{ i18n.tr('type') }}</th>
+                  <td mat-cell *matCellDef="let ticket">{{ ticket.type }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="externalKey">
+                  <th mat-header-cell *matHeaderCellDef>{{ i18n.tr('external_key') }}</th>
+                  <td mat-cell *matCellDef="let ticket">{{ ticket.externalKey || '-' }}</td>
+                </ng-container>
+
+                <ng-container matColumnDef="label">
+                  <th mat-header-cell *matHeaderCellDef>{{ i18n.tr('label') }}</th>
+                  <td mat-cell *matCellDef="let ticket">{{ ticket.label || '-' }}</td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+                <tr class="mat-row" *matNoDataRow>
+                  <td class="mat-cell empty-cell" [attr.colspan]="displayedColumns.length">
+                    {{ i18n.tr('tickets_no_filter_match') }}
+                  </td>
+                </tr>
+              </table>
+            </div>
+          }
+        }
+      </mat-card>
+    </section>
+  } @else {
+    <div class="loading-wrap">
+      <mat-progress-spinner mode="indeterminate" diameter="40"></mat-progress-spinner>
+      <span>{{ i18n.tr('loading') }}</span>
+    </div>
+  }
+</div>

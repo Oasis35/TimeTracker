@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of } from 'rxjs';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { UnitService } from '../../../core/services/unit.service';
@@ -12,8 +13,9 @@ describe('TimesheetPageComponent', () => {
     allowedMinutesHourMode: [0, 60, 120, 180, 240, 300, 360, 420, 480],
     defaultUnit: 'day' as const,
     defaultType: 'DEV',
-    tickets: [{ id: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1' }],
   };
+
+  const usedTickets = [{ id: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1' }];
 
   const month = {
     year: 2026,
@@ -32,7 +34,7 @@ describe('TimesheetPageComponent', () => {
     totalsByDay: { '2026-02-01': 120, '2026-02-02': 0 },
   };
 
-  function setup() {
+  function setup(routeDay?: string) {
     let capturedUpsert: unknown = null;
     let capturedCreateTicket: unknown = null;
     const usedByMonthCalls: Array<{ year: number; month: number }> = [];
@@ -41,7 +43,7 @@ describe('TimesheetPageComponent', () => {
       getMonth: () => of(month),
       getUsedByMonth: (year: number, month: number) => {
         usedByMonthCalls.push({ year, month });
-        return of(metadata.tickets);
+        return of(usedTickets);
       },
       createTicket: (dto: unknown) => {
         capturedCreateTicket = dto;
@@ -55,7 +57,15 @@ describe('TimesheetPageComponent', () => {
 
     TestBed.configureTestingModule({
       imports: [TimesheetPageComponent],
-      providers: [{ provide: TrackerApi, useValue: apiMock }],
+      providers: [
+        { provide: TrackerApi, useValue: apiMock },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            queryParamMap: of(convertToParamMap(routeDay ? { day: routeDay } : {})),
+          },
+        },
+      ],
     });
 
     const fixture = TestBed.createComponent(TimesheetPageComponent);
@@ -141,5 +151,13 @@ describe('TimesheetPageComponent', () => {
 
     expect(getUsedByMonthCalls()).toContainEqual({ year: 2026, month: 2 });
     expect(getUsedByMonthCalls()).toContainEqual({ year: 2026, month: 3 });
+  });
+
+  it('reads selected day from route query parameter', async () => {
+    const { fixture, component } = setup('2026-02-02');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.selectedDay()).toBe('2026-02-02');
   });
 });

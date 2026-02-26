@@ -8,5 +8,15 @@ export const routes: Routes = [
         (m) => m.TimesheetPageComponent,
       ),
   },
+  {
+    path: 'tickets',
+    loadComponent: () =>
+      import('./features/tickets/tickets-page/tickets-page').then((m) => m.TicketsPageComponent),
+  },
+  {
+    path: 'monthly',
+    loadComponent: () =>
+      import('./features/monthly/monthly-page/monthly-page').then((m) => m.MonthlyPageComponent),
+  },
   { path: '**', redirectTo: '' },
 ];

@@ -6,6 +6,5 @@ public sealed record TimesheetMetadataDto(
     int[] AllowedMinutesDayMode,
     int[] AllowedMinutesHourMode,
     string DefaultUnit,
-    string DefaultType,
-    IReadOnlyList<Tracker.Api.Dtos.Tickets.TicketDto> Tickets
+    string DefaultType
 );

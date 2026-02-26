@@ -1,0 +1,80 @@
+.page-shell {
+  padding: 1rem;
+}
+
+.content {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.tickets-card {
+  padding: 1rem;
+}
+
+.filters-row {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.table-wrap {
+  margin-top: 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline) 65%, #fff);
+  border-radius: 6px;
+  overflow: auto;
+}
+
+.tickets-table {
+  width: 100%;
+  min-width: 680px;
+}
+
+.tickets-table th {
+  font-weight: 600;
+  background: color-mix(in srgb, var(--mat-sys-surface-variant) 55%, #fff);
+}
+
+.tickets-table td,
+.tickets-table th {
+  white-space: nowrap;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.empty-cell {
+  text-align: center;
+  padding: 1rem 0.7rem;
+}
+
+.empty {
+  margin-top: 1rem;
+}
+
+.error {
+  margin-top: 0.8rem;
+  color: var(--mat-sys-error);
+}
+
+.loading-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 2rem;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .filters-row {
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
+  }
+}

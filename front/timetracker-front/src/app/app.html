@@ -19,4 +19,15 @@
     <mat-button-toggle value="hour">{{ i18n.tr('hour') }}</mat-button-toggle>
   </mat-button-toggle-group>
 </mat-toolbar>
+<nav class="app-nav" [attr.aria-label]="i18n.tr('main_navigation')">
+  <a
+    routerLink="/"
+    routerLinkActive="active"
+    [routerLinkActiveOptions]="{ exact: true }"
+  >
+    {{ i18n.tr('nav_timesheet') }}
+  </a>
+  <a routerLink="/monthly" routerLinkActive="active">{{ i18n.tr('nav_monthly') }}</a>
+  <a routerLink="/tickets" routerLinkActive="active">{{ i18n.tr('nav_tickets') }}</a>
+</nav>
 <router-outlet />

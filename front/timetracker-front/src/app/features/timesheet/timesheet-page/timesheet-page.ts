@@ -9,6 +9,7 @@ import {
   resource,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/datepicker';
@@ -24,7 +25,9 @@ import {
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectChange, MatSelectModule } from '@angular/material/select';
+import { ActivatedRoute } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { I18nService } from '../../../core/services/i18n.service';
@@ -55,6 +58,14 @@ function toIsoDate(date: Date): string {
   const m = pad2(date.getMonth() + 1);
   const d = pad2(date.getDate());
   return `${y}-${m}-${d}`;
+}
+
+function parseIsoDate(isoDate: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) return null;
+  const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
 }
 
 @Component({
@@ -194,14 +205,20 @@ export class TimesheetPageComponent {
     const iso = this.selectedDay();
     return iso ? new Date(`${iso}T00:00:00`) : null;
   });
+  readonly routeSelectedDay: () => string | null;
 
   constructor(
     private readonly api: TrackerApi,
+    private readonly route: ActivatedRoute,
     private readonly dialog: MatDialog,
     private readonly dateAdapter: DateAdapter<Date>,
     readonly i18n: I18nService,
     readonly unit: UnitService,
   ) {
+    this.routeSelectedDay = toSignal(this.route.queryParamMap.pipe(map((params) => params.get('day'))), {
+      initialValue: null,
+    });
+
     effect(() => {
       this.dateAdapter.setLocale(this.i18n.dateLocale());
     });
@@ -219,11 +236,29 @@ export class TimesheetPageComponent {
     });
 
     effect(() => {
+      const routeDay = this.routeSelectedDay();
+      if (!routeDay) return;
+      const parsed = parseIsoDate(routeDay);
+      if (!parsed) return;
+      this.year.set(parsed.getFullYear());
+      this.month.set(parsed.getMonth() + 1);
+      this.selectedDay.set(routeDay);
+    });
+
+    effect(() => {
       const month = this.monthRes.value();
       if (!month || month.days.length === 0) return;
 
       const selected = this.selectedDay();
-      if (selected && month.days.includes(selected)) return;
+      const routeDay = this.routeSelectedDay();
+      if (routeDay && selected === routeDay) {
+        return;
+      }
+      if (routeDay && month.days.includes(routeDay)) {
+        this.selectedDay.set(routeDay);
+        return;
+      }
+      if (selected && (month.days.includes(selected) || selected === routeDay)) return;
 
       const firstWeekday = month.days.find((day) => !this.isWeekendIso(day)) ?? month.days[0];
       const defaultDay =

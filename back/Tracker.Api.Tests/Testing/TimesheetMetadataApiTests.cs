@@ -15,12 +15,9 @@ public sealed class TimesheetMetadataApiTests : IClassFixture<TrackerApiFactory>
     }
 
     [Fact]
-    public async Task Metadata_Should_Return_HoursPerDay_MinutesPerDay_AllowedMinutes_And_Tickets()
+    public async Task Metadata_Should_Return_HoursPerDay_MinutesPerDay_And_AllowedMinutes()
     {
         // Arrange
-        await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "A-1", "A-1");
-        await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "A-2", "A-2");
-
         // Act
         var r = await _client.GetAsync("/api/timesheet/metadata");
 
@@ -43,9 +40,6 @@ public sealed class TimesheetMetadataApiTests : IClassFixture<TrackerApiFactory>
 
         Assert.Equal("day", meta.DefaultUnit);
         Assert.False(string.IsNullOrWhiteSpace(meta.DefaultType));
-
-        Assert.NotNull(meta.Tickets);
-        Assert.True(meta.Tickets.Count >= 2);
     }
 
     private sealed record MetadataDto(
@@ -54,7 +48,6 @@ public sealed class TimesheetMetadataApiTests : IClassFixture<TrackerApiFactory>
         int[] AllowedMinutesDayMode,
         int[] AllowedMinutesHourMode,
         string DefaultUnit,
-        string DefaultType,
-        List<object> Tickets
+        string DefaultType
     );
 }
