@@ -59,13 +59,17 @@
   border-color: color-mix(in srgb, var(--mat-sys-on-primary) 42%, transparent);
 }
 
-@media (max-width: 1050px) {
+.nav-link-active {
+  background: color-mix(in srgb, var(--mat-sys-on-primary) 18%, transparent);
+}
+
+@media (max-width: 1150px) {
   .brand {
     font-size: 1.25rem;
   }
 
   .nav-links {
-    right: 12rem;
+    right: 11rem;
   }
 }
 

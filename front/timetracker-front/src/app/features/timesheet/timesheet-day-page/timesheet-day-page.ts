@@ -30,6 +30,7 @@ import {
   TimesheetMonthDto,
   TimesheetRowDto,
 } from '../../../core/api/models';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 type MonthRequest = { y: number; m: number };
 type QuickPickOption = { minutes: number; label: string };
@@ -54,7 +55,7 @@ function toIsoDate(date: Date): string {
 }
 
 @Component({
-  selector: 'app-timesheet-page',
+  selector: 'app-timesheet-day-page',
   standalone: true,
   imports: [
     CommonModule,
@@ -69,16 +70,17 @@ function toIsoDate(date: Date): string {
     MatProgressSpinnerModule,
     MatSelectModule,
     MatTooltipModule,
+    RouterLink,
     TranslateModule,
   ],
   providers: [
     { provide: MAT_DATE_LOCALE, useValue: 'fr-FR' },
     { provide: DateAdapter, useClass: IsoMondayDateAdapter },
   ],
-  templateUrl: './timesheet-page.html',
-  styleUrl: './timesheet-page.scss',
+  templateUrl: './timesheet-day-page.html',
+  styleUrl: './timesheet-day-page.scss',
 })
-export class TimesheetPageComponent {
+export class TimesheetDayPageComponent {
   private readonly now = new Date();
   private readonly todayIso = toIsoDate(this.now);
 
@@ -130,6 +132,7 @@ export class TimesheetPageComponent {
     const usedTickets = this.usedTicketsRes.value();
     const month = this.monthRes.value();
     const totals = this.ticketTotalsRes.value();
+    const selectedDay = this.selectedDay();
     if (!usedTickets || !month) return [];
 
     const totalsByTicketId = new Map<number, number>();
@@ -142,7 +145,7 @@ export class TimesheetPageComponent {
       rowsByTicketId.set(row.ticketId, row);
     }
 
-    return usedTickets.map((ticket) => {
+    const rows = usedTickets.map((ticket) => {
       const existing = rowsByTicketId.get(ticket.id);
       if (existing) {
         return {
@@ -161,6 +164,13 @@ export class TimesheetPageComponent {
         ticketTotal: totalsByTicketId.get(ticket.id) ?? 0,
         isCompleted: ticket.isCompleted,
       };
+    });
+
+    if (!selectedDay) return rows;
+
+    return rows.filter((row) => {
+      if (!row.isCompleted) return true;
+      return (row.values?.[selectedDay] ?? 0) > 0;
     });
   });
 
@@ -211,6 +221,7 @@ export class TimesheetPageComponent {
     private readonly dialog: MatDialog,
     private readonly dateAdapter: DateAdapter<Date>,
     private readonly translate: TranslateService,
+    private readonly route: ActivatedRoute,
     readonly unit: UnitService,
   ) {
     const initial =
@@ -218,6 +229,11 @@ export class TimesheetPageComponent {
     this.language.set(initial);
     this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
       this.language.set(event.lang as AppLanguage);
+    });
+    this.route.queryParamMap.subscribe((params) => {
+      const date = params.get('date');
+      if (!date) return;
+      this.applyRouteDate(date);
     });
 
     effect(() => {
@@ -358,4 +374,14 @@ export class TimesheetPageComponent {
   private dateLocale(): string {
     return this.language() === 'fr' ? 'fr-FR' : 'en-US';
   }
+
+  private applyRouteDate(dateIso: string): void {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) return;
+    const date = new Date(`${dateIso}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return;
+    this.year.set(date.getFullYear());
+    this.month.set(date.getMonth() + 1);
+    this.selectedDay.set(dateIso);
+  }
 }
+

@@ -3,9 +3,10 @@ import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { UnitService } from '../../../core/services/unit.service';
-import { TimesheetPageComponent } from './timesheet-page';
+import { TimesheetDayPageComponent } from './timesheet-day-page';
+import { provideRouter } from '@angular/router';
 
-describe('TimesheetPageComponent', () => {
+describe('TimesheetDayPageComponent', () => {
   const metadata = {
     hoursPerDay: 8,
     minutesPerDay: 480,
@@ -36,15 +37,17 @@ describe('TimesheetPageComponent', () => {
   function setup() {
     let capturedUpsert: unknown = null;
     const usedByMonthCalls: Array<{ year: number; month: number }> = [];
+    const usedTickets = metadata.tickets;
+    const monthData = month;
+    const ticketTotals = [{ ticketId: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1', total: 120 }];
     const apiMock = {
       getMetadata: () => of(metadata),
-      getMonth: () => of(month),
+      getMonth: () => of(monthData),
       getUsedByMonth: (year: number, month: number) => {
         usedByMonthCalls.push({ year, month });
-        return of(metadata.tickets);
+        return of(usedTickets);
       },
-      getTicketTotals: () =>
-        of([{ ticketId: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1', total: 120 }]),
+      getTicketTotals: () => of(ticketTotals),
       upsertTimeEntry: (dto: unknown) => {
         capturedUpsert = dto;
         return of(void 0);
@@ -53,13 +56,13 @@ describe('TimesheetPageComponent', () => {
 
     TestBed.configureTestingModule({
       imports: [
-        TimesheetPageComponent,
+        TimesheetDayPageComponent,
         TranslateModule.forRoot(),
       ],
-      providers: [{ provide: TrackerApi, useValue: apiMock }],
+      providers: [{ provide: TrackerApi, useValue: apiMock }, provideRouter([])],
     });
 
-    const fixture = TestBed.createComponent(TimesheetPageComponent);
+    const fixture = TestBed.createComponent(TimesheetDayPageComponent);
     const unit = TestBed.inject(UnitService);
     return {
       fixture,
@@ -130,4 +133,61 @@ describe('TimesheetPageComponent', () => {
     expect(getUsedByMonthCalls()).toContainEqual({ year: 2026, month: 2 });
     expect(getUsedByMonthCalls()).toContainEqual({ year: 2026, month: 3 });
   });
+
+  it('hides archived ticket when selected day has zero logged time on it', async () => {
+    const archivedTicket = { id: 2, type: 'DEV', externalKey: 'ABC-2', label: 'Ticket ABC-2', isCompleted: true };
+    const openTicket = { id: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1', isCompleted: false };
+    const apiMock = {
+      getMetadata: () => of(metadata),
+      getMonth: () =>
+        of({
+          year: 2026,
+          month: 2,
+          days: ['2026-02-01', '2026-02-02'],
+          rows: [
+            {
+              ticketId: 1,
+              type: 'DEV',
+              externalKey: 'ABC-1',
+              label: 'Ticket ABC-1',
+              values: { '2026-02-01': 120, '2026-02-02': 0 },
+            },
+            {
+              ticketId: 2,
+              type: 'DEV',
+              externalKey: 'ABC-2',
+              label: 'Ticket ABC-2',
+              values: { '2026-02-01': 60, '2026-02-02': 0 },
+            },
+          ],
+          totalsByDay: { '2026-02-01': 180, '2026-02-02': 0 },
+        }),
+      getUsedByMonth: () => of([openTicket, archivedTicket]),
+      getTicketTotals: () =>
+        of([
+          { ticketId: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1', total: 120 },
+          { ticketId: 2, type: 'DEV', externalKey: 'ABC-2', label: 'Ticket ABC-2', total: 60 },
+        ]),
+      upsertTimeEntry: () => of(void 0),
+    };
+
+    TestBed.configureTestingModule({
+      imports: [TimesheetDayPageComponent, TranslateModule.forRoot()],
+      providers: [{ provide: TrackerApi, useValue: apiMock }, provideRouter([])],
+    });
+
+    const fixture = TestBed.createComponent(TimesheetDayPageComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.setSelectedDay('2026-02-02');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const rows = component.displayRows();
+    expect(rows.length).toBe(1);
+    expect(rows[0]?.ticketId).toBe(1);
+  });
 });
+

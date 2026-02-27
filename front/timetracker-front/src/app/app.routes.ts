@@ -3,9 +3,21 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
+    pathMatch: 'full',
+    redirectTo: 'day',
+  },
+  {
+    path: 'day',
     loadComponent: () =>
-      import('./features/timesheet/timesheet-page/timesheet-page').then(
-        (m) => m.TimesheetPageComponent,
+      import('./features/timesheet/timesheet-day-page/timesheet-day-page').then(
+        (m) => m.TimesheetDayPageComponent,
+      ),
+  },
+  {
+    path: 'month',
+    loadComponent: () =>
+      import('./features/timesheet/timesheet-month-page/timesheet-month-page').then(
+        (m) => m.TimesheetMonthPageComponent,
       ),
   },
   {
@@ -15,5 +27,6 @@ export const routes: Routes = [
         (m) => m.TicketsGridPageComponent,
       ),
   },
-  { path: '**', redirectTo: '' },
+  { path: '**', redirectTo: 'day' },
 ];
+

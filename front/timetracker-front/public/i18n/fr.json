@@ -1,4 +1,4 @@
-{
+﻿{
   "unit_display": "Unité d'affichage",
   "day": "Jour",
   "hour": "Heure",
@@ -10,6 +10,13 @@
   "day_previous": "Jour précédent",
   "day_next": "Jour suivant",
   "day_label": "Jour",
+  "month_previous": "Précédent",
+  "month_current": "Revenir à ce mois",
+  "month_next": "Suivant",
+  "month_view_title": "Vue mensuelle - {{month}}",
+  "month_view_empty": "Aucun ticket pointé sur ce mois.",
+  "month_total": "Total",
+  "weekend_label": "Week-end",
   "loading": "Chargement...",
   "rows_aria": "Saisie des tickets",
   "total_ticket_row": "Total ticket: {{value}}",
@@ -78,3 +85,5 @@
   "completed_filter_completed": "Terminés",
   "completed_filter_all": "Tous"
 }
+
+

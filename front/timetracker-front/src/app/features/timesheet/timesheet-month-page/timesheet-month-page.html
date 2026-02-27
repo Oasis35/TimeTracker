@@ -1,0 +1,159 @@
+<div class="page-shell">
+  @if (loading()) {
+    <div class="loading-wrap">
+      <mat-progress-spinner mode="indeterminate" diameter="36"></mat-progress-spinner>
+      <span>{{ 'loading' | translate }}</span>
+    </div>
+  } @else if (error(); as err) {
+    <div class="error">{{ err }}</div>
+  } @else {
+    <mat-card class="month-card">
+      <div class="header-row">
+        <div class="header-left">
+          <button mat-stroked-button type="button" (click)="prevMonth()">
+            {{ 'month_previous' | translate }}
+          </button>
+          <button mat-stroked-button type="button" (click)="nextMonth()">
+            {{ 'month_next' | translate }}
+          </button>
+        </div>
+        <div class="header-center">
+          <h2>{{ 'month_view_title' | translate:{ month: monthYearLabel() } }}</h2>
+        </div>
+        <div class="header-right">
+          <button mat-stroked-button type="button" (click)="goToCurrentMonth()" [disabled]="isCurrentMonth()">
+            {{ 'month_current' | translate }}
+          </button>
+          <button
+            mat-icon-button
+            type="button"
+            class="month-picker-btn"
+            [matTooltip]="'month' | translate"
+            [attr.aria-label]="'month' | translate"
+            (click)="monthPicker.open()"
+          >
+            <mat-icon>calendar_month</mat-icon>
+          </button>
+          <input
+            class="month-picker-input"
+            type="text"
+            [matDatepicker]="monthPicker"
+            [value]="selectedMonthDate()"
+            readonly
+            aria-hidden="true"
+            tabindex="-1"
+          />
+          <mat-datepicker
+            #monthPicker
+            startView="year"
+            [startAt]="selectedMonthDate()"
+            (monthSelected)="onMonthSelected($event, monthPicker)"
+          ></mat-datepicker>
+        </div>
+      </div>
+
+      <div class="table-wrap" [style.--sticky-col-type-width.px]="stickyTypeWidth()">
+        <table>
+          <colgroup>
+            <col class="cg-type" />
+            <col class="cg-number" />
+            <col class="cg-label" />
+            <col class="cg-total" />
+            @for (day of days(); track day) {
+              <col class="cg-day" />
+            }
+          </colgroup>
+          <thead>
+            <tr>
+              <th #typeHeaderCell class="col-type">{{ 'type' | translate }}</th>
+              <th class="col-number">{{ 'external_key' | translate }}</th>
+              <th class="col-label">{{ 'label' | translate }}</th>
+                <th class="col-total">{{ 'month_total' | translate }}</th>
+              @for (day of days(); track day) {
+                <th
+                  class="col-day"
+                  [class.col-weekend]="isWeekendIso(day)"
+                  [class.col-holiday]="isHolidayIso(day)"
+                  [class.weekend-end]="isSundayIso(day) && !isHolidayIso(day)"
+                  [matTooltip]="isHolidayIso(day) ? holidayLabel(day) : (isWeekendIso(day) ? ('weekend_label' | translate) : '')"
+                  [matTooltipDisabled]="!isWeekendIso(day) && !isHolidayIso(day)"
+                >
+                  @if (isWeekendIso(day) || isHolidayIso(day)) {
+                    <span class="day-header-label">{{ dayLabel(day) }}</span>
+                  } @else {
+                    <a
+                      class="day-header-link"
+                      [routerLink]="['/day']"
+                      [queryParams]="{ date: day }"
+                      [attr.aria-label]="dayLabel(day)"
+                    >
+                      {{ dayLabel(day) }}
+                    </a>
+                  }
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @if (rows().length === 0) {
+              <tr>
+                <td class="empty-state" [attr.colspan]="days().length + 4">{{ 'month_view_empty' | translate }}</td>
+              </tr>
+            } @else {
+              @for (row of rows(); track row.ticketId) {
+                <tr>
+                  <td>{{ row.type }}</td>
+                  <td>{{ row.externalKey || '-' }}</td>
+                  <td>{{ row.label || '-' }}</td>
+                  <td
+                    class="num total-cell"
+                    [class.value-active]="row.total > 0"
+                    [class.value-zero]="row.total === 0"
+                  >
+                    {{ formatZeroAware(row.total) }}
+                  </td>
+                  @for (day of days(); track day) {
+                    <td
+                      class="num"
+                      [class.col-weekend]="isWeekendIso(day)"
+                      [class.col-holiday]="isHolidayIso(day)"
+                      [class.weekend-end]="isSundayIso(day) && !isHolidayIso(day)"
+                      [class.value-active]="getCellMinutes(row, day) > 0"
+                      [class.value-zero]="getCellMinutes(row, day) === 0"
+                    >
+                      {{ formatZeroAware(getCellMinutes(row, day)) }}
+                    </td>
+                  }
+                </tr>
+              }
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3">{{ 'month_total' | translate }}</td>
+              <td
+                class="num total-cell"
+                [class.value-active]="monthTotal() > 0"
+                [class.value-zero]="monthTotal() === 0"
+              >
+                {{ formatZeroAware(monthTotal()) }}
+              </td>
+              @for (day of days(); track day) {
+                  <td
+                    class="num"
+                    [class.col-weekend]="isWeekendIso(day)"
+                    [class.col-holiday]="isHolidayIso(day)"
+                    [class.weekend-end]="isSundayIso(day) && !isHolidayIso(day)"
+                    [class.value-active]="(monthRes.value()?.totalsByDay?.[day] ?? 0) > 0"
+                    [class.value-zero]="(monthRes.value()?.totalsByDay?.[day] ?? 0) === 0"
+                  >
+                  {{ formatZeroAware(monthRes.value()?.totalsByDay?.[day] ?? 0) }}
+                </td>
+              }
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </mat-card>
+  }
+</div>

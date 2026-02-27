@@ -5,7 +5,15 @@
         <mat-card class="timesheet-card">
           <div class="card-header">
             <div>
-              <h2>{{ 'tickets_month_title' | translate:{ month: monthYearLabel() } }}</h2>
+              <h2>
+                <a
+                  class="month-link"
+                  [routerLink]="['/month']"
+                  [queryParams]="{ year: year(), month: month() }"
+                >
+                  {{ 'tickets_month_title' | translate:{ month: monthYearLabel() } }}
+                </a>
+              </h2>
             </div>
           </div>
 

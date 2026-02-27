@@ -1,0 +1,279 @@
+.page-shell {
+  padding: 1rem;
+}
+
+.month-card {
+  width: fit-content;
+  max-width: calc(100vw - 2rem);
+  margin-inline: auto;
+  overflow: hidden;
+}
+
+.header-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  column-gap: 1rem;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-self: start;
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  justify-self: center;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-self: end;
+}
+
+.header-row h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.month-picker-btn {
+  width: 36px;
+  height: 36px;
+}
+
+.month-picker-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+
+.table-wrap {
+  width: fit-content;
+  max-width: 100%;
+  overflow: auto;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  --sticky-col-type-width: 90px;
+  --offday-bg: color-mix(in srgb, #9ca3ad 24%, var(--mat-sys-surface));
+}
+
+table {
+  width: max-content;
+  border-collapse: collapse;
+  min-width: 0;
+  margin-inline: auto;
+}
+
+th,
+td {
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 72%, transparent);
+  padding: 0.45rem 0.55rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 28%, transparent);
+}
+
+th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 70%, var(--mat-sys-surface));
+  font-weight: 600;
+  text-align: left;
+}
+
+.col-type {
+  width: 1%;
+  min-width: max-content;
+}
+
+.col-number {
+  width: 1%;
+  min-width: max-content;
+}
+
+.col-label {
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.cg-type {
+  width: max-content;
+}
+
+.cg-number {
+  width: max-content;
+}
+
+.cg-label {
+  width: 320px;
+}
+
+.cg-total,
+.cg-day {
+  width: max-content;
+}
+
+thead th:nth-child(3),
+tbody td:nth-child(3),
+tfoot td:nth-child(3) {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.col-total,
+.col-day {
+  text-align: right;
+  width: 1%;
+  min-width: max-content;
+}
+
+th.col-day {
+  text-align: center;
+}
+
+.day-header-link {
+  display: inline-block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: 6px;
+  padding: 0 0.15rem;
+}
+
+.day-header-link:hover {
+  text-decoration: underline;
+}
+
+.day-header-label {
+  display: inline-block;
+  padding: 0 0.15rem;
+}
+
+.total-cell,
+th.col-total {
+  border-left: 1px solid var(--mat-sys-outline-variant);
+}
+
+.num {
+  text-align: right;
+}
+
+.value-active {
+  font-weight: 600;
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 28%, transparent);
+}
+
+.value-zero {
+  opacity: 0.36;
+  color: color-mix(in srgb, var(--mat-sys-on-surface) 56%, transparent);
+}
+
+tbody td.col-weekend.value-zero,
+tbody td.col-holiday.value-zero,
+tfoot td.col-weekend.value-zero,
+tfoot td.col-holiday.value-zero {
+  opacity: 0.46;
+  color: color-mix(in srgb, var(--mat-sys-on-surface) 60%, transparent);
+}
+
+th.col-weekend,
+tbody td.col-weekend,
+tfoot td.col-weekend {
+  background: var(--offday-bg);
+  color: var(--mat-sys-on-surface);
+}
+
+tbody tr:nth-child(even) td.col-weekend {
+  background: var(--offday-bg);
+}
+
+th.col-holiday,
+tbody td.col-holiday,
+tfoot td.col-holiday {
+  background: var(--offday-bg);
+  color: var(--mat-sys-on-surface);
+}
+
+tbody tr:nth-child(even) td.col-holiday {
+  background: var(--offday-bg);
+}
+
+/* Keep a uniform gray in weekend/holiday columns even when value is active. */
+tbody td.col-weekend.value-active,
+tfoot td.col-weekend.value-active,
+tbody td.col-holiday.value-active,
+tfoot td.col-holiday.value-active {
+  background: var(--offday-bg);
+}
+
+.weekend-end {
+  border-right: 1px solid color-mix(in srgb, var(--mat-sys-outline) 72%, transparent);
+}
+
+tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 18%, var(--mat-sys-surface));
+}
+
+/* Keep "Type" and "Numero" visible when scrolling horizontally. */
+thead th:nth-child(1),
+tbody td:nth-child(1),
+tfoot td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--mat-sys-surface);
+}
+
+thead th:nth-child(2),
+tbody td:nth-child(2),
+tfoot td:nth-child(2) {
+  position: sticky;
+  left: var(--sticky-col-type-width);
+  z-index: 2;
+  background: var(--mat-sys-surface);
+}
+
+thead th:nth-child(1),
+thead th:nth-child(2) {
+  z-index: 3;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 70%, var(--mat-sys-surface));
+}
+
+tbody td:nth-child(1),
+tbody td:nth-child(2) {
+  background: var(--mat-sys-surface);
+}
+
+tfoot td:nth-child(1),
+tfoot td:nth-child(2) {
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 18%, var(--mat-sys-surface));
+}
+
+.loading-wrap,
+.error {
+  padding: 1rem;
+}
+
+td.empty-state {
+  padding: 1rem;
+  text-align: center;
+  color: color-mix(in srgb, var(--mat-sys-on-surface) 70%, transparent);
+}

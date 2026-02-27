@@ -1,0 +1,257 @@
+import { CommonModule } from '@angular/common';
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatDatepicker, MatDatepickerModule } from '@angular/material/datepicker';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
+import { catchError, firstValueFrom, of } from 'rxjs';
+import { TrackerApi } from '../../../core/api/tracker-api';
+import { TicketDto, TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
+import { AppLanguage } from '../../../core/i18n/app-language';
+import { UnitService } from '../../../core/services/unit.service';
+import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
+import { resource } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+
+type MonthRequest = { y: number; m: number };
+
+type MonthlyRow = TimesheetRowDto & { total: number };
+
+@Component({
+  selector: 'app-timesheet-month-page',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatCardModule,
+    MatDatepickerModule,
+    MatIconModule,
+    MatNativeDateModule,
+    MatProgressSpinnerModule,
+    MatTooltipModule,
+    RouterLink,
+    TranslateModule,
+  ],
+  providers: [{ provide: MAT_DATE_LOCALE, useValue: 'fr-FR' }],
+  templateUrl: './timesheet-month-page.html',
+  styleUrl: './timesheet-month-page.scss',
+})
+export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
+  private readonly now = new Date();
+  private typeHeaderResizeObserver: ResizeObserver | null = null;
+  private typeHeaderElement: HTMLElement | null = null;
+
+  readonly year = signal<number>(this.now.getFullYear());
+  readonly month = signal<number>(this.now.getMonth() + 1);
+  readonly language = signal<AppLanguage>('fr');
+  readonly stickyTypeWidth = signal<number>(90);
+
+  readonly metadataRes = resource<TimesheetMetadataDto, number>({
+    params: () => 0,
+    loader: () => firstValueFrom(this.api.getMetadata()),
+  });
+  readonly monthRes = resource<TimesheetMonthDto, MonthRequest>({
+    params: () => ({ y: this.year(), m: this.month() }),
+    loader: ({ params }) => firstValueFrom(this.api.getMonth(params.y, params.m)),
+  });
+  readonly usedTicketsRes = resource<TicketDto[], MonthRequest>({
+    params: () => ({ y: this.year(), m: this.month() }),
+    loader: ({ params }) => firstValueFrom(this.api.getUsedByMonth(params.y, params.m)),
+  });
+  readonly publicHolidaysRes = resource<Record<string, string>, number>({
+    params: () => 0,
+    loader: () =>
+      firstValueFrom(
+        this.api.getPublicHolidaysMetropole().pipe(catchError(() => of({}))),
+      ),
+  });
+
+  readonly loading = computed(
+    () => this.metadataRes.isLoading() || this.monthRes.isLoading() || this.usedTicketsRes.isLoading(),
+  );
+  readonly error = computed(() => {
+    this.language();
+    if (this.metadataRes.error() || this.monthRes.error() || this.usedTicketsRes.error()) {
+      return this.translate.instant('cannot_load_data');
+    }
+    return null;
+  });
+
+  readonly days = computed<string[]>(() => this.monthRes.value()?.days ?? []);
+  readonly rows = computed<MonthlyRow[]>(() => {
+    const month = this.monthRes.value();
+    const tickets = this.usedTicketsRes.value();
+    if (!month || !tickets) return [];
+
+    const rowsByTicketId = new Map<number, TimesheetRowDto>();
+    for (const row of month.rows) {
+      rowsByTicketId.set(row.ticketId, row);
+    }
+
+    return tickets.map((ticket) => {
+      const row = rowsByTicketId.get(ticket.id) ?? {
+        ticketId: ticket.id,
+        type: ticket.type,
+        externalKey: ticket.externalKey ?? '',
+        label: ticket.label ?? '',
+        values: {},
+      };
+      const total = Object.values(row.values ?? {}).reduce((sum, value) => sum + value, 0);
+      return { ...row, total };
+    });
+  });
+
+  readonly monthYearLabel = computed(() => {
+    const date = new Date(this.year(), this.month() - 1, 1);
+    const label = new Intl.DateTimeFormat(this.dateLocale(), { month: 'long', year: 'numeric' }).format(date);
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  });
+  readonly selectedMonthDate = computed(() => new Date(this.year(), this.month() - 1, 1));
+  readonly isCurrentMonth = computed(
+    () => this.year() === this.now.getFullYear() && this.month() === this.now.getMonth() + 1,
+  );
+  readonly monthTotal = computed(() => this.rows().reduce((sum, row) => sum + row.total, 0));
+
+  constructor(
+    private readonly api: TrackerApi,
+    private readonly translate: TranslateService,
+    private readonly dateAdapter: DateAdapter<Date>,
+    private readonly route: ActivatedRoute,
+    readonly unit: UnitService,
+  ) {
+    const initial = (this.translate.currentLang || this.translate.defaultLang || 'fr') as AppLanguage;
+    this.language.set(initial);
+    this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
+      this.language.set(event.lang as AppLanguage);
+    });
+    this.translate.onLangChange.subscribe(() => {
+      this.dateAdapter.setLocale(this.dateLocale());
+    });
+    this.dateAdapter.setLocale(this.dateLocale());
+    this.route.queryParamMap.subscribe((params) => {
+      const year = Number(params.get('year'));
+      const month = Number(params.get('month'));
+      if (!Number.isInteger(year) || !Number.isInteger(month)) return;
+      if (month < 1 || month > 12) return;
+      if (year < 1900 || year > 3000) return;
+      this.year.set(year);
+      this.month.set(month);
+    });
+  }
+
+  onMonthSelected(date: Date, picker: MatDatepicker<Date>): void {
+    this.year.set(date.getFullYear());
+    this.month.set(date.getMonth() + 1);
+    picker.close();
+  }
+
+  @ViewChild('typeHeaderCell')
+  set typeHeaderCell(cell: ElementRef<HTMLElement> | undefined) {
+    if (!cell) return;
+    this.observeTypeHeader(cell.nativeElement);
+  }
+
+  ngAfterViewInit(): void {
+    // Width can settle after initial render; align sticky offset once rendered.
+    queueMicrotask(() => this.syncTypeWidth());
+  }
+
+  ngOnDestroy(): void {
+    this.typeHeaderResizeObserver?.disconnect();
+  }
+
+  prevMonth(): void {
+    this.shiftMonth(-1);
+  }
+
+  nextMonth(): void {
+    this.shiftMonth(1);
+  }
+
+  goToCurrentMonth(): void {
+    const now = new Date();
+    this.year.set(now.getFullYear());
+    this.month.set(now.getMonth() + 1);
+  }
+
+  dayLabel(dayIso: string): string {
+    return dayIso.slice(-2);
+  }
+
+  isWeekendIso(dayIso: string): boolean {
+    const day = new Date(`${dayIso}T00:00:00`).getDay();
+    return day === 0 || day === 6;
+  }
+
+  isHolidayIso(dayIso: string): boolean {
+    return !!this.publicHolidaysRes.value()?.[dayIso];
+  }
+
+  holidayLabel(dayIso: string): string {
+    return this.publicHolidaysRes.value()?.[dayIso] ?? '';
+  }
+
+  isSundayIso(dayIso: string): boolean {
+    return new Date(`${dayIso}T00:00:00`).getDay() === 0;
+  }
+
+  getCellMinutes(row: MonthlyRow, dayIso: string): number {
+    return row.values?.[dayIso] ?? 0;
+  }
+
+  formatValue(minutes: number): string {
+    const metadata = this.metadataRes.value();
+    if (!metadata) return '0';
+    if (this.unit.unitMode() === 'hour') {
+      return this.formatNumber(minutes / 60);
+    }
+    return this.formatNumber(minutes / metadata.minutesPerDay);
+  }
+
+  formatZeroAware(minutes: number): string {
+    return minutes === 0 ? '0' : this.formatValue(minutes);
+  }
+
+  private shiftMonth(delta: -1 | 1): void {
+    const date = new Date(this.year(), this.month() - 1, 1);
+    date.setMonth(date.getMonth() + delta);
+    this.year.set(date.getFullYear());
+    this.month.set(date.getMonth() + 1);
+  }
+
+  private formatNumber(value: number): string {
+    return value
+      .toFixed(2)
+      .replace('.', ',')
+      .replace(/,00$/, '')
+      .replace(/(\,\d)0$/, '$1');
+  }
+
+  private dateLocale(): string {
+    return this.language() === 'fr' ? 'fr-FR' : 'en-US';
+  }
+
+  private observeTypeHeader(el: HTMLElement): void {
+    this.typeHeaderElement = el;
+    this.typeHeaderResizeObserver?.disconnect();
+    if (typeof ResizeObserver === 'undefined') {
+      this.syncTypeWidth();
+      return;
+    }
+    this.typeHeaderResizeObserver = new ResizeObserver(() => this.syncTypeWidth());
+    this.typeHeaderResizeObserver.observe(el);
+    this.syncTypeWidth();
+  }
+
+  private syncTypeWidth(): void {
+    const width = this.typeHeaderElement
+      ? Math.ceil(this.typeHeaderElement.getBoundingClientRect().width)
+      : 0;
+    if (width > 0 && this.stickyTypeWidth() !== width) {
+      this.stickyTypeWidth.set(width);
+    }
+  }
+}

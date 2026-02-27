@@ -59,4 +59,8 @@ export class TrackerApi {
   upsertTimeEntry(dto: UpsertTimeEntryDto): Observable<void> {
     return this.http.post<void>('/api/timeentries/upsert', dto);
   }
+
+  getPublicHolidaysMetropole(): Observable<Record<string, string>> {
+    return this.http.get<Record<string, string>>('https://calendrier.api.gouv.fr/jours-feries/metropole.json');
+  }
 }

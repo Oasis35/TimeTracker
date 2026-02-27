@@ -32,6 +32,15 @@
   font-weight: 600;
 }
 
+.month-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.month-link:hover {
+  text-decoration: underline;
+}
+
 .card-header p {
   margin: 0.1rem 0 0;
   color: var(--mat-sys-on-surface-variant);

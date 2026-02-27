@@ -3,7 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AppLanguage } from './core/i18n/app-language';
 import { UnitService, TimeUnit } from './core/services/unit.service';
 
@@ -13,6 +13,7 @@ import { UnitService, TimeUnit } from './core/services/unit.service';
   imports: [
     RouterOutlet,
     RouterLink,
+    RouterLinkActive,
     MatToolbarModule,
     MatButtonToggleModule,
     MatButtonModule,

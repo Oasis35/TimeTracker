@@ -1,4 +1,4 @@
-{
+﻿{
   "unit_display": "Display unit",
   "day": "Day",
   "hour": "Hour",
@@ -10,6 +10,13 @@
   "day_previous": "Previous day",
   "day_next": "Next day",
   "day_label": "Day",
+  "month_previous": "Previous",
+  "month_current": "Back to this month",
+  "month_next": "Next",
+  "month_view_title": "Monthly view - {{month}}",
+  "month_view_empty": "No ticket logged for this month.",
+  "month_total": "Total",
+  "weekend_label": "Weekend",
   "loading": "Loading...",
   "rows_aria": "Ticket time entry",
   "total_ticket_row": "Ticket total: {{value}}",
@@ -78,3 +85,4 @@
   "completed_filter_completed": "Completed only",
   "completed_filter_all": "All"
 }
+

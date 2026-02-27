@@ -37,4 +37,17 @@ describe('App', () => {
 
     expect(unit.unitMode()).toBe('hour');
   });
+
+  it('should expose navigation link for tickets grid', () => {
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const anchors = Array.from(compiled.querySelectorAll('a[href]'));
+    const hrefs = anchors
+      .map((anchor) => anchor.getAttribute('href') ?? '')
+      .filter((href) => href.length > 0);
+
+    expect(hrefs.some((href) => href.endsWith('/tickets-grid'))).toBe(true);
+  });
 });
