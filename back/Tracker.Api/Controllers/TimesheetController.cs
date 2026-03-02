@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Tracker.Api.Data;
-using Tracker.Api.Dtos;
+using Tracker.Api.Dtos.Tickets;
 using Tracker.Api.Dtos.Timesheet;
 using Tracker.Api.Infrastructure;
 using Tracker.Api.Options;
@@ -138,7 +138,7 @@ public sealed class TimesheetController : ControllerBase
             .AsNoTracking()
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
-            .Select(t => new Tracker.Api.Dtos.Tickets.TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
+            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
             .ToListAsync();
 
         return Ok(new TimesheetMetadataDto(
