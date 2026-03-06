@@ -1,3 +1,5 @@
+namespace Tracker.Api.Dtos.TimeEntries;
+
 public sealed record WeekRowDto(
     int TicketId,
     string Type,
