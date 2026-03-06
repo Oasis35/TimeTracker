@@ -7,6 +7,9 @@
   max-width: calc(100vw - 2rem);
   margin-inline: auto;
   overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 58%, transparent);
+  border-radius: 14px;
+  box-shadow: 0 10px 24px color-mix(in srgb, #0f172a 12%, transparent);
 }
 
 .header-row {
@@ -28,6 +31,7 @@
 .header-center {
   display: flex;
   align-items: center;
+  gap: 0.5rem;
   justify-self: center;
 }
 
@@ -48,6 +52,15 @@
 .month-picker-btn {
   width: 36px;
   height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.month-picker-btn .mat-icon {
+  margin: 0;
+  line-height: 1;
 }
 
 .month-picker-input {
@@ -62,9 +75,18 @@
   width: fit-content;
   max-width: 100%;
   overflow: auto;
+  scrollbar-gutter: stable both-edges;
   border-top: 1px solid var(--mat-sys-outline-variant);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--mat-sys-surface-container-low) 60%, var(--mat-sys-surface)) 0%,
+    var(--mat-sys-surface) 62%
+  );
   --sticky-col-type-width: 90px;
   --offday-bg: color-mix(in srgb, #9ca3ad 24%, var(--mat-sys-surface));
+  --table-surface-muted: color-mix(in srgb, var(--mat-sys-surface-container-low) 26%, transparent);
+  --table-active-bg: color-mix(in srgb, var(--mat-sys-primary-container) 30%, var(--mat-sys-surface));
+  --table-active-border: color-mix(in srgb, var(--mat-sys-primary) 22%, transparent);
 }
 
 table {
@@ -72,26 +94,46 @@ table {
   border-collapse: collapse;
   min-width: 0;
   margin-inline: auto;
+  font-variant-numeric: tabular-nums;
 }
 
 th,
 td {
-  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 72%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 68%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 52%, transparent);
   padding: 0.45rem 0.55rem;
   font-size: 0.85rem;
   white-space: nowrap;
 }
 
+th:last-child,
+td:last-child {
+  border-right: none;
+}
+
 tbody tr:nth-child(even) td {
-  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 28%, transparent);
+  background: var(--table-surface-muted);
+}
+
+tbody td {
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 th {
   position: sticky;
   top: 0;
-  z-index: 1;
-  background: color-mix(in srgb, var(--mat-sys-surface-container-low) 70%, var(--mat-sys-surface));
-  font-weight: 600;
+  z-index: 4;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--mat-sys-surface-container-high) 62%, var(--mat-sys-surface)) 0%,
+    color-mix(in srgb, var(--mat-sys-surface-container-low) 66%, var(--mat-sys-surface)) 100%
+  );
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--mat-sys-outline-variant) 72%, transparent);
+  font-weight: 650;
+  letter-spacing: 0.01em;
   text-align: left;
 }
 
@@ -122,9 +164,12 @@ th {
   width: 320px;
 }
 
-.cg-total,
-.cg-day {
+.cg-total {
   width: max-content;
+}
+
+.cg-day {
+  width: min-content;
 }
 
 thead th:nth-child(3),
@@ -135,15 +180,26 @@ tfoot td:nth-child(3) {
   text-overflow: ellipsis;
 }
 
-.col-total,
-.col-day {
+.col-total {
   text-align: right;
   width: 1%;
   min-width: max-content;
 }
 
+.col-day {
+  text-align: right;
+  width: auto;
+  min-width: 2ch;
+}
+
 th.col-day {
   text-align: center;
+}
+
+th.col-day,
+tbody td:nth-child(n + 5),
+tfoot td:nth-child(n + 5) {
+  padding-inline: 0.34rem;
 }
 
 .day-header-link {
@@ -165,29 +221,39 @@ th.col-day {
 
 .total-cell,
 th.col-total {
-  border-left: 1px solid var(--mat-sys-outline-variant);
+  border-left: 1px solid color-mix(in srgb, var(--mat-sys-outline) 66%, transparent);
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 20%, var(--mat-sys-surface));
+  font-weight: 700;
 }
 
 .num {
   text-align: right;
 }
 
+th.col-total,
+td.total-cell {
+  text-align: center;
+}
+
 .value-active {
-  font-weight: 600;
-  background: color-mix(in srgb, var(--mat-sys-primary-container) 28%, transparent);
+  font-weight: 700;
+  color: color-mix(in srgb, var(--mat-sys-primary) 78%, var(--mat-sys-on-surface));
+  background: var(--table-active-bg);
+  box-shadow: none;
 }
 
 .value-zero {
-  opacity: 0.36;
-  color: color-mix(in srgb, var(--mat-sys-on-surface) 56%, transparent);
+  opacity: 1;
+  color: color-mix(in srgb, var(--mat-sys-on-surface) 28%, transparent);
+  font-weight: 400;
 }
 
 tbody td.col-weekend.value-zero,
 tbody td.col-holiday.value-zero,
 tfoot td.col-weekend.value-zero,
 tfoot td.col-holiday.value-zero {
-  opacity: 0.46;
-  color: color-mix(in srgb, var(--mat-sys-on-surface) 60%, transparent);
+  opacity: 1;
+  color: color-mix(in srgb, var(--mat-sys-on-surface) 34%, transparent);
 }
 
 th.col-weekend,
@@ -199,6 +265,12 @@ tfoot td.col-weekend {
 
 tbody tr:nth-child(even) td.col-weekend {
   background: var(--offday-bg);
+}
+
+th.col-day.col-week-block-alt:not(.col-weekend):not(.col-holiday),
+tbody td.col-week-block-alt:not(.col-weekend):not(.col-holiday),
+tfoot td.col-week-block-alt:not(.col-weekend):not(.col-holiday) {
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 12%, transparent);
 }
 
 th.col-holiday,
@@ -218,10 +290,32 @@ tfoot td.col-weekend.value-active,
 tbody td.col-holiday.value-active,
 tfoot td.col-holiday.value-active {
   background: var(--offday-bg);
+  box-shadow: none;
+}
+
+tbody tr:hover td {
+  background: color-mix(in srgb, var(--mat-sys-primary) 7%, var(--mat-sys-surface));
+}
+
+tbody tr:hover td.col-week-block-alt:not(.col-weekend):not(.col-holiday) {
+  background: color-mix(in srgb, var(--mat-sys-primary) 10%, var(--mat-sys-surface-container-low));
+}
+
+tbody tr:hover td.col-weekend,
+tbody tr:hover td.col-holiday {
+  background: color-mix(in srgb, var(--offday-bg) 84%, var(--mat-sys-primary) 16%);
+}
+
+tbody tr:hover td.value-active {
+  background: color-mix(in srgb, var(--table-active-bg) 76%, var(--mat-sys-primary) 24%);
+}
+
+tbody td.num:hover {
+  color: color-mix(in srgb, var(--mat-sys-primary) 86%, var(--mat-sys-on-surface));
 }
 
 .weekend-end {
-  border-right: 1px solid color-mix(in srgb, var(--mat-sys-outline) 72%, transparent);
+  border-right: 2px solid color-mix(in srgb, var(--mat-sys-outline) 74%, transparent);
 }
 
 tfoot td {
@@ -230,6 +324,8 @@ tfoot td {
   z-index: 2;
   font-weight: 700;
   background: color-mix(in srgb, var(--mat-sys-primary-container) 18%, var(--mat-sys-surface));
+  border-top: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 76%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--mat-sys-outline-variant) 52%, transparent);
 }
 
 /* Keep "Type" and "Numero" visible when scrolling horizontally. */
@@ -238,8 +334,9 @@ tbody td:nth-child(1),
 tfoot td:nth-child(1) {
   position: sticky;
   left: 0;
-  z-index: 2;
+  z-index: 5;
   background: var(--mat-sys-surface);
+  box-shadow: 1px 0 0 color-mix(in srgb, var(--mat-sys-outline-variant) 56%, transparent);
 }
 
 thead th:nth-child(2),
@@ -247,13 +344,16 @@ tbody td:nth-child(2),
 tfoot td:nth-child(2) {
   position: sticky;
   left: var(--sticky-col-type-width);
-  z-index: 2;
+  z-index: 5;
   background: var(--mat-sys-surface);
+  box-shadow:
+    1px 0 0 color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent),
+    10px 0 12px -10px color-mix(in srgb, #0f172a 30%, transparent);
 }
 
 thead th:nth-child(1),
 thead th:nth-child(2) {
-  z-index: 3;
+  z-index: 6;
   background: color-mix(in srgb, var(--mat-sys-surface-container-low) 70%, var(--mat-sys-surface));
 }
 

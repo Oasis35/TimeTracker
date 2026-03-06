@@ -1,23 +1,25 @@
 import { TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
+import { vi } from 'vitest';
 import { TrackerApi } from '../../../core/api/tracker-api';
+import { TicketDto, TicketTotalDto, TimesheetMetadataDto, TimesheetMonthDto } from '../../../core/api/models';
 import { UnitService } from '../../../core/services/unit.service';
 import { TimesheetDayPageComponent } from './timesheet-day-page';
 import { provideRouter } from '@angular/router';
 
 describe('TimesheetDayPageComponent', () => {
-  const metadata = {
+  const metadata: TimesheetMetadataDto = {
     hoursPerDay: 8,
     minutesPerDay: 480,
     allowedMinutesDayMode: [0, 120, 240, 360, 480],
     allowedMinutesHourMode: [0, 60, 120, 180, 240, 300, 360, 420, 480],
     defaultUnit: 'day' as const,
     defaultType: 'DEV',
-    tickets: [{ id: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1' }],
+    tickets: [{ id: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1', isCompleted: false }],
   };
 
-  const month = {
+  const month: TimesheetMonthDto = {
     year: 2026,
     month: 2,
     days: ['2026-02-01', '2026-02-02'],
@@ -28,41 +30,55 @@ describe('TimesheetDayPageComponent', () => {
         externalKey: 'ABC-1',
         label: 'Ticket ABC-1',
         values: { '2026-02-01': 120 },
-        total: 120,
       },
     ],
     totalsByDay: { '2026-02-01': 120, '2026-02-02': 0 },
   };
 
-  function setup() {
+  function setup(options?: {
+    metadata?: TimesheetMetadataDto;
+    monthData?: TimesheetMonthDto;
+    usedTickets?: TicketDto[];
+    ticketTotals?: TicketTotalDto[];
+    dialogCloseResult?: unknown;
+  }) {
     let capturedUpsert: unknown = null;
     const usedByMonthCalls: Array<{ year: number; month: number }> = [];
-    const usedTickets = metadata.tickets;
-    const monthData = month;
-    const ticketTotals = [{ ticketId: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1', total: 120 }];
+    const metadataData = options?.metadata ?? metadata;
+    const usedTickets = options?.usedTickets ?? metadataData.tickets;
+    const monthData = options?.monthData ?? month;
+    const ticketTotals = options?.ticketTotals ?? [
+      { ticketId: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1', total: 120 },
+    ];
     const apiMock = {
-      getMetadata: () => of(metadata),
-      getMonth: () => of(monthData),
-      getUsedByMonth: (year: number, month: number) => {
+      getMetadata: vi.fn(() => of(metadataData)),
+      getMonth: vi.fn(() => of(monthData)),
+      getUsedByMonth: vi.fn((year: number, month: number) => {
         usedByMonthCalls.push({ year, month });
         return of(usedTickets);
-      },
-      getTicketTotals: () => of(ticketTotals),
-      upsertTimeEntry: (dto: unknown) => {
+      }),
+      getTicketTotals: vi.fn(() => of(ticketTotals)),
+      upsertTimeEntry: vi.fn((dto: unknown) => {
         capturedUpsert = dto;
         return of(void 0);
-      },
+      }),
     };
-
     TestBed.configureTestingModule({
       imports: [
         TimesheetDayPageComponent,
         TranslateModule.forRoot(),
       ],
-      providers: [{ provide: TrackerApi, useValue: apiMock }, provideRouter([])],
+      providers: [
+        { provide: TrackerApi, useValue: apiMock },
+        provideRouter([]),
+      ],
     });
 
     const fixture = TestBed.createComponent(TimesheetDayPageComponent);
+    const dialogOpen = vi.fn().mockReturnValue({
+      afterClosed: () => of(options?.dialogCloseResult ?? false),
+    });
+    (fixture.componentInstance as any).dialog = { open: dialogOpen };
     const unit = TestBed.inject(UnitService);
     return {
       fixture,
@@ -70,6 +86,7 @@ describe('TimesheetDayPageComponent', () => {
       unit,
       getCapturedUpsert: () => capturedUpsert,
       getUsedByMonthCalls: () => usedByMonthCalls,
+      dialogOpen,
     };
   }
 
@@ -123,6 +140,8 @@ describe('TimesheetDayPageComponent', () => {
 
   it('reloads used tickets for the new month when month changes', async () => {
     const { fixture, component, getUsedByMonthCalls } = setup();
+    component.year.set(2026);
+    component.month.set(2);
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -186,8 +205,106 @@ describe('TimesheetDayPageComponent', () => {
     await fixture.whenStable();
 
     const rows = component.displayRows();
-    expect(rows.length).toBe(1);
-    expect(rows[0]?.ticketId).toBe(1);
+    expect(rows.length).toBe(0);
+  });
+
+  it('returns monthly tickets when search query is blank', async () => {
+    const { fixture, component } = setup({
+      monthData: {
+        year: 2026,
+        month: 2,
+        days: ['2026-02-01'],
+        rows: [
+          {
+            ticketId: 3,
+            type: 'DEV',
+            externalKey: '100',
+            label: 'Ticket 100',
+            values: { '2026-02-01': 60 },
+          },
+          {
+            ticketId: 4,
+            type: 'DEV',
+            externalKey: '20',
+            label: 'Ticket 20',
+            values: { '2026-02-01': 120 },
+          },
+        ],
+        totalsByDay: { '2026-02-01': 180 },
+      },
+      usedTickets: [
+        { id: 3, type: 'DEV', externalKey: '100', label: 'Ticket 100', isCompleted: true },
+        { id: 4, type: 'DEV', externalKey: '20', label: 'Ticket 20', isCompleted: false },
+      ],
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.ticketSearchQuery.set('   ');
+    const keys = component.searchResultTickets().map((t) => t.externalKey);
+
+    expect(keys).toEqual(['20']);
+  });
+
+  it('ranks search results by exact, prefix then contains match', async () => {
+    const { fixture, component } = setup({
+      metadata: {
+        ...metadata,
+        tickets: [
+          { id: 1, type: 'DEV', externalKey: '6501', label: 'Exact', isCompleted: false },
+          { id: 2, type: 'DEV', externalKey: '65010', label: 'Prefix', isCompleted: false },
+          { id: 3, type: 'DEV', externalKey: 'A6501B', label: 'Contains', isCompleted: false },
+          { id: 4, type: 'DEV', externalKey: '06501', label: 'Contains 2', isCompleted: false },
+          { id: 5, type: 'DEV', externalKey: '65011', label: 'Archived', isCompleted: true },
+        ],
+      },
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.ticketSearchQuery.set('6501');
+    const keys = component.searchResultTickets().map((t) => t.externalKey);
+
+    expect(keys).toEqual(['6501', '65010', '06501', 'A6501B']);
+  });
+
+  it('sets an error and does not open dialog when no day is selected', async () => {
+    const { fixture, component, dialogOpen } = setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.selectedDay.set('');
+    component.openTicketEntryDialog({
+      id: 1,
+      type: 'DEV',
+      externalKey: 'ABC-1',
+      label: 'Ticket ABC-1',
+      isCompleted: false,
+    });
+
+    expect(component.actionError()).toBe('day_required_before_log');
+    expect(dialogOpen).not.toHaveBeenCalled();
+  });
+
+  it('opens time entry dialog and forwards selected minutes', async () => {
+    const { fixture, component, dialogOpen } = setup({ dialogCloseResult: 240 });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.setSelectedDay('2026-02-01');
+    const pointSpy = vi.spyOn(component, 'pointMinutes').mockResolvedValue();
+
+    component.openTicketEntryDialog({
+      id: 1,
+      type: 'DEV',
+      externalKey: 'ABC-1',
+      label: 'Ticket ABC-1',
+      isCompleted: false,
+    });
+    await fixture.whenStable();
+
+    expect(dialogOpen).toHaveBeenCalled();
+    expect(pointSpy).toHaveBeenCalledWith(1, 240);
   });
 });
 

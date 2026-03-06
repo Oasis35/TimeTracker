@@ -1,11 +1,14 @@
 import { Component, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AppLanguage } from './core/i18n/app-language';
 import { UnitService, TimeUnit } from './core/services/unit.service';
+import { SettingsDialogComponent } from './features/settings/settings-dialog/settings-dialog.component';
 
 @Component({
   selector: 'app-root',
@@ -15,8 +18,10 @@ import { UnitService, TimeUnit } from './core/services/unit.service';
     RouterLink,
     RouterLinkActive,
     MatToolbarModule,
-    MatButtonToggleModule,
+    MatDialogModule,
     MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
     TranslateModule,
   ],
   templateUrl: './app.html',
@@ -25,6 +30,7 @@ import { UnitService, TimeUnit } from './core/services/unit.service';
 export class App {
   constructor(
     private readonly translate: TranslateService,
+    private readonly dialog: MatDialog,
     readonly unit: UnitService,
   ) {
     this.translate.setDefaultLang('fr');
@@ -43,6 +49,14 @@ export class App {
 
   onTimeChange(unit: TimeUnit): void {
     this.unit.setUnitMode(unit);
+  }
+
+  openSettingsDialog(): void {
+    this.dialog.open(SettingsDialogComponent, {
+      width: '460px',
+      maxWidth: '95vw',
+      autoFocus: false,
+    });
   }
 
   readonly currentLanguage = signal<AppLanguage>('fr');

@@ -58,4 +58,15 @@ describe('TimesheetMonthPageComponent', () => {
     expect(el.textContent).toContain('64205');
     expect(el.textContent).toContain('Securite API');
   });
+
+  it('alternates week block every 7 day columns', () => {
+    const fixture = setup();
+    const component = fixture.componentInstance;
+
+    expect(component.isAlternateWeekBlock(0)).toBe(false);
+    expect(component.isAlternateWeekBlock(6)).toBe(false);
+    expect(component.isAlternateWeekBlock(7)).toBe(true);
+    expect(component.isAlternateWeekBlock(13)).toBe(true);
+    expect(component.isAlternateWeekBlock(14)).toBe(false);
+  });
 });

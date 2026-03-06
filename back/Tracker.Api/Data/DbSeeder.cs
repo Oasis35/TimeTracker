@@ -6,6 +6,7 @@ namespace Tracker.Api.Data;
 public static class DbSeeder
 {
     private const string SeedMarkerComment = "__DEV_SEED_V2__";
+    private const string SingleLeaveExternalKey = "CP";
 
     public static void SeedDevelopmentData(TrackerDbContext db, TimeTrackingOptions opts)
     {
@@ -16,10 +17,10 @@ public static class DbSeeder
         if (minutesPerDay % 4 != 0)
             return;
 
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var seedYear = today.Year - 1;
+        var seedStart = new DateOnly(2025, 1, 1);
+        var seedEnd = new DateOnly(2026, 2, 28);
 
-        // 1) Tickets DEV + CONGES (idempotent par Type + ExternalKey)
+        // 1) Tickets DEV + un seul ticket CONGES (idempotent par Type + ExternalKey)
         var requiredTickets = new List<Ticket>
         {
             new() { Type = "DEV", ExternalKey = "65010", Label = "Refonte auth API" },
@@ -37,13 +38,7 @@ public static class DbSeeder
             new() { Type = "DEV", ExternalKey = "65022", Label = "Ajout endpoint statistiques" },
             new() { Type = "DEV", ExternalKey = "65023", Label = "Mise à niveau Angular" },
             new() { Type = "DEV", ExternalKey = "65024", Label = "Tests de non-régression" },
-
-            new() { Type = "CONGES", ExternalKey = "CP-HIVER", Label = "Congés hiver" },
-            new() { Type = "CONGES", ExternalKey = "CP-PRINTEMPS", Label = "Congés printemps" },
-            new() { Type = "CONGES", ExternalKey = "CP-ETE", Label = "Congés été" },
-            new() { Type = "CONGES", ExternalKey = "CP-TOUSSAINT", Label = "Congés Toussaint" },
-            new() { Type = "CONGES", ExternalKey = "CP-NOEL", Label = "Congés fin d'année" },
-            new() { Type = "CONGES", ExternalKey = "RTT-PONTS", Label = "RTT et ponts" }
+            new() { Type = "CONGES", ExternalKey = SingleLeaveExternalKey, Label = "Congés" }
         };
 
         foreach (var ticket in requiredTickets)
@@ -58,33 +53,28 @@ public static class DbSeeder
 
         db.SaveChanges();
 
-        // 2) Seed idempotent : on ne rejoue pas si v2 déjà présent
-        var alreadySeeded = db.TimeEntries.Any(e => e.Comment == SeedMarkerComment);
+        NormalizeSeededLeaveEntriesToSingleCpTicket(db);
 
-        if (alreadySeeded)
-            return;
-
-        var ticketsByKey = db.Tickets
+        var ticketIdsByExternalKey = db.Tickets
             .Where(t => t.ExternalKey != null)
-            .ToList();
+            .ToDictionary(t => t.ExternalKey!, t => t.Id, StringComparer.Ordinal);
 
-        int GetTicketId(string externalKey)
-            => ticketsByKey.First(t => t.ExternalKey == externalKey).Id;
+        int GetTicketId(string externalKey) => ticketIdsByExternalKey[externalKey];
 
         var devKeys = requiredTickets
             .Where(t => t.Type == "DEV")
             .Select(t => t.ExternalKey!)
             .ToList();
-
-        if (devKeys.Count == 0)
-            return;
+        var devTicketIds = devKeys
+            .Select(GetTicketId)
+            .ToHashSet();
 
         var periodEntries = new List<TimeEntry>();
         int devIndex = 0;
 
         void AddDevDay(DateOnly date)
         {
-            if (date >= today || date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
                 return;
 
             var key = devKeys[devIndex % devKeys.Count];
@@ -103,7 +93,7 @@ public static class DbSeeder
             var ticketId = GetTicketId(ticketKey);
             for (var day = start; day <= endInclusive; day = day.AddDays(1))
             {
-                if (day >= today || day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+                if (day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
                     continue;
 
                 periodEntries.Add(new TimeEntry
@@ -116,39 +106,31 @@ public static class DbSeeder
             }
         }
 
-        // Remplit l'année passée en DEV sur les jours ouvrés
-        for (var month = 1; month <= 12; month++)
+        // Remplit la période de seed en DEV sur les jours ouvrés.
+        for (var day = seedStart; day <= seedEnd; day = day.AddDays(1))
         {
-            var from = new DateOnly(seedYear, month, 1);
-            var to = from.AddMonths(1).AddDays(-1);
-            for (var day = from; day <= to; day = day.AddDays(1))
-            {
-                AddDevDay(day);
-            }
+            AddDevDay(day);
         }
 
-        // Périodes de congés françaises (année passée), toutes dans le passé
-        AddCongesPeriod("CP-HIVER", new DateOnly(seedYear, 2, 26), new DateOnly(seedYear, 3, 1));
-        AddCongesPeriod("CP-PRINTEMPS", new DateOnly(seedYear, 4, 22), new DateOnly(seedYear, 4, 26));
-        AddCongesPeriod("CP-ETE", new DateOnly(seedYear, 8, 5), new DateOnly(seedYear, 8, 23));
-        AddCongesPeriod("CP-TOUSSAINT", new DateOnly(seedYear, 10, 28), new DateOnly(seedYear, 11, 1));
-        AddCongesPeriod("CP-NOEL", new DateOnly(seedYear, 12, 23), new DateOnly(seedYear, 12, 31));
-        AddCongesPeriod("RTT-PONTS", new DateOnly(seedYear, 5, 2), new DateOnly(seedYear, 5, 3));
-        AddCongesPeriod("RTT-PONTS", new DateOnly(seedYear, 5, 10), new DateOnly(seedYear, 5, 10));
+        // Périodes de congés seedées sur le ticket CP unique.
+        AddCongesPeriod(SingleLeaveExternalKey, new DateOnly(2025, 2, 26), new DateOnly(2025, 3, 1));
+        AddCongesPeriod(SingleLeaveExternalKey, new DateOnly(2025, 4, 22), new DateOnly(2025, 4, 26));
+        AddCongesPeriod(SingleLeaveExternalKey, new DateOnly(2025, 5, 2), new DateOnly(2025, 5, 3));
+        AddCongesPeriod(SingleLeaveExternalKey, new DateOnly(2025, 5, 10), new DateOnly(2025, 5, 10));
+        AddCongesPeriod(SingleLeaveExternalKey, new DateOnly(2025, 8, 5), new DateOnly(2025, 8, 23));
+        AddCongesPeriod(SingleLeaveExternalKey, new DateOnly(2025, 10, 28), new DateOnly(2025, 11, 1));
+        AddCongesPeriod(SingleLeaveExternalKey, new DateOnly(2025, 12, 23), new DateOnly(2025, 12, 31));
+        AddCongesPeriod(SingleLeaveExternalKey, new DateOnly(2026, 2, 23), new DateOnly(2026, 2, 27));
 
         // Remplace les saisies DEV des jours de congés par les saisies CONGES
+        var singleLeaveTicketId = GetTicketId(SingleLeaveExternalKey);
         var congesDays = periodEntries
-            .Where(e => e.TicketId == GetTicketId("CP-HIVER")
-                     || e.TicketId == GetTicketId("CP-PRINTEMPS")
-                     || e.TicketId == GetTicketId("CP-ETE")
-                     || e.TicketId == GetTicketId("CP-TOUSSAINT")
-                     || e.TicketId == GetTicketId("CP-NOEL")
-                     || e.TicketId == GetTicketId("RTT-PONTS"))
+            .Where(e => e.TicketId == singleLeaveTicketId)
             .Select(e => e.Date)
             .ToHashSet();
 
         periodEntries = periodEntries
-            .Where(e => !devKeys.Select(GetTicketId).Contains(e.TicketId ?? -1) || !congesDays.Contains(e.Date))
+            .Where(e => e.TicketId is not int ticketId || !devTicketIds.Contains(ticketId) || !congesDays.Contains(e.Date))
             .ToList();
 
         // Sécurité idempotence sur index (TicketId, Date)
@@ -156,18 +138,74 @@ public static class DbSeeder
             .Where(e => e.TicketId != null)
             .Select(e => new { e.TicketId, e.Date })
             .ToList()
-            .Select(x => $"{x.TicketId}-{x.Date:yyyy-MM-dd}")
+            .Select(x => (TicketId: x.TicketId!.Value, x.Date))
             .ToHashSet();
 
         var toInsert = periodEntries
-            .Where(e => e.TicketId != null)
-            .Where(e => !existingPairs.Contains($"{e.TicketId}-{e.Date:yyyy-MM-dd}"))
+            .Where(e => e.TicketId is int ticketId && !existingPairs.Contains((ticketId, e.Date)))
             .ToList();
 
         if (toInsert.Count == 0)
             return;
 
         db.TimeEntries.AddRange(toInsert);
+        db.SaveChanges();
+    }
+
+    private static void NormalizeSeededLeaveEntriesToSingleCpTicket(TrackerDbContext db)
+    {
+        var cpTicket = db.Tickets.FirstOrDefault(t => t.Type == "CONGES" && t.ExternalKey == SingleLeaveExternalKey);
+        if (cpTicket is null)
+            return;
+
+        var leaveTickets = db.Tickets
+            .Where(t => t.Type == "CONGES")
+            .ToList();
+        var leaveTicketsById = leaveTickets.ToDictionary(t => t.Id);
+
+        var seededLeaveEntries = db.TimeEntries
+            .Where(e => e.Comment == SeedMarkerComment && e.TicketId != null)
+            .ToList();
+        var seededLeaveEntryPairs = seededLeaveEntries
+            .Where(e => e.TicketId is int ticketId && leaveTicketsById.ContainsKey(ticketId))
+            .Select(e => new { Entry = e, Ticket = leaveTicketsById[e.TicketId!.Value] })
+            .ToList();
+
+        if (seededLeaveEntryPairs.Count > 0)
+        {
+            var cpDates = seededLeaveEntryPairs
+                .Where(x => x.Ticket.Id == cpTicket.Id)
+                .Select(x => x.Entry.Date)
+                .ToHashSet();
+
+            var toDelete = new List<TimeEntry>();
+            foreach (var item in seededLeaveEntryPairs.Where(x => x.Ticket.Id != cpTicket.Id))
+            {
+                if (cpDates.Contains(item.Entry.Date))
+                {
+                    toDelete.Add(item.Entry);
+                    continue;
+                }
+
+                item.Entry.TicketId = cpTicket.Id;
+                cpDates.Add(item.Entry.Date);
+            }
+
+            if (toDelete.Count > 0)
+                db.TimeEntries.RemoveRange(toDelete);
+
+            db.SaveChanges();
+        }
+
+        var removableLegacyLeaveTickets = db.Tickets
+            .Where(t => t.Type == "CONGES" && t.Id != cpTicket.Id)
+            .Where(t => !db.TimeEntries.Any(e => e.TicketId == t.Id))
+            .ToList();
+
+        if (removableLegacyLeaveTickets.Count == 0)
+            return;
+
+        db.Tickets.RemoveRange(removableLegacyLeaveTickets);
         db.SaveChanges();
     }
 }

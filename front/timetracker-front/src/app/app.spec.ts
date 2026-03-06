@@ -1,11 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
 import { App } from './app';
 import { UnitService } from './core/services/unit.service';
+import { SettingsDialogComponent } from './features/settings/settings-dialog/settings-dialog.component';
 
 describe('App', () => {
   beforeEach(async () => {
+    vi.restoreAllMocks();
     await TestBed.configureTestingModule({
       imports: [
         App,
@@ -49,5 +52,23 @@ describe('App', () => {
       .filter((href) => href.length > 0);
 
     expect(hrefs.some((href) => href.endsWith('/tickets-grid'))).toBe(true);
+  });
+
+  it('opens settings dialog with expected config', () => {
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    const dialogOpen = vi.fn();
+    (app as any).dialog = { open: dialogOpen };
+
+    app.openSettingsDialog();
+
+    expect(dialogOpen).toHaveBeenCalledWith(
+      SettingsDialogComponent,
+      expect.objectContaining({
+        width: '460px',
+        maxWidth: '95vw',
+        autoFocus: false,
+      }),
+    );
   });
 });

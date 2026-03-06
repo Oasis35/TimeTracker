@@ -32,6 +32,11 @@ export class TrackerApi {
     return this.http.get<TicketDto[]>('/api/tickets');
   }
 
+  lookupOpenTicketsByNumber(query: string, take = 10): Observable<TicketDto[]> {
+    const params = new HttpParams().set('q', query).set('take', take);
+    return this.http.get<TicketDto[]>('/api/tickets/lookup', { params });
+  }
+
   getTicketTotals(year?: number, month?: number): Observable<TicketTotalDto[]> {
     let params = new HttpParams();
     if (year != null && month != null) {

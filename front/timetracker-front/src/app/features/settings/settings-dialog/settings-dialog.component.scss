@@ -1,0 +1,42 @@
+:host {
+  display: block;
+  position: relative;
+}
+
+.close-btn {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.45rem;
+}
+
+.settings-content {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: start;
+  padding-top: 0.4rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.setting-group {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+mat-button-toggle-group {
+  --mat-standard-button-toggle-height: 40px;
+  width: fit-content;
+  max-width: 100%;
+  justify-self: start;
+  overflow: clip;
+}
+
+@media (max-width: 700px) {
+  .settings-content {
+    grid-template-columns: 1fr;
+  }
+}

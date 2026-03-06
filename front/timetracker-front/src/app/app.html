@@ -1,29 +1,52 @@
 <mat-toolbar class="app-topbar">
-  <span class="brand">TimeTracker</span>
-  <mat-button-toggle-group
-    class="lang-toggle"
-    [value]="currentLanguage()"
-    (change)="onLanguageChange($event.value)"
-    aria-label="Language"
-    hideSingleSelectionIndicator
-  >
-    <mat-button-toggle value="fr">FR</mat-button-toggle>
-    <mat-button-toggle value="en">EN</mat-button-toggle>
-  </mat-button-toggle-group>
-  <mat-button-toggle-group
-    class="unit-toggle"
-    [value]="unit.unitMode()"
-    (change)="onTimeChange($event.value)"
-    [attr.aria-label]="'unit_display' | translate"
-    hideSingleSelectionIndicator
-  >
-    <mat-button-toggle value="day">{{ 'day' | translate }}</mat-button-toggle>
-    <mat-button-toggle value="hour">{{ 'hour' | translate }}</mat-button-toggle>
-  </mat-button-toggle-group>
-  <div class="nav-links">
-    <a mat-stroked-button class="nav-link" routerLink="/tickets-grid" routerLinkActive="nav-link-active">
-      {{ 'grid_view' | translate }}
-    </a>
+  <div class="topbar-inner">
+    <div class="topbar-brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">TimeTracker</span>
+    </div>
+
+    <nav class="topbar-nav" aria-label="Navigation principale">
+      <a
+        mat-button
+        class="nav-pill"
+        routerLink="/day"
+        routerLinkActive="nav-pill-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        {{ 'day' | translate }}
+      </a>
+      <a
+        mat-button
+        class="nav-pill"
+        routerLink="/month"
+        routerLinkActive="nav-pill-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        {{ 'month' | translate }}
+      </a>
+      <a
+        mat-button
+        class="nav-pill"
+        routerLink="/tickets-grid"
+        routerLinkActive="nav-pill-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        {{ 'grid_view' | translate }}
+      </a>
+    </nav>
+
+    <div class="topbar-actions">
+      <button
+        mat-icon-button
+        type="button"
+        class="settings-btn"
+        (click)="openSettingsDialog()"
+        [attr.aria-label]="'settings_title' | translate"
+        [matTooltip]="'settings_title' | translate"
+      >
+        <mat-icon aria-hidden="true">tune</mat-icon>
+      </button>
+    </div>
   </div>
 </mat-toolbar>
 <router-outlet />

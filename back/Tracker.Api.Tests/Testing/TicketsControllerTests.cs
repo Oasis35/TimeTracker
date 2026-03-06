@@ -75,6 +75,106 @@ public sealed class TicketsControllerTests
         Assert.Equal("DEV", list[0].Type);
     }
 
+    [Fact]
+    public async Task LookupOpenByExternalKey_Should_Return_Only_Open_Non_Conges_Tickets()
+    {
+        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
+        await using var _ = db;
+        await using var __ = conn;
+
+        db.Tickets.AddRange(
+            new Ticket { Type = "DEV", ExternalKey = "65010", Label = "Open", IsCompleted = false },
+            new Ticket { Type = "DEV", ExternalKey = "65011", Label = "Archived", IsCompleted = true },
+            new Ticket { Type = "CONGES", ExternalKey = "65012", Label = "Leave", IsCompleted = false }
+        );
+        await db.SaveChangesAsync();
+
+        var controller = new TicketsController(db);
+
+        var result = await controller.LookupOpenByExternalKey("6501", 10);
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
+
+        Assert.Single(list);
+        Assert.Equal("65010", list[0].ExternalKey);
+        Assert.False(list[0].IsCompleted);
+    }
+
+    [Fact]
+    public async Task LookupOpenByExternalKey_Should_Return_Empty_When_Query_Is_Blank()
+    {
+        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
+        await using var _ = db;
+        await using var __ = conn;
+
+        db.Tickets.Add(new Ticket { Type = "DEV", ExternalKey = "65010", Label = "Open", IsCompleted = false });
+        await db.SaveChangesAsync();
+
+        var controller = new TicketsController(db);
+
+        var result = await controller.LookupOpenByExternalKey("   ", 10);
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
+
+        Assert.Empty(list);
+    }
+
+    [Fact]
+    public async Task LookupOpenByExternalKey_Should_Clamp_Take_To_25()
+    {
+        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
+        await using var _ = db;
+        await using var __ = conn;
+
+        for (var i = 0; i < 40; i++)
+        {
+            db.Tickets.Add(new Ticket
+            {
+                Type = "DEV",
+                ExternalKey = $"650{i:00}",
+                Label = $"Ticket {i:00}",
+                IsCompleted = false
+            });
+        }
+        await db.SaveChangesAsync();
+
+        var controller = new TicketsController(db);
+
+        var result = await controller.LookupOpenByExternalKey("650", 100);
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
+
+        Assert.Equal(25, list.Count);
+    }
+
+    [Fact]
+    public async Task LookupOpenByExternalKey_Should_Order_By_Exact_Prefix_Then_Contains()
+    {
+        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
+        await using var _ = db;
+        await using var __ = conn;
+
+        db.Tickets.AddRange(
+            new Ticket { Type = "DEV", ExternalKey = "X6501", Label = "Contains 2", IsCompleted = false },
+            new Ticket { Type = "DEV", ExternalKey = "65010", Label = "Prefix", IsCompleted = false },
+            new Ticket { Type = "DEV", ExternalKey = "6501", Label = "Exact", IsCompleted = false },
+            new Ticket { Type = "DEV", ExternalKey = "16501", Label = "Contains 1", IsCompleted = false }
+        );
+        await db.SaveChangesAsync();
+
+        var controller = new TicketsController(db);
+
+        var result = await controller.LookupOpenByExternalKey("6501", 10);
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
+
+        Assert.Equal(4, list.Count);
+        Assert.Equal("6501", list[0].ExternalKey);
+        Assert.Equal("65010", list[1].ExternalKey);
+        Assert.Equal("16501", list[2].ExternalKey);
+        Assert.Equal("X6501", list[3].ExternalKey);
+    }
+
     // -------------------------
     // POST /api/tickets
     // -------------------------

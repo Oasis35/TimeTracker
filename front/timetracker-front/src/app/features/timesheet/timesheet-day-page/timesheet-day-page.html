@@ -3,50 +3,19 @@
     <section class="content">
       @if (metadataRes.value(); as meta) {
         <mat-card class="timesheet-card">
-          <div class="card-header">
-            <div>
-              <h2>
-                <a
-                  class="month-link"
-                  [routerLink]="['/month']"
-                  [queryParams]="{ year: year(), month: month() }"
-                >
-                  {{ 'tickets_month_title' | translate:{ month: monthYearLabel() } }}
-                </a>
-              </h2>
-            </div>
-          </div>
+          <div class="day-toolbar">
+            <div class="toolbar-spacer" aria-hidden="true"></div>
 
-          <mat-divider></mat-divider>
-
-          <div class="insights-strip">
-            <div class="kpi">
-              <span>{{ 'kpi_tickets' | translate }}</span>
-              <strong>{{ displayRows().length }}</strong>
-            </div>
-            <div class="kpi">
-              <span>{{ 'kpi_total_month' | translate }}</span>
-              <strong>{{ formatEntryValue(monthTotalMinutes()) }}</strong>
-            </div>
-            <div class="kpi">
-              <span>{{ 'kpi_days_logged' | translate }}</span>
-              <strong>{{ workedDaysCount() }}</strong>
-            </div>
-            <button mat-flat-button type="button" class="open-ticket-dialog" (click)="openAddTicketDialog()">
-              {{ 'new_ticket' | translate }}
-            </button>
-          </div>
-
-          <div class="days-row">
-            <div class="day-nav">
+            <div class="toolbar-nav">
               <button
                 mat-stroked-button
                 type="button"
                 class="day-shift-btn"
                 (click)="prevWorkday()"
                 [attr.aria-label]="'day_previous' | translate"
+                [matTooltip]="'day_previous' | translate"
               >
-                {{ 'day_previous' | translate }}
+                <mat-icon aria-hidden="true">chevron_left</mat-icon>
               </button>
               <mat-form-field appearance="outline" class="day-picker-field">
                 <mat-label>{{ 'day_label' | translate }}</mat-label>
@@ -66,28 +35,134 @@
                 class="day-shift-btn"
                 (click)="nextWorkday()"
                 [attr.aria-label]="'day_next' | translate"
+                [matTooltip]="'day_next' | translate"
               >
-                {{ 'day_next' | translate }}
+                <mat-icon aria-hidden="true">chevron_right</mat-icon>
+              </button>
+            </div>
+
+            <div class="toolbar-actions">
+              @if (busy() || actionMessage() || actionError()) {
+                <span
+                  class="save-indicator"
+                  [class.save-indicator-saving]="busy()"
+                  [class.save-indicator-saved]="!busy() && !!actionMessage()"
+                  [class.save-indicator-error]="!busy() && !!actionError()"
+                >
+                  @if (busy()) {
+                    {{ 'day_status_saving' | translate }}
+                  } @else if (actionError()) {
+                    {{ 'day_status_error' | translate }}
+                  } @else {
+                    {{ 'day_status_saved' | translate }}
+                  }
+                </span>
+              }
+              <button
+                mat-icon-button
+                type="button"
+                class="open-ticket-dialog create-ticket-btn"
+                (click)="openAddTicketDialog()"
+                [attr.aria-label]="'new_ticket' | translate"
+                [matTooltip]="'new_ticket' | translate"
+              >
+                <mat-icon>add</mat-icon>
               </button>
             </div>
           </div>
 
-          @if (actionMessage()) {
-            <div class="ok">{{ actionMessage() }}</div>
-          }
-          @if (actionError(); as err) {
-            <div class="error">{{ err }}</div>
-          }
-          @if (error(); as err) {
-            <div class="error">{{ err }}</div>
-          }
+          <div class="summary-row">
+            <div class="insights-strip">
+              <div class="kpi">
+                <span>{{ 'kpi_tickets' | translate }}</span>
+                <strong>{{ displayRows().length }}</strong>
+              </div>
+              <div class="kpi">
+                <span>{{ 'kpi_total_month' | translate }}</span>
+                <strong>{{ formatEntryValue(monthTotalMinutes()) }}</strong>
+              </div>
+              <div class="kpi">
+                <span>{{ 'kpi_days_logged' | translate }}</span>
+                <strong>{{ workedDaysCount() }}</strong>
+              </div>
+            </div>
+
+            <div class="ticket-search">
+              <mat-form-field appearance="outline" class="ticket-search-field">
+                <mat-label>{{ 'ticket_search_label' | translate }}</mat-label>
+                <input
+                  matInput
+                  [value]="ticketSearchQuery()"
+                  (input)="onTicketSearchInput($event)"
+                  [placeholder]="'ticket_search_placeholder' | translate"
+                  [matAutocomplete]="ticketLookupAuto"
+                  #ticketLookupTrigger="matAutocompleteTrigger"
+                  (focus)="openTicketSearchPanel(ticketLookupTrigger)"
+                  (click)="openTicketSearchPanel(ticketLookupTrigger)"
+                />
+                @if (ticketSearchQuery().trim()) {
+                  <button
+                    mat-icon-button
+                    matSuffix
+                    type="button"
+                    [attr.aria-label]="'cancel' | translate"
+                    (click)="clearTicketSearch()"
+                  >
+                    <mat-icon aria-hidden="true">close</mat-icon>
+                  </button>
+                }
+              </mat-form-field>
+              <mat-autocomplete
+                #ticketLookupAuto="matAutocomplete"
+                [displayWith]="ticketSearchDisplayValue"
+                (optionSelected)="onTicketSearchOptionSelected($event)"
+              >
+                @for (ticket of searchResultTickets(); track ticket.id) {
+                  <mat-option [value]="ticket">
+                    <span class="ticket-search-item-ref">{{ ticket.type }} {{ ticket.externalKey }}</span>
+                    @if (ticket.label) {
+                      <span class="ticket-search-item-label"> - {{ ticket.label }}</span>
+                    }
+                  </mat-option>
+                }
+                @if (searchResultTickets().length === 0) {
+                  <mat-option disabled>{{ 'ticket_search_empty' | translate }}</mat-option>
+                }
+              </mat-autocomplete>
+            </div>
+          </div>
+
+          <div class="feedback-strip">
+            @if (actionMessage()) {
+              <div class="ok">{{ actionMessage() }}</div>
+            }
+            @if (actionError(); as err) {
+              <div class="error">{{ err }}</div>
+            }
+            @if (error(); as err) {
+              <div class="error">{{ err }}</div>
+            }
+          </div>
 
           <div class="rows" [attr.aria-label]="'rows_aria' | translate">
             @for (r of displayRows(); track r.ticketId) {
-              <div class="row ticket-row" [class.ticket-row-completed]="r.isCompleted">
+              <article class="row ticket-row" [class.ticket-row-completed]="r.isCompleted">
                 <div class="ticket-main">
-                  <span class="ticket-title">{{ r.type }} {{ r.externalKey }}</span>
+                  <div class="ticket-head">
+                    <span class="ticket-title">{{ r.type }} {{ r.externalKey }}</span>
+                    @if (r.isCompleted) {
+                      <span class="ticket-state ticket-state-completed">
+                        {{ 'ticket_state_completed' | translate }}
+                      </span>
+                    }
+                  </div>
                   <div class="line-2">{{ r.label }}</div>
+                </div>
+
+                <div class="ticket-meta">
+                  <div class="week-total">
+                    {{ 'total_ticket_row' | translate:{ value: formatEntryValue(r.ticketTotal) } }}
+                  </div>
                 </div>
 
                 <div class="ticket-action">
@@ -95,7 +170,10 @@
                     [matTooltip]="r.isCompleted ? ('ticket_completed_no_time_entry' | translate) : ''"
                     [matTooltipDisabled]="!r.isCompleted"
                   >
-                    <mat-form-field appearance="outline">
+                    <mat-form-field
+                      appearance="outline"
+                      [class.entry-active]="getCellMinutes(r, selectedDay()) > 0"
+                    >
                       <mat-select
                         [value]="getCellMinutes(r, selectedDay())"
                         (selectionChange)="pointMinutes(r.ticketId, $event.value)"
@@ -109,11 +187,8 @@
                       </mat-select>
                     </mat-form-field>
                   </span>
-                  <div class="week-total">
-                    {{ 'total_ticket_row' | translate:{ value: formatEntryValue(r.ticketTotal) } }}
-                  </div>
                 </div>
-              </div>
+              </article>
             }
           </div>
 

@@ -19,11 +19,6 @@
         </div>
         <div class="header-center">
           <h2>{{ 'month_view_title' | translate:{ month: monthYearLabel() } }}</h2>
-        </div>
-        <div class="header-right">
-          <button mat-stroked-button type="button" (click)="goToCurrentMonth()" [disabled]="isCurrentMonth()">
-            {{ 'month_current' | translate }}
-          </button>
           <button
             mat-icon-button
             type="button"
@@ -34,23 +29,28 @@
           >
             <mat-icon>calendar_month</mat-icon>
           </button>
-          <input
-            class="month-picker-input"
-            type="text"
-            [matDatepicker]="monthPicker"
-            [value]="selectedMonthDate()"
-            readonly
-            aria-hidden="true"
-            tabindex="-1"
-          />
-          <mat-datepicker
-            #monthPicker
-            startView="year"
-            [startAt]="selectedMonthDate()"
-            (monthSelected)="onMonthSelected($event, monthPicker)"
-          ></mat-datepicker>
+        </div>
+        <div class="header-right">
+          <button mat-stroked-button type="button" (click)="goToCurrentMonth()" [disabled]="isCurrentMonth()">
+            {{ 'month_current' | translate }}
+          </button>
         </div>
       </div>
+      <input
+        class="month-picker-input"
+        type="text"
+        [matDatepicker]="monthPicker"
+        [value]="selectedMonthDate()"
+        readonly
+        aria-hidden="true"
+        tabindex="-1"
+      />
+      <mat-datepicker
+        #monthPicker
+        startView="year"
+        [startAt]="selectedMonthDate()"
+        (monthSelected)="onMonthSelected($event, monthPicker)"
+      ></mat-datepicker>
 
       <div class="table-wrap" [style.--sticky-col-type-width.px]="stickyTypeWidth()">
         <table>
@@ -69,11 +69,12 @@
               <th class="col-number">{{ 'external_key' | translate }}</th>
               <th class="col-label">{{ 'label' | translate }}</th>
                 <th class="col-total">{{ 'month_total' | translate }}</th>
-              @for (day of days(); track day) {
+              @for (day of days(); track day; let dayIndex = $index) {
                 <th
                   class="col-day"
                   [class.col-weekend]="isWeekendIso(day)"
                   [class.col-holiday]="isHolidayIso(day)"
+                  [class.col-week-block-alt]="isAlternateWeekBlock(dayIndex)"
                   [class.weekend-end]="isSundayIso(day) && !isHolidayIso(day)"
                   [matTooltip]="isHolidayIso(day) ? holidayLabel(day) : (isWeekendIso(day) ? ('weekend_label' | translate) : '')"
                   [matTooltipDisabled]="!isWeekendIso(day) && !isHolidayIso(day)"
@@ -112,11 +113,12 @@
                   >
                     {{ formatZeroAware(row.total) }}
                   </td>
-                  @for (day of days(); track day) {
+                  @for (day of days(); track day; let dayIndex = $index) {
                     <td
                       class="num"
                       [class.col-weekend]="isWeekendIso(day)"
                       [class.col-holiday]="isHolidayIso(day)"
+                      [class.col-week-block-alt]="isAlternateWeekBlock(dayIndex)"
                       [class.weekend-end]="isSundayIso(day) && !isHolidayIso(day)"
                       [class.value-active]="getCellMinutes(row, day) > 0"
                       [class.value-zero]="getCellMinutes(row, day) === 0"
@@ -138,11 +140,12 @@
               >
                 {{ formatZeroAware(monthTotal()) }}
               </td>
-              @for (day of days(); track day) {
+              @for (day of days(); track day; let dayIndex = $index) {
                   <td
                     class="num"
                     [class.col-weekend]="isWeekendIso(day)"
                     [class.col-holiday]="isHolidayIso(day)"
+                    [class.col-week-block-alt]="isAlternateWeekBlock(dayIndex)"
                     [class.weekend-end]="isSundayIso(day) && !isHolidayIso(day)"
                     [class.value-active]="(monthRes.value()?.totalsByDay?.[day] ?? 0) > 0"
                     [class.value-zero]="(monthRes.value()?.totalsByDay?.[day] ?? 0) === 0"

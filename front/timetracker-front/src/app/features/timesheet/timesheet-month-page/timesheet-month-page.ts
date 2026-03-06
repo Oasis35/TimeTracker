@@ -198,6 +198,10 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     return new Date(`${dayIso}T00:00:00`).getDay() === 0;
   }
 
+  isAlternateWeekBlock(dayIndex: number): boolean {
+    return Math.floor(dayIndex / 7) % 2 === 1;
+  }
+
   getCellMinutes(row: MonthlyRow, dayIso: string): number {
     return row.values?.[dayIso] ?? 0;
   }
