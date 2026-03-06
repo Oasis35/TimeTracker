@@ -194,6 +194,24 @@ Exemple de reponse :
 }
 ```
 
+#### `GET /api/tickets/lookup?q=6501&take=10`
+
+Retourne les tickets ouverts qui correspondent a une recherche partielle sur la cle externe.
+
+Comportement :
+
+- exclut les tickets completes
+- exclut les tickets dont `Type == "CONGES"`
+- recherche uniquement les tickets avec `ExternalKey` non null
+- classe d'abord les matches exacts, puis les prefixes, puis les autres matches partiels
+
+Parametres de query :
+
+- `q` : chaine de recherche sur `ExternalKey`
+- `take` : nombre de lignes demande (par defaut `10`, borne entre `1` et `25`)
+
+Si `q` est absent ou vide, l'endpoint retourne un tableau vide.
+
 #### `GET /api/tickets/used?year=2026&month=2`
 
 Retourne les tickets distincts utilises par des saisies de temps sur le mois demande.
@@ -551,4 +569,3 @@ dotnet ef database update --project back/Tracker.Api/Tracker.Api.csproj
 - `GET /api/tickets` et `GET /api/timesheet/metadata` ne retournent pas exactement le meme ensemble de tickets car le premier exclut `CONGES` et le second non.
 - Les ecritures de saisies de temps sont contraintes par `HoursPerDay` ; changer cette valeur modifie immediatement le comportement de validation de l'API.
 - L'API applique les migrations au demarrage. C'est pratique en local, mais le demarrage peut echouer si une migration est invalide ou si la base n'est pas inscriptible.
-

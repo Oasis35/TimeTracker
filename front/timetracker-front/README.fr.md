@@ -32,6 +32,7 @@ Il fournit l'interface principale du timesheet (vues jour et mois), une grille d
 - `src/app/core/services/unit.service.ts` : etat global du mode d'affichage jour/heure
 - `src/app/features/timesheet/` : pages timesheet jour et mois
 - `src/app/features/tickets-grid/` : grille de gestion des tickets
+- `src/app/features/settings/` : dialogue de parametres (langue et mode d'unite)
 - `src/app/features/tickets/shared/add-ticket-dialog/` : dialogue partage de creation de ticket
 - `public/i18n/fr.json` : libelles francais
 - `public/i18n/en.json` : libelles anglais
@@ -137,9 +138,8 @@ Le projet utilise le builder de tests Angular et contient des specs pour :
 Le composant racine dans [app.ts](c:/Git/TimeTracker/front/timetracker-front/src/app/app.ts) fournit :
 
 - une toolbar principale
-- un selecteur de langue (`FR` / `EN`)
-- un selecteur d'unite (`day` / `hour`)
-- un bouton de navigation vers la grille des tickets
+- des liens de navigation directs vers `/day`, `/month` et `/tickets-grid`
+- un bouton de parametres qui ouvre le dialogue dedie
 - un `router-outlet` pour le contenu des pages
 
 Etat UI global expose au niveau du shell :
@@ -148,6 +148,7 @@ Etat UI global expose au niveau du shell :
 - unite d'affichage courante (`day` ou `hour`)
 
 Le choix de l'unite est partage via `UnitService`, donc un changement d'unite affecte toutes les vues qui formatent des durees.
+Le changement de langue et d'unite se fait depuis le dialogue de parametres ouvert par le bouton de la toolbar.
 
 ## Routing
 
@@ -203,6 +204,10 @@ Le frontend appelle actuellement :
 - `PATCH /api/tickets/{ticketId}/completion`
 - `DELETE /api/tickets/{ticketId}`
 - `POST /api/timeentries/upsert`
+
+Le client API partage expose aussi :
+
+- `GET /api/tickets/lookup?q=...&take=...` pour la recherche par cle externe (present dans `TrackerApi`, pret pour des parcours d'autocompletion UI)
 
 ### Appel Externe
 
@@ -481,11 +486,10 @@ Mettre a jour :
 
 ## Notes D'implementation Et Points D'attention
 
-- La navigation racine expose actuellement un bouton direct vers la grille des tickets ; les pages jour et mois restent accessibles par route mais ne sont pas exposees dans la toolbar de `app.html`.
+- La navigation racine expose directement `/day`, `/month` et `/tickets-grid` dans `app.html` ; les selecteurs de langue et d'unite sont geres dans le dialogue de parametres.
 - `UnitService` est purement en memoire. Recharger la page reinitialise l'unite a `day`.
 - Le choix de langue n'est pas persiste non plus et repart sur `fr`.
 - La page mensuelle depend d'une API externe de jours feries francais. Si ce service tombe, la page continue de fonctionner mais sans libelles de jours feries.
 - Le frontend repose fortement sur les signaux Angular et `resource()`. Si les flux de donnees changent, il faut garder des rechargements explicites apres les mutations.
 - La page jour et la grille des tickets dependent toutes deux des metadata backend pour les conversions jour/heure ; si `HoursPerDay` change cote backend, les valeurs en jours changent automatiquement.
 - Le filtre texte de la grille normalise accents et casse avant comparaison ; c'est un comportement facile a casser lors d'un refactor.
-

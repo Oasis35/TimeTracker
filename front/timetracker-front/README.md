@@ -32,6 +32,7 @@ It provides the main timesheet UI (day and month views), a ticket management gri
 - `src/app/core/services/unit.service.ts`: global day/hour display mode state
 - `src/app/features/timesheet/`: day and month timesheet pages
 - `src/app/features/tickets-grid/`: ticket management grid
+- `src/app/features/settings/`: settings dialog (language and unit mode)
 - `src/app/features/tickets/shared/add-ticket-dialog/`: shared ticket creation dialog
 - `public/i18n/fr.json`: French UI strings
 - `public/i18n/en.json`: English UI strings
@@ -137,9 +138,8 @@ The project uses the Angular unit-test builder and includes spec files for:
 The root app component in [app.ts](c:/Git/TimeTracker/front/timetracker-front/src/app/app.ts) provides:
 
 - a top toolbar
-- a language toggle (`FR` / `EN`)
-- a unit toggle (`day` / `hour`)
-- a navigation button to the tickets grid
+- direct navigation links to `/day`, `/month` and `/tickets-grid`
+- a settings button that opens the settings dialog
 - a router outlet for page content
 
 Global UI state exposed at the shell level:
@@ -148,6 +148,7 @@ Global UI state exposed at the shell level:
 - current display unit (`day` or `hour`)
 
 The unit selection is shared across pages through `UnitService`, so switching units affects all views that format durations.
+Language and unit are changed from the settings dialog, opened from the toolbar button.
 
 ## Routing
 
@@ -203,6 +204,10 @@ The frontend currently calls:
 - `PATCH /api/tickets/{ticketId}/completion`
 - `DELETE /api/tickets/{ticketId}`
 - `POST /api/timeentries/upsert`
+
+The shared API client also exposes:
+
+- `GET /api/tickets/lookup?q=...&take=...` for external-key lookup (available in `TrackerApi`, ready for UI autocomplete flows)
 
 ### External Calls
 
@@ -481,11 +486,10 @@ Update all of:
 
 ## Implementation Notes and Gotchas
 
-- The root nav currently exposes a direct button to the tickets grid; day and month pages are still routable but not surfaced from the top toolbar in `app.html`.
+- The root nav surfaces `/day`, `/month`, and `/tickets-grid` directly in `app.html`; language and unit toggles are handled in the settings dialog.
 - `UnitService` is in-memory only. Reloading the page resets the unit to `day`.
 - Language selection is also not persisted beyond the current session and defaults to `fr`.
 - The month page depends on an external French public holiday API. If that service is unavailable, the page still works but without holiday labels.
 - The frontend uses Angular signals and `resource()` heavily. When changing data flows, keep the reload semantics explicit after mutations.
 - The day page and tickets grid both depend on backend metadata for day/hour conversions; if backend `HoursPerDay` changes, displayed day values change automatically.
 - The tickets grid text filter normalizes accents and casing before matching, which is easy to accidentally break if filtering logic is refactored.
-

@@ -194,6 +194,24 @@ Response item shape:
 }
 ```
 
+#### `GET /api/tickets/lookup?q=6501&take=10`
+
+Returns open tickets that match a partial external key.
+
+Behavior:
+
+- excludes completed tickets
+- excludes tickets where `Type == "CONGES"`
+- only searches tickets where `ExternalKey` is not null
+- ranks exact matches first, then prefix matches, then other partial matches
+
+Query parameters:
+
+- `q`: search string on `ExternalKey`
+- `take`: requested number of rows (default `10`, clamped to `1..25`)
+
+If `q` is missing or blank, the endpoint returns an empty array.
+
 #### `GET /api/tickets/used?year=2026&month=2`
 
 Returns distinct tickets used by time entries in the requested month.
@@ -551,4 +569,3 @@ dotnet ef database update --project back/Tracker.Api/Tracker.Api.csproj
 - `GET /api/tickets` and `GET /api/timesheet/metadata` do not return the same ticket set because the first excludes `CONGES` and the second does not.
 - Time-entry writes are constrained by `HoursPerDay`; changing that value changes API validation behavior immediately.
 - The API auto-migrates on startup. That is convenient locally, but it also means startup can fail if a migration is broken or the database is not writable.
-
