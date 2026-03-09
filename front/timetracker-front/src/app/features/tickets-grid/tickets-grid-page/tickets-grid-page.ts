@@ -9,9 +9,11 @@ import { MatInputModule } from '@angular/material/input';
 import { MatPaginator, MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { RouterLink } from '@angular/router';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
@@ -19,6 +21,7 @@ import { TrackerApi } from '../../../core/api/tracker-api';
 import { CreateTicketDto, TicketDto, TicketTotalDto, TimesheetMetadataDto } from '../../../core/api/models';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
+import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 
 type GridRow = {
@@ -84,9 +87,11 @@ class GridPaginatorIntl extends MatPaginatorIntl implements OnDestroy {
     MatPaginatorModule,
     MatProgressSpinnerModule,
     MatSelectModule,
+    MatSnackBarModule,
     MatSortModule,
     MatTableModule,
     MatTooltipModule,
+    RouterLink,
     TranslateModule,
   ],
   templateUrl: './tickets-grid-page.html',
@@ -117,7 +122,6 @@ export class TicketsGridPageComponent {
   ];
   readonly pageSizeOptions: readonly number[] = [10, 25, 50];
   readonly language = signal<AppLanguage>('fr');
-  readonly actionMessage = signal<string>('');
   readonly actionError = signal<string>('');
   readonly deletingTicketId = signal<number | null>(null);
   readonly completionTicketId = signal<number | null>(null);
@@ -185,6 +189,7 @@ export class TicketsGridPageComponent {
     private readonly api: TrackerApi,
     private readonly dialog: MatDialog,
     private readonly translate: TranslateService,
+    private readonly snackBar: MatSnackBar,
     readonly unit: UnitService,
   ) {
     const initial =
@@ -245,7 +250,6 @@ export class TicketsGridPageComponent {
   }
 
   async deleteTicket(row: GridRow): Promise<void> {
-    this.actionMessage.set('');
     this.actionError.set('');
 
     const confirmation = window.confirm(this.translate.instant('delete_ticket_confirm'));
@@ -254,7 +258,7 @@ export class TicketsGridPageComponent {
     this.deletingTicketId.set(row.id);
     try {
       await firstValueFrom(this.api.deleteTicket(row.id));
-      this.actionMessage.set(this.translate.instant('ticket_deleted'));
+      this.showActionMessage('ticket_deleted');
       this.allTicketsRes.reload();
       this.ticketTotalsRes.reload();
     } catch (error: unknown) {
@@ -267,13 +271,12 @@ export class TicketsGridPageComponent {
   }
 
   async toggleCompletion(row: GridRow): Promise<void> {
-    this.actionMessage.set('');
     this.actionError.set('');
     this.completionTicketId.set(row.id);
 
     try {
       await firstValueFrom(this.api.setTicketCompletion(row.id, !row.isCompleted));
-      this.actionMessage.set(this.translate.instant('ticket_updated'));
+      this.showActionMessage('ticket_updated');
       this.allTicketsRes.reload();
     } catch (error: unknown) {
       this.actionError.set(
@@ -289,7 +292,6 @@ export class TicketsGridPageComponent {
   }
 
   startInlineEdit(row: GridRow): void {
-    this.actionMessage.set('');
     this.actionError.set('');
     this.editingTicketId.set(row.id);
     this.editDraft.set({
@@ -320,7 +322,6 @@ export class TicketsGridPageComponent {
       if (!confirmation) return;
     }
 
-    this.actionMessage.set('');
     this.actionError.set('');
     this.savingTicketId.set(ticketId);
 
@@ -333,7 +334,7 @@ export class TicketsGridPageComponent {
 
     try {
       await firstValueFrom(this.api.updateTicket(ticketId, payload));
-      this.actionMessage.set(this.translate.instant('ticket_updated'));
+      this.showActionMessage('ticket_updated');
       this.editingTicketId.set(null);
       this.allTicketsRes.reload();
       this.ticketTotalsRes.reload();
@@ -348,23 +349,15 @@ export class TicketsGridPageComponent {
 
   formatLoggedTime(minutes: number): string {
     if (this.unit.unitMode() === 'hour') {
-      return this.formatNumber(minutes / 60);
+      return formatNumberTrimmed(minutes / 60);
     }
 
     const minutesPerDay = this.metadataRes.value()?.minutesPerDay ?? 480;
-    return this.formatNumber(minutes / minutesPerDay);
+    return formatNumberTrimmed(minutes / minutesPerDay);
   }
 
   loggedTimeHeader(): string {
     return this.translate.instant('logged_time');
-  }
-
-  private formatNumber(value: number): string {
-    return value
-      .toFixed(2)
-      .replace('.', ',')
-      .replace(/,00$/, '')
-      .replace(/(\,\d)0$/, '$1');
   }
 
   private normalize(value: string): string {
@@ -382,5 +375,13 @@ export class TicketsGridPageComponent {
     };
     this.tableDataSource.filter = JSON.stringify(payload);
     this.tableDataSource.paginator?.firstPage();
+  }
+
+  private showActionMessage(key: string): void {
+    this.snackBar.open(this.translate.instant(key), undefined, {
+      duration: 2400,
+      horizontalPosition: 'center',
+      verticalPosition: 'top',
+    });
   }
 }

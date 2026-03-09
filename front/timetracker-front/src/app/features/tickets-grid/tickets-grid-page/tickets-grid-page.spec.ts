@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
@@ -53,6 +54,7 @@ describe('TicketsGridPageComponent', () => {
       providers: [
         { provide: TrackerApi, useValue: apiMock },
         { provide: MatDialog, useValue: dialogMock },
+        provideRouter([]),
       ],
     });
 

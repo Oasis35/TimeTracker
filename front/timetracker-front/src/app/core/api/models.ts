@@ -16,6 +16,18 @@ export interface TicketTotalDto {
   total: number;
 }
 
+export interface TicketTimeEntryDto {
+  date: string;
+  quantityMinutes: number;
+  comment?: string | null;
+}
+
+export interface TicketDetailDto {
+  ticket: TicketDto;
+  entries: TicketTimeEntryDto[];
+  totalMinutes: number;
+}
+
 export interface CreateTicketDto {
   type: string;
   externalKey?: string | null;

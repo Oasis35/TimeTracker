@@ -28,6 +28,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'ticket/:ticketId',
+    loadComponent: () =>
+      import('./features/tickets/ticket-detail-page/ticket-detail-page').then(
+        (m) => m.TicketDetailPageComponent,
+      ),
+  },
+  {
     path: '404',
     loadComponent: () =>
       import('./features/not-found/not-found-page/not-found-page').then(
@@ -36,4 +43,3 @@ export const routes: Routes = [
   },
   { path: '**', redirectTo: '404' },
 ];
-

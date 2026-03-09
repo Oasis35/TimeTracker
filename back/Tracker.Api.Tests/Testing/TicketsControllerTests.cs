@@ -76,6 +76,131 @@ public sealed class TicketsControllerTests
     }
 
     [Fact]
+    public async Task GetDetail_Should_Return_BadRequest_When_TicketId_Is_Invalid()
+    {
+        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
+        await using var _ = db;
+        await using var __ = conn;
+
+        var controller = new TicketsController(db);
+
+        var result = await controller.GetDetail(0);
+        var bad = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(400, bad.StatusCode);
+        var error = Assert.IsType<ApiErrorResponse>(bad.Value);
+        Assert.Equal(ApiErrorCodes.TicketIdInvalid, error.Code);
+    }
+
+    [Fact]
+    public async Task GetDetail_Should_Return_BadRequest_When_Ticket_Not_Found()
+    {
+        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
+        await using var _ = db;
+        await using var __ = conn;
+
+        var controller = new TicketsController(db);
+
+        var result = await controller.GetDetail(9999);
+        var bad = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(400, bad.StatusCode);
+        var error = Assert.IsType<ApiErrorResponse>(bad.Value);
+        Assert.Equal(ApiErrorCodes.TicketNotFound, error.Code);
+    }
+
+    [Fact]
+    public async Task GetDetail_Should_Return_Ticket_With_TimeEntries_Sorted_By_Date_Desc()
+    {
+        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
+        await using var _ = db;
+        await using var __ = conn;
+
+        var ticket = new Ticket
+        {
+            Type = TicketType.DEV,
+            ExternalKey = "65010",
+            Label = "Refonte auth API",
+            IsCompleted = false
+        };
+        db.Tickets.Add(ticket);
+        await db.SaveChangesAsync();
+
+        db.TimeEntries.AddRange(
+            new TimeEntry
+            {
+                TicketId = ticket.Id,
+                Date = new DateOnly(2026, 3, 11),
+                QuantityMinutes = 120,
+                Comment = "A"
+            },
+            new TimeEntry
+            {
+                TicketId = ticket.Id,
+                Date = new DateOnly(2026, 3, 12),
+                QuantityMinutes = 240,
+                Comment = "B"
+            });
+        await db.SaveChangesAsync();
+
+        var controller = new TicketsController(db);
+
+        var result = await controller.GetDetail(ticket.Id);
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<TicketDetailDto>(ok.Value);
+
+        Assert.Equal(ticket.Id, dto.Ticket.Id);
+        Assert.Equal(2, dto.Entries.Count);
+        Assert.Equal(new DateOnly(2026, 3, 12), dto.Entries[0].Date);
+        Assert.Equal(new DateOnly(2026, 3, 11), dto.Entries[1].Date);
+        Assert.Equal(360, dto.TotalMinutes);
+    }
+
+    [Fact]
+    public async Task GetDetail_Should_Not_Filter_Out_Zero_Quantity_Entries()
+    {
+        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
+        await using var _ = db;
+        await using var __ = conn;
+
+        var ticket = new Ticket
+        {
+            Type = TicketType.DEV,
+            ExternalKey = "65011",
+            Label = "Optimisation dashboard",
+            IsCompleted = false
+        };
+        db.Tickets.Add(ticket);
+        await db.SaveChangesAsync();
+
+        db.TimeEntries.AddRange(
+            new TimeEntry
+            {
+                TicketId = ticket.Id,
+                Date = new DateOnly(2026, 3, 13),
+                QuantityMinutes = 0,
+                Comment = null
+            },
+            new TimeEntry
+            {
+                TicketId = ticket.Id,
+                Date = new DateOnly(2026, 3, 12),
+                QuantityMinutes = 60,
+                Comment = null
+            });
+        await db.SaveChangesAsync();
+
+        var controller = new TicketsController(db);
+
+        var result = await controller.GetDetail(ticket.Id);
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var dto = Assert.IsType<TicketDetailDto>(ok.Value);
+
+        Assert.Equal(2, dto.Entries.Count);
+        Assert.Equal(new DateOnly(2026, 3, 13), dto.Entries[0].Date);
+        Assert.Equal(0, dto.Entries[0].QuantityMinutes);
+        Assert.Equal(60, dto.TotalMinutes);
+    }
+
+    [Fact]
     public async Task LookupOpenByExternalKey_Should_Return_Only_Open_Non_Conges_Tickets()
     {
         var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();

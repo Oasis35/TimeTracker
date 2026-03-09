@@ -1,0 +1,40 @@
+<mat-form-field appearance="outline">
+  <input
+    matInput
+    [value]="query()"
+    (input)="onInput($event)"
+    [placeholder]="'ticket_search_placeholder' | translate"
+    [matAutocomplete]="ticketLookupAuto"
+    #ticketLookupTrigger="matAutocompleteTrigger"
+    (focus)="openPanel(ticketLookupTrigger)"
+    (click)="openPanel(ticketLookupTrigger)"
+  />
+  @if (query().trim()) {
+    <button
+      mat-icon-button
+      matSuffix
+      type="button"
+      [attr.aria-label]="'cancel' | translate"
+      (click)="clear()"
+    >
+      <mat-icon aria-hidden="true">close</mat-icon>
+    </button>
+  }
+</mat-form-field>
+<mat-autocomplete
+  #ticketLookupAuto="matAutocomplete"
+  [displayWith]="displayValue"
+  (optionSelected)="onOptionSelected($event)"
+>
+  @for (ticket of results(); track ticket.id) {
+    <mat-option [value]="ticket">
+      <span class="ticket-search-item-ref">{{ ticket.type }} {{ ticket.externalKey }}</span>
+      @if (ticket.label) {
+        <span class="ticket-search-item-label"> - {{ ticket.label }}</span>
+      }
+    </mat-option>
+  }
+  @if (results().length === 0) {
+    <mat-option disabled>{{ 'ticket_search_empty' | translate }}</mat-option>
+  }
+</mat-autocomplete>

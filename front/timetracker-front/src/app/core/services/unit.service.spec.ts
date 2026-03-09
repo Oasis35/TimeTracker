@@ -3,6 +3,7 @@ import { UnitService } from './unit.service';
 
 describe('UnitService', () => {
   beforeEach(() => {
+    localStorage.removeItem('tt.unitMode');
     TestBed.configureTestingModule({});
   });
 
@@ -15,5 +16,17 @@ describe('UnitService', () => {
     const service = TestBed.inject(UnitService);
     service.setUnitMode('hour');
     expect(service.unitMode()).toBe('hour');
+  });
+
+  it('loads persisted mode from local storage', () => {
+    localStorage.setItem('tt.unitMode', 'hour');
+    const service = TestBed.inject(UnitService);
+    expect(service.unitMode()).toBe('hour');
+  });
+
+  it('persists mode in local storage when changed', () => {
+    const service = TestBed.inject(UnitService);
+    service.setUnitMode('hour');
+    expect(localStorage.getItem('tt.unitMode')).toBe('hour');
   });
 });

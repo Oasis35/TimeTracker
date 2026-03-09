@@ -75,9 +75,9 @@
   "ticket_completed_no_time_entry": "Ticket terminé",
   "ticket_already_exists": "Un ticket avec ce type et ce numéro existe déjà.",
   "cannot_create_ticket": "Impossible de créer le ticket.",
-  "grid_view": "Tous les tickets",
+  "grid_view": "Tickets",
   "timesheet_nav": "Feuille de temps",
-  "grid_title": "Grille des tickets",
+  "grid_title": "Liste des tickets",
   "grid_subtitle": "Tri et filtres par colonne",
   "back_to_timesheet": "Retour feuille de temps",
   "logged_time": "Temps saisi",
@@ -102,8 +102,11 @@
   "ticket_entry_empty": "0 saisi",
   "not_found_title": "Page introuvable",
   "not_found_description": "La page demandée n'existe pas ou n'est plus disponible.",
-  "not_found_back_to_day": "Retour à la saisie du jour"
+  "not_found_back_to_day": "Retour à la saisie du jour",
+  "ticket_archived_readonly": "Ticket archivé, accessible en lecture seule",
+  "ticket_archived_badge": "Archivé",
+  "ticket_detail_total_time": "Temps total : {{value}}",
+  "ticket_detail_days_count": "Jours saisis: {{count}}",
+  "ticket_detail_empty": "Aucune saisie pour ce ticket.",
+  "ticket_add_entry": "Ajouter une saisie"
 }
-
-
-

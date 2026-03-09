@@ -9,6 +9,8 @@ import { SettingsDialogComponent } from './features/settings/settings-dialog/set
 describe('App', () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
+    localStorage.removeItem('tt.language');
+    localStorage.removeItem('tt.unitMode');
     await TestBed.configureTestingModule({
       imports: [
         App,
@@ -52,6 +54,14 @@ describe('App', () => {
       .filter((href) => href.length > 0);
 
     expect(hrefs.some((href) => href.endsWith('/tickets-grid'))).toBe(true);
+  });
+
+  it('loads language from local storage', async () => {
+    localStorage.setItem('tt.language', 'en');
+    const fixture = TestBed.createComponent(App);
+    const app = fixture.componentInstance;
+    await fixture.whenStable();
+    expect(app.currentLanguage()).toBe('en');
   });
 
   it('opens settings dialog with expected config', () => {

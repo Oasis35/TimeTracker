@@ -43,9 +43,6 @@
     } @else if (error()) {
       <div class="error">{{ error() }}</div>
     } @else {
-      @if (actionMessage()) {
-        <div class="ok">{{ actionMessage() }}</div>
-      }
       @if (actionError()) {
         <div class="error">{{ actionError() }}</div>
       }
@@ -62,7 +59,13 @@
                   (input)="onInlineEditInput('externalKey', $event)"
                 />
               } @else {
-                {{ row.externalKey || '-' }}
+                @if (row.externalKey) {
+                  <a class="ticket-number-link" [routerLink]="['/ticket', row.id]">
+                    {{ row.externalKey }}
+                  </a>
+                } @else {
+                  -
+                }
               }
             </td>
           </ng-container>

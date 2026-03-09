@@ -1,10 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, Injectable, OnDestroy, computed, effect, resource, signal } from '@angular/core';
-import {
-  MatAutocompleteModule,
-  MatAutocompleteSelectedEvent,
-  MatAutocompleteTrigger,
-} from '@angular/material/autocomplete';
+import { Component, Injectable, computed, effect, resource, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/datepicker';
@@ -22,6 +17,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
@@ -30,6 +26,7 @@ import { TrackerApi } from '../../../core/api/tracker-api';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
+import { isWeekendIso, toIsoDate } from '../../../core/utils/date-helpers';
 import {
   TicketDto,
   TicketTotalDto,
@@ -37,11 +34,12 @@ import {
   TimesheetMonthDto,
   TimesheetRowDto,
 } from '../../../core/api/models';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   TimeEntryDialogComponent,
   TimeEntryDialogData,
 } from '../shared/time-entry-dialog/time-entry-dialog.component';
+import { TicketLookupComponent } from '../../tickets/shared/ticket-lookup/ticket-lookup.component';
 
 type MonthRequest = { y: number; m: number };
 type QuickPickOption = { minutes: number; label: string };
@@ -52,17 +50,6 @@ class IsoMondayDateAdapter extends NativeDateAdapter {
   override getFirstDayOfWeek(): number {
     return 1;
   }
-}
-
-function pad2(n: number): string {
-  return String(n).padStart(2, '0');
-}
-
-function toIsoDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = pad2(date.getMonth() + 1);
-  const d = pad2(date.getDate());
-  return `${y}-${m}-${d}`;
 }
 
 const DAY_PAGE_DATE_FORMATS = {
@@ -96,7 +83,6 @@ const DAY_PAGE_DATE_FORMATS = {
   standalone: true,
   imports: [
     CommonModule,
-    MatAutocompleteModule,
     MatButtonModule,
     MatCardModule,
     MatDatepickerModule,
@@ -108,7 +94,10 @@ const DAY_PAGE_DATE_FORMATS = {
     MatIconModule,
     MatProgressSpinnerModule,
     MatSelectModule,
+    MatSnackBarModule,
     MatTooltipModule,
+    RouterLink,
+    TicketLookupComponent,
     TranslateModule,
   ],
   providers: [
@@ -119,17 +108,14 @@ const DAY_PAGE_DATE_FORMATS = {
   templateUrl: './timesheet-day-page.html',
   styleUrl: './timesheet-day-page.scss',
 })
-export class TimesheetDayPageComponent implements OnDestroy {
+export class TimesheetDayPageComponent {
   private readonly now = new Date();
   private readonly todayIso = toIsoDate(this.now);
-  private actionMessageTimer: ReturnType<typeof setTimeout> | null = null;
 
   readonly year = signal<number>(this.now.getFullYear());
   readonly month = signal<number>(this.now.getMonth() + 1);
   readonly selectedDay = signal<string>('');
-  readonly ticketSearchQuery = signal<string>('');
 
-  readonly actionMessage = signal<string>('');
   readonly actionError = signal<string>('');
   readonly busy = signal<boolean>(false);
   readonly language = signal<AppLanguage>('fr');
@@ -257,63 +243,41 @@ export class TimesheetDayPageComponent implements OnDestroy {
     }).format(date);
   });
 
-  readonly searchResultTickets = computed<TicketDto[]>(() => {
-    const query = this.ticketSearchQuery().trim().toLowerCase();
-    const compareByTicketNumber = (a: TicketDto, b: TicketDto): number =>
-      (a.externalKey ?? '').localeCompare(b.externalKey ?? '', undefined, {
-        numeric: true,
-        sensitivity: 'base',
-      });
+  readonly daySearchDefaultTickets = computed<TicketDto[]>(() => {
+    const month = this.monthRes.value();
+    const usedTickets = this.usedTicketsRes.value() ?? [];
+    if (!month) return [];
 
-    if (!query) {
-      const month = this.monthRes.value();
-      const usedTickets = this.usedTicketsRes.value() ?? [];
-      if (!month) return [];
-
-      const usedById = new Map<number, TicketDto>();
-      for (const ticket of usedTickets) {
-        usedById.set(ticket.id, ticket);
-      }
-
-      const monthTickets = month.rows
-        .map((row): TicketDto => {
-          const fromUsed = usedById.get(row.ticketId);
-          return {
-            id: row.ticketId,
-            type: fromUsed?.type ?? row.type,
-            externalKey: fromUsed?.externalKey ?? row.externalKey,
-            label: fromUsed?.label ?? row.label,
-            isCompleted: fromUsed?.isCompleted ?? false,
-          };
-        })
-        .filter((ticket) => !ticket.isCompleted && !!(ticket.externalKey ?? '').trim())
-        .sort(compareByTicketNumber);
-
-      return monthTickets;
+    const usedById = new Map<number, TicketDto>();
+    for (const ticket of usedTickets) {
+      usedById.set(ticket.id, ticket);
     }
 
-    const allTickets = this.metadataRes.value()?.tickets ?? [];
-    const candidates = allTickets.filter((ticket) => !ticket.isCompleted);
-
-    const rank = (ticket: TicketDto): number => {
-      const externalKey = (ticket.externalKey ?? '').toLowerCase();
-      if (externalKey === query) return 0;
-      if (externalKey.startsWith(query)) return 1;
-      if (externalKey.includes(query)) return 2;
-      return 3;
-    };
-
-    return candidates
-      .filter((ticket) => (ticket.externalKey ?? '').toLowerCase().includes(query))
-      .sort((a, b) => rank(a) - rank(b) || compareByTicketNumber(a, b))
-      .slice(0, 8);
+    return month.rows
+      .map((row): TicketDto => {
+        const fromUsed = usedById.get(row.ticketId);
+        return {
+          id: row.ticketId,
+          type: fromUsed?.type ?? row.type,
+          externalKey: fromUsed?.externalKey ?? row.externalKey,
+          label: fromUsed?.label ?? row.label,
+          isCompleted: fromUsed?.isCompleted ?? false,
+        };
+      })
+      .filter((ticket) => !ticket.isCompleted && !!(ticket.externalKey ?? '').trim());
   });
+  readonly daySearchAllTickets = computed<TicketDto[]>(() =>
+    (this.metadataRes.value()?.tickets ?? []).filter(
+      (ticket) => !ticket.isCompleted && !!(ticket.externalKey ?? '').trim(),
+    ),
+  );
 
   constructor(
     private readonly api: TrackerApi,
     private readonly dialog: MatDialog,
     private readonly dateAdapter: DateAdapter<Date>,
     private readonly translate: TranslateService,
+    private readonly snackBar: MatSnackBar,
     private readonly route: ActivatedRoute,
     readonly unit: UnitService,
   ) {
@@ -353,38 +317,8 @@ export class TimesheetDayPageComponent implements OnDestroy {
     this.selectedDay.set(day);
   }
 
-  onTicketSearchInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value ?? '';
-    this.ticketSearchQuery.set(value);
-  }
-
-  clearTicketSearch(): void {
-    this.ticketSearchQuery.set('');
-  }
-
-  openTicketSearchPanel(trigger: MatAutocompleteTrigger): void {
-    if (!trigger.panelOpen) {
-      trigger.openPanel();
-    }
-  }
-
-  onTicketSearchOptionSelected(event: MatAutocompleteSelectedEvent): void {
-    const ticket = event.option.value as TicketDto | null;
-    if (!ticket) return;
+  onTicketLookupSelected(ticket: TicketDto): void {
     this.openTicketEntryDialog(ticket);
-  }
-
-  ticketSearchDisplayValue(value: TicketDto | string | null): string {
-    if (!value) return '';
-    if (typeof value === 'string') return value;
-    return value.externalKey ?? '';
-  }
-
-  ngOnDestroy(): void {
-    if (this.actionMessageTimer) {
-      clearTimeout(this.actionMessageTimer);
-      this.actionMessageTimer = null;
-    }
   }
 
   prevWorkday(): void {
@@ -424,7 +358,6 @@ export class TimesheetDayPageComponent implements OnDestroy {
   }
 
   private clearActionState(): void {
-    this.actionMessage.set('');
     this.actionError.set('');
   }
 
@@ -477,8 +410,7 @@ export class TimesheetDayPageComponent implements OnDestroy {
   }
 
   private isWeekendIso(isoDate: string): boolean {
-    const day = new Date(`${isoDate}T00:00:00`).getDay();
-    return day === 0 || day === 6;
+    return isWeekendIso(isoDate);
   }
 
   formatEntryValue(minutes: number): string {
@@ -525,7 +457,6 @@ export class TimesheetDayPageComponent implements OnDestroy {
       data,
     });
 
-    this.clearTicketSearch();
     dialogRef.afterClosed().subscribe((minutes) => {
       if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
       void this.pointMinutes(ticket.id, minutes);
@@ -533,14 +464,11 @@ export class TimesheetDayPageComponent implements OnDestroy {
   }
 
   private showActionMessage(key: string): void {
-    if (this.actionMessageTimer) {
-      clearTimeout(this.actionMessageTimer);
-    }
-    this.actionMessage.set(this.translate.instant(key));
-    this.actionMessageTimer = setTimeout(() => {
-      this.actionMessage.set('');
-      this.actionMessageTimer = null;
-    }, 2400);
+    this.snackBar.open(this.translate.instant(key), undefined, {
+      duration: 2400,
+      horizontalPosition: 'center',
+      verticalPosition: 'top',
+    });
   }
 
   private dateLocale(): string {
@@ -562,4 +490,3 @@ export class TimesheetDayPageComponent implements OnDestroy {
     this.selectedDay.set(dateIso);
   }
 }
-

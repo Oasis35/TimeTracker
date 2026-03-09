@@ -12,6 +12,8 @@ import { TrackerApi } from '../../../core/api/tracker-api';
 import { TicketDto, TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
+import { isWeekendIso } from '../../../core/utils/date-helpers';
+import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
 import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { resource } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -182,8 +184,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
   }
 
   isWeekendIso(dayIso: string): boolean {
-    const day = new Date(`${dayIso}T00:00:00`).getDay();
-    return day === 0 || day === 6;
+    return isWeekendIso(dayIso);
   }
 
   isHolidayIso(dayIso: string): boolean {
@@ -210,9 +211,9 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     const metadata = this.metadataRes.value();
     if (!metadata) return '0';
     if (this.unit.unitMode() === 'hour') {
-      return this.formatNumber(minutes / 60);
+      return formatNumberTrimmed(minutes / 60);
     }
-    return this.formatNumber(minutes / metadata.minutesPerDay);
+    return formatNumberTrimmed(minutes / metadata.minutesPerDay);
   }
 
   formatZeroAware(minutes: number): string {
@@ -224,14 +225,6 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     date.setMonth(date.getMonth() + delta);
     this.year.set(date.getFullYear());
     this.month.set(date.getMonth() + 1);
-  }
-
-  private formatNumber(value: number): string {
-    return value
-      .toFixed(2)
-      .replace('.', ',')
-      .replace(/,00$/, '')
-      .replace(/(\,\d)0$/, '$1');
   }
 
   private dateLocale(): string {

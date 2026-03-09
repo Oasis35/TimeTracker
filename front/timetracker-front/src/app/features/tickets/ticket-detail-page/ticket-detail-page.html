@@ -1,0 +1,200 @@
+<div class="page-shell">
+  @if (loading()) {
+    <div class="loading-wrap">
+      <mat-progress-spinner mode="indeterminate" diameter="36"></mat-progress-spinner>
+      <span>{{ 'loading' | translate }}</span>
+    </div>
+  } @else if (error(); as err) {
+    <div class="error">{{ err }}</div>
+  } @else if (ticket(); as currentTicket) {
+    <mat-card class="ticket-card">
+      <div class="header-row">
+        <div class="title-block">
+          <h2>{{ currentTicket.type }} {{ currentTicket.externalKey }}</h2>
+          <p class="header-subtitle">{{ currentTicket.label || '-' }}</p>
+        </div>
+
+        <div class="header-right">
+          <div class="header-controls">
+            <div class="completion-toggle">
+              <span class="completion-label">{{ 'completed' | translate }} :</span>
+              <button
+                mat-icon-button
+                type="button"
+                class="action-btn"
+                [class.action-completed]="currentTicket.isCompleted"
+                [class.action-open]="!currentTicket.isCompleted"
+                [disabled]="completionBusy()"
+                [matTooltip]="(currentTicket.isCompleted ? 'mark_open' : 'mark_completed') | translate"
+                [attr.aria-label]="(currentTicket.isCompleted ? 'mark_open' : 'mark_completed') | translate"
+                (click)="onCompletionChange(!currentTicket.isCompleted)"
+              >
+                <mat-icon>{{ currentTicket.isCompleted ? 'task_alt' : 'radio_button_unchecked' }}</mat-icon>
+              </button>
+            </div>
+
+            <div class="header-search">
+              <app-ticket-lookup
+                [defaultTickets]="ticketSearchTickets()"
+                [searchableTickets]="ticketSearchTickets()"
+                (ticketSelected)="onTicketLookupSelected($event)"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary-row">
+        <span class="summary-chip">{{ 'ticket_detail_total_time' | translate:{ value: formatEntryValue(totalMinutes()) } }}</span>
+        <span class="summary-chip">{{ 'ticket_detail_days_count' | translate:{ count: entryCount() } }}</span>
+        @if (isArchived()) {
+          <span class="summary-chip summary-chip-archived" [matTooltip]="'ticket_archived_readonly' | translate">
+            <mat-icon>lock</mat-icon>
+            <span>{{ 'ticket_archived_badge' | translate }}</span>
+          </span>
+        }
+      </div>
+
+      @if (actionError()) {
+        <div class="feedback-row">
+          <div class="error">{{ actionError() }}</div>
+        </div>
+      }
+
+      @if (entries().length === 0) {
+        <div class="empty-state">{{ 'ticket_detail_empty' | translate }}</div>
+      } @else {
+        <div class="entries-groups">
+          @for (group of entryGroups(); track group.key) {
+            <section class="entry-group">
+              <div class="entry-group-header">
+                <div class="month-header-left">
+                  <button
+                    type="button"
+                    class="month-toggle"
+                    (click)="toggleMonth(group.key)"
+                    [attr.aria-expanded]="isMonthExpanded(group.key)"
+                  >
+                    <mat-icon class="month-toggle-icon" [class.is-open]="isMonthExpanded(group.key)">expand_more</mat-icon>
+                    <span>{{ group.label }}</span>
+                  </button>
+                  <span class="month-meta">
+                    {{ 'ticket_detail_total_time' | translate:{ value: formatEntryValue(group.totalMinutes) } }} - {{ 'ticket_detail_days_count' | translate:{ count:
+                    group.entries.length } }}
+                  </span>
+                </div>
+                <div class="month-header-right">
+                  @if (isMonthEditing(group.key)) {
+                    <button
+                      mat-flat-button
+                      type="button"
+                      class="month-add-btn"
+                      (click)="addMonthEntry(group.key)"
+                      [disabled]="isMonthBusy(group.key)"
+                    >
+                      {{ 'ticket_add_entry' | translate }}
+                    </button>
+                    <button
+                      mat-stroked-button
+                      type="button"
+                      class="month-action-btn month-save-btn"
+                      (click)="saveMonth(group.key)"
+                      [disabled]="isMonthBusy(group.key)"
+                    >
+                      {{ 'save_ticket' | translate }}
+                    </button>
+                    <button
+                      mat-stroked-button
+                      type="button"
+                      class="month-action-btn month-cancel-btn"
+                      (click)="cancelMonthEdit()"
+                      [disabled]="isMonthBusy(group.key)"
+                    >
+                      {{ 'cancel_edit' | translate }}
+                    </button>
+                  } @else {
+                    <button
+                      mat-icon-button
+                      type="button"
+                      class="month-action-btn month-edit-btn"
+                      (click)="startMonthEdit(group.key)"
+                      [disabled]="isArchived() || !!busyMonthKey()"
+                      [matTooltip]="'edit_ticket' | translate"
+                      [attr.aria-label]="'edit_ticket' | translate"
+                    >
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  }
+                </div>
+              </div>
+
+              <div class="entry-list" [class.is-collapsed]="!isMonthExpanded(group.key)" [attr.aria-hidden]="!isMonthExpanded(group.key)">
+                @if (isMonthEditing(group.key)) {
+                  <div class="month-chip-list month-chip-list-edit">
+                    @for (entry of monthEntriesForDisplay(group.key); track entry.date) {
+                      <article class="entry-chip entry-chip-edit">
+                        <mat-form-field appearance="outline" class="entry-chip-date-field">
+                          <input
+                            matInput
+                            readonly
+                            [matDatepicker]="entryDatePicker"
+                            [value]="entryDateAsDate(entry.date)"
+                            [min]="monthMinDateAsDate(group.key)"
+                            [max]="monthMaxDateAsDate(group.key)"
+                            [matDatepickerFilter]="datePickerFilterForMonth(group.key, entry.date)"
+                            [disabled]="isMonthBusy(group.key)"
+                            (dateChange)="onMonthEntryDatePicked(entry.date, $event.value)"
+                          />
+                          <mat-datepicker-toggle matIconSuffix [for]="entryDatePicker"></mat-datepicker-toggle>
+                          <mat-datepicker #entryDatePicker></mat-datepicker>
+                        </mat-form-field>
+                        <span class="entry-chip-sep">:</span>
+                        <mat-form-field appearance="outline" class="entry-chip-select">
+                          <mat-select
+                            [value]="entry.quantityMinutes"
+                            (selectionChange)="onMonthEntryMinutesChange(entry.date, $event.value)"
+                            [disabled]="isMonthBusy(group.key)"
+                          >
+                            @for (option of quickPickOptions(); track option.minutes) {
+                              <mat-option [value]="option.minutes">{{ option.label }}</mat-option>
+                            }
+                          </mat-select>
+                        </mat-form-field>
+                        <button
+                          mat-icon-button
+                          type="button"
+                          class="action-btn action-delete"
+                          [matTooltip]="'delete_ticket' | translate"
+                          [attr.aria-label]="'delete_ticket' | translate"
+                          (click)="removeMonthEntry(entry.date)"
+                          [disabled]="isMonthBusy(group.key)"
+                        >
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </article>
+                    }
+                  </div>
+                } @else {
+                  <div class="month-chip-list">
+                    @for (entry of group.entries; track entry.date) {
+                      <button
+                        type="button"
+                        class="entry-chip"
+                        [routerLink]="['/day']"
+                        [queryParams]="{ date: entry.date }"
+                      >
+                        <span class="entry-chip-day">{{ formatEntryDate(entry.date) }}</span>
+                        <span class="entry-chip-sep">:</span>
+                        <span class="entry-chip-value">{{ formatEntryValue(entry.quantityMinutes) }}</span>
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </section>
+          }
+        </div>
+      }
+    </mat-card>
+  }
+</div>

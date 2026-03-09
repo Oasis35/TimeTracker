@@ -100,6 +100,15 @@ export const TRANSLATION_KEYS = [
   'ticket_state_completed',
   'ticket_entry_logged',
   'ticket_entry_empty',
+  'not_found_title',
+  'not_found_description',
+  'not_found_back_to_day',
+  'ticket_archived_readonly',
+  'ticket_archived_badge',
+  'ticket_detail_total_time',
+  'ticket_detail_days_count',
+  'ticket_detail_empty',
+  'ticket_add_entry',
 ] as const;
 
 export type TranslationKey = (typeof TRANSLATION_KEYS)[number];

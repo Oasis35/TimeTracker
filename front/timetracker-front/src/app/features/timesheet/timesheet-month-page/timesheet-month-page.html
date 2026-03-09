@@ -104,7 +104,15 @@
               @for (row of rows(); track row.ticketId) {
                 <tr>
                   <td>{{ row.type }}</td>
-                  <td>{{ row.externalKey || '-' }}</td>
+                  <td>
+                    @if (row.externalKey) {
+                      <a class="ticket-number-link" [routerLink]="['/ticket', row.ticketId]">
+                        {{ row.externalKey }}
+                      </a>
+                    } @else {
+                      -
+                    }
+                  </td>
                   <td>{{ row.label || '-' }}</td>
                   <td
                     class="num total-cell"

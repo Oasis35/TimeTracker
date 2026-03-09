@@ -10,6 +10,8 @@ import { AppLanguage } from './core/i18n/app-language';
 import { UnitService, TimeUnit } from './core/services/unit.service';
 import { SettingsDialogComponent } from './features/settings/settings-dialog/settings-dialog.component';
 
+const LANGUAGE_STORAGE_KEY = 'tt.language';
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -35,11 +37,15 @@ export class App {
   ) {
     this.translate.setDefaultLang('fr');
     const initial =
-      (this.translate.currentLang || this.translate.defaultLang || 'fr') as AppLanguage;
+      this.readStoredLanguage() ??
+      ((this.translate.currentLang || this.translate.defaultLang || 'fr') as AppLanguage);
     void this.translate.use(initial);
     this.currentLanguage.set(initial);
+    this.persistLanguage(initial);
     this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
-      this.currentLanguage.set(event.lang as AppLanguage);
+      const language = this.parseAppLanguage(event.lang) ?? 'fr';
+      this.currentLanguage.set(language);
+      this.persistLanguage(language);
     });
   }
 
@@ -57,6 +63,27 @@ export class App {
       maxWidth: '95vw',
       autoFocus: false,
     });
+  }
+
+  private readStoredLanguage(): AppLanguage | null {
+    try {
+      return this.parseAppLanguage(localStorage.getItem(LANGUAGE_STORAGE_KEY));
+    } catch {
+      return null;
+    }
+  }
+
+  private persistLanguage(language: AppLanguage): void {
+    try {
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    } catch {
+      // Ignore storage errors (private mode, blocked storage).
+    }
+  }
+
+  private parseAppLanguage(value: string | null | undefined): AppLanguage | null {
+    if (value === 'fr' || value === 'en') return value;
+    return null;
   }
 
   readonly currentLanguage = signal<AppLanguage>('fr');

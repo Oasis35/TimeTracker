@@ -202,6 +202,22 @@ table {
   min-width: 220px;
 }
 
+.ticket-number-link {
+  display: inline-block;
+  padding: 0;
+  text-decoration: none;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--mat-sys-primary) 62%, var(--mat-sys-on-surface));
+  border-bottom: 1px solid transparent;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.ticket-number-link:hover {
+  color: color-mix(in srgb, var(--mat-sys-primary) 78%, var(--mat-sys-on-surface));
+  border-bottom-color: color-mix(in srgb, var(--mat-sys-primary) 44%, transparent);
+}
+
 .mat-mdc-header-row {
   background: var(--mat-sys-surface-container-high);
   box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--mat-sys-outline-variant) 55%, transparent);
@@ -264,12 +280,6 @@ table {
 
 .error {
   color: var(--mat-sys-error);
-  font-weight: 600;
-  padding: 0.5rem 0;
-}
-
-.ok {
-  color: color-mix(in srgb, var(--mat-sys-primary) 72%, #1b5e20);
   font-weight: 600;
   padding: 0.5rem 0;
 }

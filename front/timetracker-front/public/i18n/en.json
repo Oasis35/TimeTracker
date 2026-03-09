@@ -75,7 +75,7 @@
   "ticket_completed_no_time_entry": "Completed ticket",
   "ticket_already_exists": "A ticket with this type and number already exists.",
   "cannot_create_ticket": "Unable to create ticket.",
-  "grid_view": "All tickets",
+  "grid_view": "Tickets",
   "timesheet_nav": "Timesheet",
   "grid_title": "Ticket grid",
   "grid_subtitle": "Per-column sorting and filtering",
@@ -102,6 +102,11 @@
   "ticket_entry_empty": "No entry",
   "not_found_title": "Page not found",
   "not_found_description": "The page you requested does not exist or is no longer available.",
-  "not_found_back_to_day": "Back to day entry"
+  "not_found_back_to_day": "Back to day entry",
+  "ticket_archived_readonly": "Archived ticket, read-only access.",
+  "ticket_archived_badge": "Archived",
+  "ticket_detail_total_time": "Total time: {{value}}",
+  "ticket_detail_days_count": "Logged days: {{count}}",
+  "ticket_detail_empty": "No entry for this ticket.",
+  "ticket_add_entry": "Add entry"
 }
-

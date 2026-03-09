@@ -24,6 +24,7 @@
 # =========================
 # NuGet / MSBuild caches
 # =========================
+.dotnet/
 **/project.assets.json
 **/*.nuget.cache
 **/*.csproj.nuget.dgspec.json

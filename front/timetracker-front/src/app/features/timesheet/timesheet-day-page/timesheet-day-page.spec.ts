@@ -208,7 +208,7 @@ describe('TimesheetDayPageComponent', () => {
     expect(rows.length).toBe(0);
   });
 
-  it('returns monthly tickets when search query is blank', async () => {
+  it('exposes month tickets as default lookup candidates', async () => {
     const { fixture, component } = setup({
       monthData: {
         year: 2026,
@@ -240,13 +240,12 @@ describe('TimesheetDayPageComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    component.ticketSearchQuery.set('   ');
-    const keys = component.searchResultTickets().map((t) => t.externalKey);
+    const keys = component.daySearchDefaultTickets().map((t) => t.externalKey);
 
     expect(keys).toEqual(['20']);
   });
 
-  it('ranks search results by exact, prefix then contains match', async () => {
+  it('exposes open metadata tickets as searchable lookup candidates', async () => {
     const { fixture, component } = setup({
       metadata: {
         ...metadata,
@@ -262,10 +261,9 @@ describe('TimesheetDayPageComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    component.ticketSearchQuery.set('6501');
-    const keys = component.searchResultTickets().map((t) => t.externalKey);
+    const keys = component.daySearchAllTickets().map((t) => t.externalKey);
 
-    expect(keys).toEqual(['6501', '65010', '06501', 'A6501B']);
+    expect(keys).toEqual(['6501', '65010', 'A6501B', '06501']);
   });
 
   it('sets an error and does not open dialog when no day is selected', async () => {

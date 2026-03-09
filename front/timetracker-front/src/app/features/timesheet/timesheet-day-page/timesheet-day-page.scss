@@ -120,12 +120,6 @@
   background: color-mix(in srgb, var(--mat-sys-primary-container) 42%, var(--mat-sys-surface));
 }
 
-.save-indicator-saved {
-  color: color-mix(in srgb, #147a3f 74%, var(--mat-sys-on-surface));
-  border-color: color-mix(in srgb, #147a3f 35%, transparent);
-  background: color-mix(in srgb, #c8f5db 55%, var(--mat-sys-surface));
-}
-
 .save-indicator-error {
   color: var(--mat-sys-error);
   border-color: color-mix(in srgb, var(--mat-sys-error) 48%, transparent);
@@ -182,7 +176,6 @@
   gap: 0.35rem;
 }
 
-.ok,
 .error {
   margin: 0;
   padding: 0.14rem 0.52rem;
@@ -190,12 +183,6 @@
   font-size: 0.73rem;
   border: 1px solid transparent;
   animation: feedback-enter 140ms ease-out;
-}
-
-.ok {
-  color: color-mix(in srgb, var(--mat-sys-primary) 65%, #147a3f);
-  border-color: color-mix(in srgb, #147a3f 30%, transparent);
-  background: color-mix(in srgb, #c8f5db 45%, var(--mat-sys-surface));
 }
 
 .error {
@@ -213,16 +200,6 @@
 .ticket-search-field {
   width: min(360px, 100%);
   margin: 0;
-}
-
-.ticket-search-item-ref {
-  font-size: 0.88rem;
-  font-weight: 700;
-}
-
-.ticket-search-item-label {
-  font-size: 0.85rem;
-  color: color-mix(in srgb, var(--mat-sys-on-surface-variant) 92%, transparent);
 }
 
 @keyframes feedback-enter {
@@ -299,6 +276,14 @@
   font-weight: 700;
   line-height: 1.1;
   color: var(--mat-sys-on-surface);
+}
+
+.ticket-link {
+  text-decoration: none;
+}
+
+.ticket-link:hover {
+  text-decoration: underline;
 }
 
 .ticket-state {

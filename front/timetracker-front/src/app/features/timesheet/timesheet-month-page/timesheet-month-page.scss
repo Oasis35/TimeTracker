@@ -219,6 +219,22 @@ tfoot td:nth-child(n + 5) {
   padding: 0 0.15rem;
 }
 
+.ticket-number-link {
+  display: inline-block;
+  padding: 0;
+  text-decoration: none;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--mat-sys-primary) 62%, var(--mat-sys-on-surface));
+  border-bottom: 1px solid transparent;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.ticket-number-link:hover {
+  color: color-mix(in srgb, var(--mat-sys-primary) 78%, var(--mat-sys-on-surface));
+  border-bottom-color: color-mix(in srgb, var(--mat-sys-primary) 44%, transparent);
+}
+
 .total-cell,
 th.col-total {
   border-left: 1px solid color-mix(in srgb, var(--mat-sys-outline) 66%, transparent);

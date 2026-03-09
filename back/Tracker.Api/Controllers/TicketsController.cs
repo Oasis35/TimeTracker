@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.Tickets;
@@ -259,5 +259,35 @@ public sealed class TicketsController : ControllerBase
             .ToList();
 
         return Ok(result);
+    }
+
+    [HttpGet("{ticketId:int}/detail")]
+    public async Task<ActionResult<TicketDetailDto>> GetDetail(int ticketId)
+    {
+        if (ticketId <= 0)
+            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketIdInvalid);
+
+        var ticket = await _db.Tickets
+            .AsNoTracking()
+            .Where(t => t.Id == ticketId)
+            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
+            .FirstOrDefaultAsync();
+        if (ticket is null)
+            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNotFound);
+
+        var entries = await _db.TimeEntries
+            .AsNoTracking()
+            .Where(e => e.TicketId == ticketId)
+            .OrderByDescending(e => e.Date)
+            .Select(e => new TicketTimeEntryDto(
+                e.Date,
+                e.QuantityMinutes,
+                e.Comment))
+            .ToListAsync();
+
+        return Ok(new TicketDetailDto(
+            Ticket: ticket,
+            Entries: entries,
+            TotalMinutes: entries.Sum(e => e.QuantityMinutes)));
     }
 }

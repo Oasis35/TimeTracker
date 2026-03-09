@@ -42,19 +42,16 @@
             </div>
 
             <div class="toolbar-actions">
-              @if (busy() || actionMessage() || actionError()) {
+              @if (busy() || actionError()) {
                 <span
                   class="save-indicator"
                   [class.save-indicator-saving]="busy()"
-                  [class.save-indicator-saved]="!busy() && !!actionMessage()"
                   [class.save-indicator-error]="!busy() && !!actionError()"
                 >
                   @if (busy()) {
                     {{ 'day_status_saving' | translate }}
-                  } @else if (actionError()) {
-                    {{ 'day_status_error' | translate }}
                   } @else {
-                    {{ 'day_status_saved' | translate }}
+                    {{ 'day_status_error' | translate }}
                   }
                 </span>
               }
@@ -88,68 +85,34 @@
             </div>
 
             <div class="ticket-search">
-              <mat-form-field appearance="outline" class="ticket-search-field">
-                <mat-label>{{ 'ticket_search_label' | translate }}</mat-label>
-                <input
-                  matInput
-                  [value]="ticketSearchQuery()"
-                  (input)="onTicketSearchInput($event)"
-                  [placeholder]="'ticket_search_placeholder' | translate"
-                  [matAutocomplete]="ticketLookupAuto"
-                  #ticketLookupTrigger="matAutocompleteTrigger"
-                  (focus)="openTicketSearchPanel(ticketLookupTrigger)"
-                  (click)="openTicketSearchPanel(ticketLookupTrigger)"
-                />
-                @if (ticketSearchQuery().trim()) {
-                  <button
-                    mat-icon-button
-                    matSuffix
-                    type="button"
-                    [attr.aria-label]="'cancel' | translate"
-                    (click)="clearTicketSearch()"
-                  >
-                    <mat-icon aria-hidden="true">close</mat-icon>
-                  </button>
-                }
-              </mat-form-field>
-              <mat-autocomplete
-                #ticketLookupAuto="matAutocomplete"
-                [displayWith]="ticketSearchDisplayValue"
-                (optionSelected)="onTicketSearchOptionSelected($event)"
-              >
-                @for (ticket of searchResultTickets(); track ticket.id) {
-                  <mat-option [value]="ticket">
-                    <span class="ticket-search-item-ref">{{ ticket.type }} {{ ticket.externalKey }}</span>
-                    @if (ticket.label) {
-                      <span class="ticket-search-item-label"> - {{ ticket.label }}</span>
-                    }
-                  </mat-option>
-                }
-                @if (searchResultTickets().length === 0) {
-                  <mat-option disabled>{{ 'ticket_search_empty' | translate }}</mat-option>
-                }
-              </mat-autocomplete>
+              <app-ticket-lookup
+                class="ticket-search-field"
+                [defaultTickets]="daySearchDefaultTickets()"
+                [searchableTickets]="daySearchAllTickets()"
+                (ticketSelected)="onTicketLookupSelected($event)"
+              />
             </div>
           </div>
 
-          <div class="feedback-strip">
-            @if (actionMessage()) {
-              <div class="ok">{{ actionMessage() }}</div>
-            }
+          @if (actionError() || error()) {
+            <div class="feedback-strip">
             @if (actionError(); as err) {
               <div class="error">{{ err }}</div>
             }
             @if (error(); as err) {
               <div class="error">{{ err }}</div>
             }
-          </div>
+            </div>
+          }
 
           <div class="rows" [attr.aria-label]="'rows_aria' | translate">
             @for (r of displayRows(); track r.ticketId) {
               <article class="row ticket-row" [class.ticket-row-completed]="r.isCompleted">
                 <div class="ticket-main">
                   <div class="ticket-head">
-                    <span class="ticket-title">{{ r.type }} {{ r.externalKey }}</span>
+                    <a class="ticket-title ticket-link" [routerLink]="['/ticket', r.ticketId]">
+                      {{ r.type }} {{ r.externalKey }}
+                    </a>
                     @if (r.isCompleted) {
                       <span class="ticket-state ticket-state-completed">
                         {{ 'ticket_state_completed' | translate }}
