@@ -18,7 +18,7 @@ public sealed class DbSeederTests
         DbSeeder.SeedDevelopmentData(db, new TimeTrackingOptions { HoursPerDay = 8 });
 
         var congesTickets = db.Tickets
-            .Where(t => t.Type == "CONGES")
+            .Where(t => t.Type == TicketType.ABSENT)
             .ToList();
 
         Assert.Single(congesTickets);
@@ -32,8 +32,8 @@ public sealed class DbSeederTests
         await using var _ = db;
         await using var __ = conn;
 
-        var cp = new Ticket { Type = "CONGES", ExternalKey = "CP", Label = "Conges" };
-        var legacy = new Ticket { Type = "CONGES", ExternalKey = "CP-ETE", Label = "Legacy leave" };
+        var cp = new Ticket { Type = TicketType.ABSENT, ExternalKey = "CP", Label = "Conges" };
+        var legacy = new Ticket { Type = TicketType.ABSENT, ExternalKey = "CP-ETE", Label = "Legacy leave" };
         db.Tickets.AddRange(cp, legacy);
         await db.SaveChangesAsync();
 
@@ -64,17 +64,17 @@ public sealed class DbSeederTests
 
         DbSeeder.SeedDevelopmentData(db, new TimeTrackingOptions { HoursPerDay = 8 });
 
-        var cpTicket = db.Tickets.Single(t => t.Type == "CONGES" && t.ExternalKey == "CP");
+        var cpTicket = db.Tickets.Single(t => t.Type == TicketType.ABSENT && t.ExternalKey == "CP");
         var seededLeaveEntries = db.TimeEntries
             .Where(e => e.Comment == "__DEV_SEED_V2__" && e.TicketId != null)
             .Join(
-                db.Tickets.Where(t => t.Type == "CONGES"),
+                db.Tickets.Where(t => t.Type == TicketType.ABSENT),
                 e => e.TicketId!.Value,
                 t => t.Id,
                 (entry, _) => entry)
             .ToList();
 
         Assert.All(seededLeaveEntries, entry => Assert.Equal(cpTicket.Id, entry.TicketId));
-        Assert.DoesNotContain(db.Tickets, t => t.Type == "CONGES" && t.ExternalKey == "CP-ETE");
+        Assert.DoesNotContain(db.Tickets, t => t.Type == TicketType.ABSENT && t.ExternalKey == "CP-ETE");
     }
 }

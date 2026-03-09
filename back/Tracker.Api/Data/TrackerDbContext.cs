@@ -23,6 +23,12 @@ namespace Tracker.Api.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Ticket>()
+                .Property(t => t.Type)
+                .HasConversion<string>()
+                .HasMaxLength(32)
+                .IsRequired();
+
+            modelBuilder.Entity<Ticket>()
                 .HasIndex(t => new { t.Type, t.ExternalKey })
                 .IsUnique();
 

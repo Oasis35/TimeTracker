@@ -99,6 +99,9 @@
   "ticket_state_open": "Open",
   "ticket_state_completed": "Completed",
   "ticket_entry_logged": "Logged",
-  "ticket_entry_empty": "No entry"
+  "ticket_entry_empty": "No entry",
+  "not_found_title": "Page not found",
+  "not_found_description": "The page you requested does not exist or is no longer available.",
+  "not_found_back_to_day": "Back to day entry"
 }
 

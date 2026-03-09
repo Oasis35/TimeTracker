@@ -27,6 +27,13 @@ export const routes: Routes = [
         (m) => m.TicketsGridPageComponent,
       ),
   },
-  { path: '**', redirectTo: 'day' },
+  {
+    path: '404',
+    loadComponent: () =>
+      import('./features/not-found/not-found-page/not-found-page').then(
+        (m) => m.NotFoundPageComponent,
+      ),
+  },
+  { path: '**', redirectTo: '404' },
 ];
 

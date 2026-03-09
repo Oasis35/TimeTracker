@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Tracker.Api.Models;
 using Tracker.Api.Tests.Testing;
 using Xunit;
 
@@ -17,8 +18,8 @@ public sealed class TimesheetApiTests : IClassFixture<TrackerApiFactory>
     [Fact]
     public async Task Get_Should_Return_MinutesPerDay_TicketKey_And_Zero_For_Empty_Cells()
     {
-        var t1 = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "64205", "DEV 64205");
-        var t2 = await ApiTestHelpers.CreateTicketAsync(_client, "GEN", "", "General");
+        var t1 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "64205", "DEV 64205");
+        var t2 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.SUPPORT, "", "General");
 
         await ApiTestHelpers.UpsertAsync(_client, t1, "2026-02-03", 120);
         await ApiTestHelpers.UpsertAsync(_client, t2, "2026-02-01", 60);
@@ -33,15 +34,15 @@ public sealed class TimesheetApiTests : IClassFixture<TrackerApiFactory>
         Assert.Contains("2026-02-01", dto.Days);
         Assert.Contains("2026-02-03", dto.Days);
 
-        var dev = Assert.Single(dto.Rows, x => x.Type == "DEV");
+        var dev = Assert.Single(dto.Rows, x => x.Type == TicketType.DEV);
         Assert.Equal("DEV-64205", dev.TicketKey);
         Assert.Equal(120, dev.Values["2026-02-03"]);
         Assert.Equal(0, dev.Values["2026-02-01"]);
 
-        var gen = Assert.Single(dto.Rows, x => x.Type == "GEN");
-        Assert.Equal("GEN", gen.TicketKey);
-        Assert.Equal(60, gen.Values["2026-02-01"]);
-        Assert.Equal(0, gen.Values["2026-02-03"]);
+        var support = Assert.Single(dto.Rows, x => x.Type == TicketType.SUPPORT);
+        Assert.Equal("SUPPORT", support.TicketKey);
+        Assert.Equal(60, support.Values["2026-02-01"]);
+        Assert.Equal(0, support.Values["2026-02-03"]);
     }
 
     private sealed record TimesheetMonthViewDto(
@@ -54,7 +55,7 @@ public sealed class TimesheetApiTests : IClassFixture<TrackerApiFactory>
 
     private sealed record TimesheetRowViewDto(
         int TicketId,
-        string Type,
+        TicketType Type,
         string ExternalKey,
         string Label,
         string TicketKey,

@@ -1,0 +1,55 @@
+:host {
+  display: block;
+}
+
+.not-found-shell {
+  min-height: calc(100dvh - 72px);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.not-found-card {
+  width: min(560px, 100%);
+  padding: 2rem 1.5rem;
+  text-align: center;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 50%, transparent);
+  background:
+    radial-gradient(
+      120% 100% at 50% 0%,
+      color-mix(in srgb, var(--mat-sys-primary-container) 45%, #fff) 0%,
+      color-mix(in srgb, var(--mat-sys-surface-container-low) 92%, #fff) 55%
+    );
+  box-shadow:
+    0 20px 40px color-mix(in srgb, #0f172a 12%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 70%, transparent);
+}
+
+.status-code {
+  margin: 0 0 0.35rem;
+  font-size: clamp(2.5rem, 8vw, 4.6rem);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--mat-sys-primary) 70%, #334155);
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.2rem, 3vw, 1.7rem);
+}
+
+.description {
+  margin: 0 auto 1.35rem;
+  max-width: 42ch;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.back-link {
+  border-radius: 999px;
+}
+
+.back-link .mat-icon {
+  margin-right: 0.25rem;
+}

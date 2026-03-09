@@ -1,14 +1,15 @@
 ﻿using System.Net.Http.Json;
+using Tracker.Api.Models;
 
 namespace Tracker.Api.Tests.Testing;
 
 public static class ApiTestHelpers
 {
-    public static async Task<int> CreateTicketAsync(HttpClient client, string type, string externalKey, string label)
+    public static async Task<int> CreateTicketAsync(HttpClient client, TicketType type, string externalKey, string label)
     {
         var r = await client.PostAsJsonAsync("/api/tickets", new
         {
-            type,
+            type = type.ToString(),
             externalKey,
             label
         });
@@ -27,5 +28,5 @@ public static class ApiTestHelpers
             comment
         });
 
-    private sealed record TicketDto(int Id, string Type, string? ExternalKey, string? Label);
+    private sealed record TicketDto(int Id, TicketType Type, string? ExternalKey, string? Label);
 }

@@ -5,6 +5,7 @@ using Tracker.Api.Data;
 using Tracker.Api.Dtos.Tickets;
 using Tracker.Api.Dtos.Timesheet;
 using Tracker.Api.Infrastructure;
+using Tracker.Api.Models;
 using Tracker.Api.Options;
 
 namespace Tracker.Api.Controllers;
@@ -73,9 +74,10 @@ public sealed class TimesheetController : ControllerBase
                     d => valuesByDate.TryGetValue(d, out var v) ? v : 0);
 
                 var externalKey = t.ExternalKey ?? "";
+                var typeCode = t.Type.ToString();
                 var ticketKey = string.IsNullOrWhiteSpace(externalKey)
-                    ? t.Type
-                    : $"{t.Type}-{externalKey}";
+                    ? typeCode
+                    : $"{typeCode}-{externalKey}";
 
                 return new TimesheetRowDto
                 {
@@ -141,14 +143,15 @@ public sealed class TimesheetController : ControllerBase
             .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
             .ToListAsync();
 
-        return Ok(new TimesheetMetadataDto(
-            HoursPerDay: _opts.HoursPerDay,
-            MinutesPerDay: minutesPerDay,
-            AllowedMinutesDayMode: allowedDay,
-            AllowedMinutesHourMode: allowedHour,
-            DefaultUnit: "day",
-            DefaultType: "DEV",
-            Tickets: tickets
-        ));
+        return Ok(new TimesheetMetadataDto
+        {
+            HoursPerDay = _opts.HoursPerDay,
+            MinutesPerDay = minutesPerDay,
+            AllowedMinutesDayMode = allowedDay,
+            AllowedMinutesHourMode = allowedHour,
+            DefaultUnit = "day",
+            DefaultType = TicketType.DEV,
+            Tickets = tickets
+        });
     }
 }

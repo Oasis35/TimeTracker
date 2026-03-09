@@ -1,6 +1,6 @@
-﻿namespace Tracker.Api.Dtos.TimeEntries;
+namespace Tracker.Api.Dtos.TimeEntries;
 
-public sealed class UpsertTimeEntryDto
+public sealed record UpsertTimeEntryDto
 {
     public required int TicketId { get; init; }
     public required DateOnly Date { get; init; }

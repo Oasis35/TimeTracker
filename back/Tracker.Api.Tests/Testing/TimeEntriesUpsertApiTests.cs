@@ -1,6 +1,7 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Tracker.Api.Infrastructure;
+using Tracker.Api.Models;
 using Tracker.Api.Tests.Testing;
 using Xunit;
 
@@ -18,7 +19,7 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
     [Fact]
     public async Task Upsert_Should_Create_Then_Update_Then_Delete()
     {
-        var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "U-1", "U-1");
+        var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "U-1", "U-1");
 
         var c = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-23", 120, "A");
         Assert.Equal(HttpStatusCode.Created, c.StatusCode);
@@ -42,8 +43,8 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
     [Fact]
     public async Task Upsert_Should_Reject_When_Total_Exceeds_MinutesPerDay()
     {
-        var t1 = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "U-2", "U-2");
-        var t2 = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "U-3", "U-3");
+        var t1 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "U-2", "U-2");
+        var t2 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "U-3", "U-3");
 
         var r1 = await ApiTestHelpers.UpsertAsync(_client, t1, "2026-02-24", 360);
         Assert.True(r1.StatusCode is HttpStatusCode.Created or HttpStatusCode.NoContent);
@@ -57,8 +58,8 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
     [Fact]
     public async Task Upsert_Should_Allow_Update_Without_DoubleCounting_Existing()
     {
-        var t1 = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "U-4", "U-4");
-        var t2 = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "U-5", "U-5");
+        var t1 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "U-4", "U-4");
+        var t2 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "U-5", "U-5");
 
         (await ApiTestHelpers.UpsertAsync(_client, t1, "2026-02-25", 240)).EnsureSuccessStatusCode();
         (await ApiTestHelpers.UpsertAsync(_client, t2, "2026-02-25", 240)).EnsureSuccessStatusCode();
@@ -76,7 +77,7 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
     [InlineData(481)]
     public async Task Upsert_Should_Reject_Invalid_Minutes(int minutes)
     {
-        var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "U-6", "U-6");
+        var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "U-6", "U-6");
 
         var r = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-26", minutes);
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
@@ -114,7 +115,7 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
 
     private sealed record DayEntryDto(
         int TicketId,
-        string Type,
+        TicketType Type,
         string? ExternalKey,
         string? Label,
         int QuantityMinutes);

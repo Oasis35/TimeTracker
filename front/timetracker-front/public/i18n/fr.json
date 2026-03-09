@@ -1,4 +1,4 @@
-﻿{
+{
   "unit_display": "Unité d'affichage",
   "day": "Jour",
   "hour": "Heure",
@@ -99,7 +99,10 @@
   "ticket_state_open": "En cours",
   "ticket_state_completed": "Terminé",
   "ticket_entry_logged": "Saisi",
-  "ticket_entry_empty": "0 saisi"
+  "ticket_entry_empty": "0 saisi",
+  "not_found_title": "Page introuvable",
+  "not_found_description": "La page demandée n'existe pas ou n'est plus disponible.",
+  "not_found_back_to_day": "Retour à la saisie du jour"
 }
 
 

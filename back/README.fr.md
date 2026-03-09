@@ -2,7 +2,7 @@
 
 Ce dossier contient le backend .NET de TimeTracker.
 
-Il expose une API Web ASP.NET Core basée sur SQLite et Entity Framework Core, ainsi qu'un projet de tests xUnit qui couvre les endpoints HTTP et les regles principales de saisie du temps.
+Il expose une API Web ASP.NET Core basée sur SQLite et Entity Framework Core, ainsi qu'un projet de tests xUnit qui couvre les endpoints HTTP et les règles principales de saisie du temps.
 
 ## Contenu
 
@@ -154,8 +154,8 @@ Le document OpenAPI est donc disponible uniquement en developpement. La route pa
 Au demarrage en `Development`, l'application insere :
 
 - un ensemble de tickets `DEV`
-- un ensemble de tickets `CONGES`
-- une annee d'historique de saisies sur les jours ouvrés
+- un ensemble de tickets `ABSENT`
+- une année d'historique de saisies sur les jours ouvrés
 - des periodes de conges predefinies (`CP-HIVER`, `CP-PRINTEMPS`, `CP-ETE`, `CP-TOUSSAINT`, `CP-NOEL`, `RTT-PONTS`)
 
 Details du seed :
@@ -168,7 +168,7 @@ Details du seed :
 
 Point important cote API :
 
-- `GET /api/tickets` exclut explicitement les tickets dont `Type == "CONGES"`
+- `GET /api/tickets` exclut explicitement les tickets dont `Type == "ABSENT"`
 
 Les tickets de conges seedes existent donc en base et sont inclus dans les metadonnees, mais ils sont filtres hors de l'endpoint principal de liste des tickets.
 
@@ -180,7 +180,7 @@ Tous les endpoints sont prefixes par `/api`.
 
 #### `GET /api/tickets`
 
-Retourne tous les tickets sauf `CONGES`, tries par `Type` puis `ExternalKey`.
+Retourne tous les tickets sauf `ABSENT`, tries par `Type` puis `ExternalKey`.
 
 Exemple de reponse :
 
@@ -201,7 +201,7 @@ Retourne les tickets ouverts qui correspondent a une recherche partielle sur la 
 Comportement :
 
 - exclut les tickets completes
-- exclut les tickets dont `Type == "CONGES"`
+- exclut les tickets dont `Type == "ABSENT"`
 - recherche uniquement les tickets avec `ExternalKey` non null
 - classe d'abord les matches exacts, puis les prefixes, puis les autres matches partiels
 
@@ -474,7 +474,7 @@ Valeurs calculees actuellement :
 - `allowedMinutesDayMode` : `0`, `1/4 jour`, `1/2 jour`, `3/4 jour`, `1 jour`
 - `allowedMinutesHourMode` : de `0` a `MinutesPerDay` par pas de `30` minutes
 
-Contrairement a `GET /api/tickets`, cet endpoint inclut tous les tickets de la base, y compris `CONGES`.
+Contrairement a `GET /api/tickets`, cet endpoint inclut tous les tickets de la base, y compris `ABSENT`.
 
 ## Format Des Erreurs
 
@@ -566,6 +566,6 @@ dotnet ef database update --project back/Tracker.Api/Tracker.Api.csproj
 - La completion d'un ticket est un verrou metier pour l'edition et la suppression, pas juste un indicateur UI.
 - Un ticket ne peut pas etre marque comme complete tant qu'il n'a aucune saisie de temps.
 - `POST /api/tickets` est volontairement idempotent uniquement lorsqu'un `(type, externalKey)` existe deja et que `externalKey` est renseigne.
-- `GET /api/tickets` et `GET /api/timesheet/metadata` ne retournent pas exactement le meme ensemble de tickets car le premier exclut `CONGES` et le second non.
+- `GET /api/tickets` et `GET /api/timesheet/metadata` ne retournent pas exactement le meme ensemble de tickets car le premier exclut `ABSENT` et le second non.
 - Les ecritures de saisies de temps sont contraintes par `HoursPerDay` ; changer cette valeur modifie immediatement le comportement de validation de l'API.
 - L'API applique les migrations au demarrage. C'est pratique en local, mais le demarrage peut echouer si une migration est invalide ou si la base n'est pas inscriptible.

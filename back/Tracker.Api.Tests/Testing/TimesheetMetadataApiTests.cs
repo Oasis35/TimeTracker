@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using Tracker.Api.Models;
 using Tracker.Api.Tests.Testing;
 using Xunit;
 
@@ -18,8 +19,8 @@ public sealed class TimesheetMetadataApiTests : IClassFixture<TrackerApiFactory>
     public async Task Metadata_Should_Return_HoursPerDay_MinutesPerDay_AllowedMinutes_And_Tickets()
     {
         // Arrange
-        await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "A-1", "A-1");
-        await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "A-2", "A-2");
+        await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "A-1", "A-1");
+        await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "A-2", "A-2");
 
         // Act
         var r = await _client.GetAsync("/api/timesheet/metadata");
@@ -42,7 +43,7 @@ public sealed class TimesheetMetadataApiTests : IClassFixture<TrackerApiFactory>
         Assert.All(meta.AllowedMinutesHourMode, m => Assert.True(m % 30 == 0));
 
         Assert.Equal("day", meta.DefaultUnit);
-        Assert.False(string.IsNullOrWhiteSpace(meta.DefaultType));
+        Assert.Equal(TicketType.DEV, meta.DefaultType);
 
         Assert.NotNull(meta.Tickets);
         Assert.True(meta.Tickets.Count >= 2);
@@ -54,7 +55,7 @@ public sealed class TimesheetMetadataApiTests : IClassFixture<TrackerApiFactory>
         int[] AllowedMinutesDayMode,
         int[] AllowedMinutesHourMode,
         string DefaultUnit,
-        string DefaultType,
+        TicketType DefaultType,
         List<object> Tickets
     );
 }

@@ -154,7 +154,7 @@ That means the OpenAPI document is available during development only. The defaul
 On startup in `Development`, the app seeds:
 
 - a set of `DEV` tickets
-- a set of `CONGES` tickets
+- a set of `ABSENT` tickets
 - one year of historical time entries for business days
 - predefined leave periods (`CP-HIVER`, `CP-PRINTEMPS`, `CP-ETE`, `CP-TOUSSAINT`, `CP-NOEL`, `RTT-PONTS`)
 
@@ -168,7 +168,7 @@ Seed behavior details:
 
 One important API nuance:
 
-- `GET /api/tickets` explicitly excludes tickets where `Type == "CONGES"`
+- `GET /api/tickets` explicitly excludes tickets where `Type == "ABSENT"`
 
 So seeded leave tickets exist in the database and are included in metadata, but they are filtered out from the main tickets list endpoint.
 
@@ -180,7 +180,7 @@ All endpoints are rooted under `/api`.
 
 #### `GET /api/tickets`
 
-Returns all tickets except `CONGES`, ordered by `Type` then `ExternalKey`.
+Returns all tickets except `ABSENT`, ordered by `Type` then `ExternalKey`.
 
 Response item shape:
 
@@ -201,7 +201,7 @@ Returns open tickets that match a partial external key.
 Behavior:
 
 - excludes completed tickets
-- excludes tickets where `Type == "CONGES"`
+- excludes tickets where `Type == "ABSENT"`
 - only searches tickets where `ExternalKey` is not null
 - ranks exact matches first, then prefix matches, then other partial matches
 
@@ -474,7 +474,7 @@ The current computed defaults are:
 - `allowedMinutesDayMode`: `0`, `1/4 day`, `1/2 day`, `3/4 day`, `1 day`
 - `allowedMinutesHourMode`: `0` to `MinutesPerDay` in `30` minute steps
 
-Unlike `GET /api/tickets`, this endpoint includes all tickets from the database, including `CONGES`.
+Unlike `GET /api/tickets`, this endpoint includes all tickets from the database, including `ABSENT`.
 
 ## Error Format
 
@@ -566,6 +566,6 @@ dotnet ef database update --project back/Tracker.Api/Tracker.Api.csproj
 - Ticket completion is a business lock for editing and deletion, not just a UI flag.
 - A ticket cannot be marked completed until it has at least one time entry.
 - `POST /api/tickets` is intentionally idempotent only when `(type, externalKey)` already exists and `externalKey` is present.
-- `GET /api/tickets` and `GET /api/timesheet/metadata` do not return the same ticket set because the first excludes `CONGES` and the second does not.
+- `GET /api/tickets` and `GET /api/timesheet/metadata` do not return the same ticket set because the first excludes `ABSENT` and the second does not.
 - Time-entry writes are constrained by `HoursPerDay`; changing that value changes API validation behavior immediately.
 - The API auto-migrates on startup. That is convenient locally, but it also means startup can fail if a migration is broken or the database is not writable.

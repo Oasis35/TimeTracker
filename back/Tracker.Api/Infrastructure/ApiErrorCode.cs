@@ -1,4 +1,4 @@
-namespace Tracker.Api.Infrastructure;
+﻿namespace Tracker.Api.Infrastructure;
 
 public static class ApiErrorCodes
 {

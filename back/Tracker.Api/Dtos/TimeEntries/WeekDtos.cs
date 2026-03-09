@@ -1,8 +1,10 @@
+﻿using Tracker.Api.Models;
+
 namespace Tracker.Api.Dtos.TimeEntries;
 
 public sealed record WeekRowDto(
     int TicketId,
-    string Type,
+    TicketType Type,
     string? ExternalKey,
     string? Label,
     Dictionary<DateOnly, int> ValuesMinutes,

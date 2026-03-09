@@ -1,4 +1,5 @@
 ﻿using System.Net.Http.Json;
+using Tracker.Api.Models;
 using Tracker.Api.Tests.Testing;
 using Xunit;
 
@@ -16,8 +17,8 @@ public sealed class TimeEntriesViewsApiTests : IClassFixture<TrackerApiFactory>
     [Fact]
     public async Task GetDay_Should_Group_By_Ticket_And_Return_Total()
     {
-        var t1 = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "D-1", "D-1");
-        var t2 = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "D-2", "D-2");
+        var t1 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "D-1", "D-1");
+        var t2 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "D-2", "D-2");
 
         await ApiTestHelpers.UpsertAsync(_client, t1, "2026-02-23", 120);
         await ApiTestHelpers.UpsertAsync(_client, t2, "2026-02-23", 240);
@@ -36,7 +37,7 @@ public sealed class TimeEntriesViewsApiTests : IClassFixture<TrackerApiFactory>
     [Fact]
     public async Task GetWeek_Should_Return_7_Days_And_TotalsByDay()
     {
-        var t1 = await ApiTestHelpers.CreateTicketAsync(_client, "DEV", "W-1", "W-1");
+        var t1 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "W-1", "W-1");
 
         // Start = 2026-02-18 (Wednesday) => monday = 2026-02-16
         await ApiTestHelpers.UpsertAsync(_client, t1, "2026-02-16", 120);
@@ -64,7 +65,7 @@ public sealed class TimeEntriesViewsApiTests : IClassFixture<TrackerApiFactory>
 
     private sealed record DayEntryDto(
         int TicketId,
-        string Type,
+        TicketType Type,
         string? ExternalKey,
         string? Label,
         int QuantityMinutes);

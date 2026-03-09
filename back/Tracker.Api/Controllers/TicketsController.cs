@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.Tickets;
@@ -20,7 +20,7 @@ public sealed class TicketsController : ControllerBase
     {
         var tickets = await _db.Tickets
             .AsNoTracking()
-            .Where(t => t.Type != "CONGES")
+            .Where(t => t.Type != TicketType.ABSENT)
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
             .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
@@ -45,7 +45,7 @@ public sealed class TicketsController : ControllerBase
             .AsNoTracking()
             .Where(t =>
                 !t.IsCompleted &&
-                t.Type != "CONGES" &&
+                t.Type != TicketType.ABSENT &&
                 t.ExternalKey != null &&
                 EF.Functions.Like(t.ExternalKey, likePattern))
             .OrderBy(t => t.ExternalKey == query ? 0 : (t.ExternalKey!.StartsWith(query) ? 1 : 2))
@@ -90,10 +90,10 @@ public sealed class TicketsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<TicketDto>> Create([FromBody] CreateTicketDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Type))
+        if (!Enum.IsDefined(dto.Type))
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketTypeRequired);
 
-        var type = dto.Type.Trim();
+        var type = dto.Type;
         var externalKey = string.IsNullOrWhiteSpace(dto.ExternalKey) ? null : dto.ExternalKey.Trim();
         var label = string.IsNullOrWhiteSpace(dto.Label) ? null : dto.Label.Trim();
 
@@ -136,10 +136,10 @@ public sealed class TicketsController : ControllerBase
         if (entity.IsCompleted)
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketCompletedLocked);
 
-        if (string.IsNullOrWhiteSpace(dto.Type))
+        if (!Enum.IsDefined(dto.Type))
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketTypeRequired);
 
-        var type = dto.Type.Trim();
+        var type = dto.Type;
         var externalKey = string.IsNullOrWhiteSpace(dto.ExternalKey) ? null : dto.ExternalKey.Trim();
         var label = string.IsNullOrWhiteSpace(dto.Label) ? null : dto.Label.Trim();
 

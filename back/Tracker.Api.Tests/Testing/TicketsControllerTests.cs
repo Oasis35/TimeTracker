@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Tracker.Api.Controllers;
 using Tracker.Api.Dtos.Tickets;
 using Tracker.Api.Infrastructure;
@@ -22,10 +22,10 @@ public sealed class TicketsControllerTests
         await using var __ = conn;
 
         db.Tickets.AddRange(
-            new Ticket { Type = "B", ExternalKey = "2", Label = "B2" },
-            new Ticket { Type = "A", ExternalKey = "9", Label = "A9" },
-            new Ticket { Type = "A", ExternalKey = "1", Label = "A1" },
-            new Ticket { Type = "B", ExternalKey = null, Label = null }
+            new Ticket { Type = TicketType.SUPPORT, ExternalKey = "2", Label = "B2" },
+            new Ticket { Type = TicketType.DEV, ExternalKey = "9", Label = "A9" },
+            new Ticket { Type = TicketType.DEV, ExternalKey = "1", Label = "A1" },
+            new Ticket { Type = TicketType.SUPPORT, ExternalKey = null, Label = null }
         );
         await db.SaveChangesAsync();
 
@@ -39,16 +39,16 @@ public sealed class TicketsControllerTests
 
         // Ordering: Type A then B ; within A: ExternalKey 1 then 9 ; within B: null then 2 ? (Attention: ordre des nulls dépend du provider)
         // SQLite trie généralement NULL avant texte en ORDER BY ASC.
-        Assert.Equal("A", list[0].Type);
+        Assert.Equal(TicketType.DEV, list[0].Type);
         Assert.Equal("1", list[0].ExternalKey);
 
-        Assert.Equal("A", list[1].Type);
+        Assert.Equal(TicketType.DEV, list[1].Type);
         Assert.Equal("9", list[1].ExternalKey);
 
-        Assert.Equal("B", list[2].Type);
+        Assert.Equal(TicketType.SUPPORT, list[2].Type);
         Assert.Null(list[2].ExternalKey);
 
-        Assert.Equal("B", list[3].Type);
+        Assert.Equal(TicketType.SUPPORT, list[3].Type);
         Assert.Equal("2", list[3].ExternalKey);
     }
 
@@ -60,8 +60,8 @@ public sealed class TicketsControllerTests
         await using var __ = conn;
 
         db.Tickets.AddRange(
-            new Ticket { Type = "CONGES", ExternalKey = "CP-ETE", Label = "Conges ete" },
-            new Ticket { Type = "DEV", ExternalKey = "65010", Label = "Refonte auth API" }
+            new Ticket { Type = TicketType.ABSENT, ExternalKey = "CP-ETE", Label = "Conges ete" },
+            new Ticket { Type = TicketType.DEV, ExternalKey = "65010", Label = "Refonte auth API" }
         );
         await db.SaveChangesAsync();
 
@@ -72,7 +72,7 @@ public sealed class TicketsControllerTests
         var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
 
         Assert.Single(list);
-        Assert.Equal("DEV", list[0].Type);
+        Assert.Equal(TicketType.DEV, list[0].Type);
     }
 
     [Fact]
@@ -83,9 +83,9 @@ public sealed class TicketsControllerTests
         await using var __ = conn;
 
         db.Tickets.AddRange(
-            new Ticket { Type = "DEV", ExternalKey = "65010", Label = "Open", IsCompleted = false },
-            new Ticket { Type = "DEV", ExternalKey = "65011", Label = "Archived", IsCompleted = true },
-            new Ticket { Type = "CONGES", ExternalKey = "65012", Label = "Leave", IsCompleted = false }
+            new Ticket { Type = TicketType.DEV, ExternalKey = "65010", Label = "Open", IsCompleted = false },
+            new Ticket { Type = TicketType.DEV, ExternalKey = "65011", Label = "Archived", IsCompleted = true },
+            new Ticket { Type = TicketType.ABSENT, ExternalKey = "65012", Label = "Leave", IsCompleted = false }
         );
         await db.SaveChangesAsync();
 
@@ -107,7 +107,7 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        db.Tickets.Add(new Ticket { Type = "DEV", ExternalKey = "65010", Label = "Open", IsCompleted = false });
+        db.Tickets.Add(new Ticket { Type = TicketType.DEV, ExternalKey = "65010", Label = "Open", IsCompleted = false });
         await db.SaveChangesAsync();
 
         var controller = new TicketsController(db);
@@ -130,7 +130,7 @@ public sealed class TicketsControllerTests
         {
             db.Tickets.Add(new Ticket
             {
-                Type = "DEV",
+                Type = TicketType.DEV,
                 ExternalKey = $"650{i:00}",
                 Label = $"Ticket {i:00}",
                 IsCompleted = false
@@ -155,10 +155,10 @@ public sealed class TicketsControllerTests
         await using var __ = conn;
 
         db.Tickets.AddRange(
-            new Ticket { Type = "DEV", ExternalKey = "X6501", Label = "Contains 2", IsCompleted = false },
-            new Ticket { Type = "DEV", ExternalKey = "65010", Label = "Prefix", IsCompleted = false },
-            new Ticket { Type = "DEV", ExternalKey = "6501", Label = "Exact", IsCompleted = false },
-            new Ticket { Type = "DEV", ExternalKey = "16501", Label = "Contains 1", IsCompleted = false }
+            new Ticket { Type = TicketType.DEV, ExternalKey = "X6501", Label = "Contains 2", IsCompleted = false },
+            new Ticket { Type = TicketType.DEV, ExternalKey = "65010", Label = "Prefix", IsCompleted = false },
+            new Ticket { Type = TicketType.DEV, ExternalKey = "6501", Label = "Exact", IsCompleted = false },
+            new Ticket { Type = TicketType.DEV, ExternalKey = "16501", Label = "Contains 1", IsCompleted = false }
         );
         await db.SaveChangesAsync();
 
@@ -188,7 +188,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Create(new CreateTicketDto(Type: "   ", ExternalKey: null, Label: null));
+        var result = await controller.Create(new CreateTicketDto(Type: (TicketType)(-1), ExternalKey: null, Label: null));
 
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
@@ -205,7 +205,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Create(new CreateTicketDto(Type: "JIRA", ExternalKey: "ABC-1", Label: "   "));
+        var result = await controller.Create(new CreateTicketDto(Type: TicketType.SUPPORT, ExternalKey: "ABC-1", Label: "   "));
 
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
@@ -223,7 +223,7 @@ public sealed class TicketsControllerTests
         var controller = new TicketsController(db);
 
         var result = await controller.Create(new CreateTicketDto(
-            Type: "  JIRA  ",
+            Type: TicketType.SUPPORT,
             ExternalKey: "  ABC-123  ",
             Label: "  ABC-123 - Login bug  "));
 
@@ -231,12 +231,12 @@ public sealed class TicketsControllerTests
         var dto = Assert.IsType<TicketDto>(created.Value);
 
         Assert.True(dto.Id > 0);
-        Assert.Equal("JIRA", dto.Type);
+        Assert.Equal(TicketType.SUPPORT, dto.Type);
         Assert.Equal("ABC-123", dto.ExternalKey);
         Assert.Equal("ABC-123 - Login bug", dto.Label);
 
         var entity = db.Tickets.Single(t => t.Id == dto.Id);
-        Assert.Equal("JIRA", entity.Type);
+        Assert.Equal(TicketType.SUPPORT, entity.Type);
         Assert.Equal("ABC-123", entity.ExternalKey);
         Assert.Equal("ABC-123 - Login bug", entity.Label);
     }
@@ -248,7 +248,7 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var existing = new Ticket { Type = "JIRA", ExternalKey = "ABC-123", Label = "Old label" };
+        var existing = new Ticket { Type = TicketType.SUPPORT, ExternalKey = "ABC-123", Label = "Old label" };
         db.Tickets.Add(existing);
         await db.SaveChangesAsync();
 
@@ -256,7 +256,7 @@ public sealed class TicketsControllerTests
 
         // Label différent -> doit retourner l'existant, sans créer un doublon
         var result = await controller.Create(new CreateTicketDto(
-            Type: "JIRA",
+            Type: TicketType.SUPPORT,
             ExternalKey: "ABC-123",
             Label: "New label"));
 
@@ -276,18 +276,18 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        db.Tickets.Add(new Ticket { Type = "GEN", ExternalKey = null, Label = "L1" });
+        db.Tickets.Add(new Ticket { Type = TicketType.SUPPORT, ExternalKey = null, Label = "L1" });
         await db.SaveChangesAsync();
 
         var controller = new TicketsController(db);
 
         // externalKey null => ton code ne "dedupe" pas (il dedupe uniquement si externalKey != null)
-        var result = await controller.Create(new CreateTicketDto(Type: "GEN", ExternalKey: null, Label: "L2"));
+        var result = await controller.Create(new CreateTicketDto(Type: TicketType.SUPPORT, ExternalKey: null, Label: "L2"));
 
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         var dto = Assert.IsType<TicketDto>(created.Value);
 
-        Assert.Equal("GEN", dto.Type);
+        Assert.Equal(TicketType.SUPPORT, dto.Type);
         Assert.Null(dto.ExternalKey);
         Assert.Equal("L2", dto.Label);
 
@@ -307,7 +307,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(0, new CreateTicketDto("DEV", "X-1", "Label"));
+        var result = await controller.Update(0, new CreateTicketDto(TicketType.DEV, "X-1", "Label"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -323,7 +323,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(999, new CreateTicketDto("DEV", "X-1", "Label"));
+        var result = await controller.Update(999, new CreateTicketDto(TicketType.DEV, "X-1", "Label"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -337,13 +337,13 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var ticket = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "Label" };
+        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "Label" };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new CreateTicketDto("   ", "X-1", "Label"));
+        var result = await controller.Update(ticket.Id, new CreateTicketDto((TicketType)(-1), "X-1", "Label"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -357,13 +357,13 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var ticket = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "Label" };
+        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "Label" };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new CreateTicketDto("DEV", "X-1", "   "));
+        var result = await controller.Update(ticket.Id, new CreateTicketDto(TicketType.DEV, "X-1", "   "));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -377,14 +377,14 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var t1 = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "L1" };
-        var t2 = new Ticket { Type = "DEV", ExternalKey = "X-2", Label = "L2" };
+        var t1 = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "L1" };
+        var t2 = new Ticket { Type = TicketType.DEV, ExternalKey = "X-2", Label = "L2" };
         db.Tickets.AddRange(t1, t2);
         await db.SaveChangesAsync();
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(t2.Id, new CreateTicketDto("DEV", "X-1", "New label"));
+        var result = await controller.Update(t2.Id, new CreateTicketDto(TicketType.DEV, "X-1", "New label"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -398,23 +398,23 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var ticket = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "Old" };
+        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "Old" };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new CreateTicketDto("  CONGES  ", "  RTT-1  ", "  Nouveau  "));
+        var result = await controller.Update(ticket.Id, new CreateTicketDto(TicketType.ABSENT, "  RTT-1  ", "  Nouveau  "));
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<TicketDto>(ok.Value);
 
         Assert.Equal(ticket.Id, dto.Id);
-        Assert.Equal("CONGES", dto.Type);
+        Assert.Equal(TicketType.ABSENT, dto.Type);
         Assert.Equal("RTT-1", dto.ExternalKey);
         Assert.Equal("Nouveau", dto.Label);
 
         var reloaded = db.Tickets.Single(t => t.Id == ticket.Id);
-        Assert.Equal("CONGES", reloaded.Type);
+        Assert.Equal(TicketType.ABSENT, reloaded.Type);
         Assert.Equal("RTT-1", reloaded.ExternalKey);
         Assert.Equal("Nouveau", reloaded.Label);
     }
@@ -426,13 +426,13 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var ticket = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "Label", IsCompleted = true };
+        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "Label", IsCompleted = true };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new CreateTicketDto("DEV", "X-1", "Updated"));
+        var result = await controller.Update(ticket.Id, new CreateTicketDto(TicketType.DEV, "X-1", "Updated"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -482,7 +482,7 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var ticket = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "X1", IsCompleted = false };
+        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "X1", IsCompleted = false };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
         db.TimeEntries.Add(new TimeEntry
@@ -510,7 +510,7 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var ticket = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "X1", IsCompleted = true };
+        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "X1", IsCompleted = true };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
 
@@ -531,7 +531,7 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var ticket = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "X1", IsCompleted = false };
+        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "X1", IsCompleted = false };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
 
@@ -589,7 +589,7 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var ticket = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "X1" };
+        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "X1" };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
 
@@ -619,7 +619,7 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var ticket = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "X1" };
+        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "X1" };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
 
@@ -637,7 +637,7 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var ticket = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "X1", IsCompleted = true };
+        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "X1", IsCompleted = true };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
 
@@ -679,9 +679,9 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var t1 = new Ticket { Type = "B", ExternalKey = "2", Label = "B2" };
-        var t2 = new Ticket { Type = "A", ExternalKey = "1", Label = "A1" };
-        var t3 = new Ticket { Type = "A", ExternalKey = "9", Label = "A9" };
+        var t1 = new Ticket { Type = TicketType.SUPPORT, ExternalKey = "2", Label = "B2" };
+        var t2 = new Ticket { Type = TicketType.DEV, ExternalKey = "1", Label = "A1" };
+        var t3 = new Ticket { Type = TicketType.DEV, ExternalKey = "9", Label = "A9" };
         db.Tickets.AddRange(t1, t2, t3);
         await db.SaveChangesAsync();
 
@@ -711,7 +711,7 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var t1 = new Ticket { Type = "DEV", ExternalKey = "X-1", Label = "X1" };
+        var t1 = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "X1" };
         db.Tickets.Add(t1);
         await db.SaveChangesAsync();
 
@@ -779,8 +779,8 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var t1 = new Ticket { Type = "JIRA", ExternalKey = "A-1", Label = "A1" };
-        var t2 = new Ticket { Type = "JIRA", ExternalKey = "A-2", Label = "A2" };
+        var t1 = new Ticket { Type = TicketType.SUPPORT, ExternalKey = "A-1", Label = "A1" };
+        var t2 = new Ticket { Type = TicketType.SUPPORT, ExternalKey = "A-2", Label = "A2" };
         db.Tickets.AddRange(t1, t2);
         await db.SaveChangesAsync();
 
@@ -814,7 +814,7 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var t1 = new Ticket { Type = "JIRA", ExternalKey = "A-1", Label = "A1" };
+        var t1 = new Ticket { Type = TicketType.SUPPORT, ExternalKey = "A-1", Label = "A1" };
         db.Tickets.Add(t1);
         await db.SaveChangesAsync();
 
@@ -842,7 +842,7 @@ public sealed class TicketsControllerTests
         await using var _ = db;
         await using var __ = conn;
 
-        var t = new Ticket { Type = "GEN", ExternalKey = "", Label = "" };
+        var t = new Ticket { Type = TicketType.SUPPORT, ExternalKey = "", Label = "" };
         db.Tickets.Add(t);
         await db.SaveChangesAsync();
 
@@ -856,3 +856,4 @@ public sealed class TicketsControllerTests
         Assert.Equal(0, list[0].Total);
     }
 }
+
