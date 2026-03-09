@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Linq;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.Tickets;
 using Tracker.Api.Dtos.Timesheet;

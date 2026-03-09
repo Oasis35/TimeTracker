@@ -1,10 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
 using Tracker.Api.Controllers;
 using Tracker.Api.Dtos.Tickets;
 using Tracker.Api.Infrastructure;
 using Tracker.Api.Models;
 using Tracker.Api.Tests.Testing;
-using Xunit;
 
 namespace Tracker.Api.Tests;
 
