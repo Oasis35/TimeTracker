@@ -4,6 +4,16 @@ Ce depot fournit actuellement un support Docker pour le backend uniquement.
 
 Il n'y a pas encore d'image frontend ni de stack compose complete front + back.
 
+Pour la stack production complete dans une seule image Docker, voir :
+
+- [README.docker.prod.fr.md](README.docker.prod.fr.md)
+
+Ce guide prod documente aussi :
+
+- l'export de l'image en `.tar`
+- l'import sur un autre poste
+- le redemarrage via `docker compose`
+
 ## Fichiers Docker
 
 - [back/docker-compose.yml](back/docker-compose.yml)
