@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.Tickets;
@@ -23,35 +23,6 @@ public sealed class TicketsController : ControllerBase
             .Where(t => t.Type != TicketType.ABSENT)
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
-            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
-            .ToListAsync();
-
-        return Ok(tickets);
-    }
-
-    [HttpGet("lookup")]
-    public async Task<ActionResult<IReadOnlyList<TicketDto>>> LookupOpenByExternalKey(
-        [FromQuery] string? q,
-        [FromQuery] int take = 10)
-    {
-        var query = (q ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(query))
-            return Ok(Array.Empty<TicketDto>());
-
-        var safeTake = Math.Clamp(take, 1, 25);
-        var likePattern = $"%{query}%";
-
-        var tickets = await _db.Tickets
-            .AsNoTracking()
-            .Where(t =>
-                !t.IsCompleted &&
-                t.Type != TicketType.ABSENT &&
-                t.ExternalKey != null &&
-                EF.Functions.Like(t.ExternalKey, likePattern))
-            .OrderBy(t => t.ExternalKey == query ? 0 : (t.ExternalKey!.StartsWith(query) ? 1 : 2))
-            .ThenBy(t => t.Type)
-            .ThenBy(t => t.ExternalKey)
-            .Take(safeTake)
             .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
             .ToListAsync();
 
@@ -88,7 +59,7 @@ public sealed class TicketsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<TicketDto>> Create([FromBody] CreateTicketDto dto)
+    public async Task<ActionResult<TicketDto>> Create([FromBody] SaveTicketDto dto)
     {
         if (!Enum.IsDefined(dto.Type))
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketTypeRequired);
@@ -125,7 +96,7 @@ public sealed class TicketsController : ControllerBase
     }
 
     [HttpPut("{ticketId:int}")]
-    public async Task<ActionResult<TicketDto>> Update(int ticketId, [FromBody] CreateTicketDto dto)
+    public async Task<ActionResult<TicketDto>> Update(int ticketId, [FromBody] SaveTicketDto dto)
     {
         if (ticketId <= 0)
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketIdInvalid);

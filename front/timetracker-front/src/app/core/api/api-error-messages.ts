@@ -4,11 +4,12 @@ import { TranslationKey } from '../i18n/translations';
 const API_ERROR_TRANSLATION_BY_CODE: Record<string, TranslationKey> = {
   TT_UNKNOWN_ERROR: 'unknown_error_contact_admin',
   TT_MONTH_INVALID: 'month_invalid',
-  TT_CONFIG_HOURS_PER_DAY_INVALID: 'config_hours_per_day_invalid',
   TT_CONFIG_MINUTES_PER_DAY_INVALID: 'config_minutes_per_day_invalid',
   TT_TICKET_ID_INVALID: 'ticket_id_invalid',
   TT_TICKET_TYPE_REQUIRED: 'type_required',
   TT_TICKET_LABEL_REQUIRED: 'label_required_with_external',
+  TT_BACKUP_FILE_MISSING: 'backup_file_missing',
+  TT_BACKUP_FILE_INVALID: 'backup_file_invalid',
   TT_TICKET_NOT_FOUND: 'ticket_not_found',
   TT_TICKET_HAS_TIME_ENTRIES: 'ticket_has_time_entries',
   TT_TICKET_NO_TIME_ENTRIES: 'ticket_no_time_entries',

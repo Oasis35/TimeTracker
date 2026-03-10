@@ -2,5 +2,5 @@
 
 public sealed class TimeTrackingOptions
 {
-    public int HoursPerDay { get; set; } = 8;
+    public int MinutesPerDay { get; set; } = 480;
 }

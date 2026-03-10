@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
+  BackupRestoreResponseDto,
   CreateTicketDto,
   TicketDetailDto,
   TicketDto,
@@ -31,11 +32,6 @@ export class TrackerApi {
 
   getAllTickets(): Observable<TicketDto[]> {
     return this.http.get<TicketDto[]>('/api/tickets');
-  }
-
-  lookupOpenTicketsByNumber(query: string, take = 10): Observable<TicketDto[]> {
-    const params = new HttpParams().set('q', query).set('take', take);
-    return this.http.get<TicketDto[]>('/api/tickets/lookup', { params });
   }
 
   getTicketTotals(year?: number, month?: number): Observable<TicketTotalDto[]> {
@@ -68,6 +64,19 @@ export class TrackerApi {
 
   getTicketDetail(ticketId: number): Observable<TicketDetailDto> {
     return this.http.get<TicketDetailDto>(`/api/tickets/${ticketId}/detail`);
+  }
+
+  exportBackup(): Observable<HttpResponse<Blob>> {
+    return this.http.post('/api/backup/export', null, {
+      observe: 'response',
+      responseType: 'blob',
+    });
+  }
+
+  restoreBackup(file: File): Observable<BackupRestoreResponseDto> {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    return this.http.post<BackupRestoreResponseDto>('/api/backup/restore', formData);
   }
 
   getPublicHolidaysMetropole(): Observable<Record<string, string>> {

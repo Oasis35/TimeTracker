@@ -9,7 +9,6 @@ import { TicketsGridPageComponent } from './tickets-grid-page';
 
 describe('TicketsGridPageComponent', () => {
   const metadata = {
-    hoursPerDay: 8,
     minutesPerDay: 480,
     allowedMinutesDayMode: [0, 120, 240, 360, 480],
     allowedMinutesHourMode: [0, 60, 120, 180, 240, 300, 360, 420, 480],

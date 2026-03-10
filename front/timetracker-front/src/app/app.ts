@@ -7,7 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AppLanguage } from './core/i18n/app-language';
-import { UnitService, TimeUnit } from './core/services/unit.service';
+import { UnitService } from './core/services/unit.service';
 import { SettingsDialogComponent } from './features/settings/settings-dialog/settings-dialog.component';
 
 const LANGUAGE_STORAGE_KEY = 'tt.language';
@@ -47,14 +47,6 @@ export class App {
       this.currentLanguage.set(language);
       this.persistLanguage(language);
     });
-  }
-
-  onLanguageChange(language: AppLanguage): void {
-    this.translate.use(language);
-  }
-
-  onTimeChange(unit: TimeUnit): void {
-    this.unit.setUnitMode(unit);
   }
 
   openSettingsDialog(): void {

@@ -33,14 +33,12 @@ describe('App', () => {
     expect(compiled.querySelector('router-outlet')).not.toBeNull();
   });
 
-  it('should propagate unit mode changes through UnitService', () => {
+  it('should expose UnitService default mode', () => {
     const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
     const unit = TestBed.inject(UnitService);
 
-    app.onTimeChange('hour');
-
-    expect(unit.unitMode()).toBe('hour');
+    expect(fixture.componentInstance).toBeTruthy();
+    expect(unit.unitMode()).toBe('day');
   });
 
   it('should expose navigation link for tickets grid', () => {

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using System.Linq;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.Tickets;
 using Tracker.Api.Dtos.Timesheet;
@@ -24,7 +23,7 @@ public sealed class TimesheetController : ControllerBase
         _opts = opts.Value;
     }
 
-    private int MinutesPerDay => _opts.HoursPerDay * 60;
+    private int MinutesPerDay => _opts.MinutesPerDay;
 
     [HttpGet]
     public async Task<ActionResult<TimesheetMonthDto>> Get(
@@ -75,10 +74,6 @@ public sealed class TimesheetController : ControllerBase
                     d => valuesByDate.TryGetValue(d, out var v) ? v : 0);
 
                 var externalKey = t.ExternalKey ?? "";
-                var typeCode = t.Type.ToString();
-                var ticketKey = string.IsNullOrWhiteSpace(externalKey)
-                    ? typeCode
-                    : $"{typeCode}-{externalKey}";
 
                 return new TimesheetRowDto
                 {
@@ -86,7 +81,6 @@ public sealed class TimesheetController : ControllerBase
                     Type = t.Type,
                     ExternalKey = externalKey,
                     Label = t.Label ?? "",
-                    TicketKey = ticketKey,
                     Values = completeValues
                 };
             })
@@ -114,12 +108,9 @@ public sealed class TimesheetController : ControllerBase
     [HttpGet("metadata")]
     public async Task<ActionResult<TimesheetMetadataDto>> GetMetadata()
     {
-        if (_opts.HoursPerDay <= 0)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.ConfigHoursPerDayInvalid);
-
         var minutesPerDay = MinutesPerDay;
 
-        if (minutesPerDay % 4 != 0)
+        if (minutesPerDay <= 0 || minutesPerDay % 4 != 0)
             return ApiProblems.BadRequest(this, ApiErrorCodes.ConfigMinutesPerDayInvalid);
 
         var allowedDay = new[]
@@ -146,7 +137,6 @@ public sealed class TimesheetController : ControllerBase
 
         return Ok(new TimesheetMetadataDto
         {
-            HoursPerDay = _opts.HoursPerDay,
             MinutesPerDay = minutesPerDay,
             AllowedMinutesDayMode = allowedDay,
             AllowedMinutesHourMode = allowedHour,

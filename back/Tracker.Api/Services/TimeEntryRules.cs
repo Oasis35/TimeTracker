@@ -1,4 +1,4 @@
-using Tracker.Api.Infrastructure;
+﻿using Tracker.Api.Infrastructure;
 
 namespace Tracker.Api.Services;
 

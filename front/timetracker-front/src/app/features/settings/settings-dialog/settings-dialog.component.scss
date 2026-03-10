@@ -23,8 +23,74 @@
 
 .setting-group {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.45rem;
   min-width: 0;
+}
+
+.setting-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.setting-title mat-icon {
+  width: 18px;
+  height: 18px;
+  font-size: 18px;
+  color: #2563eb;
+}
+
+.setting-group-maintenance {
+  grid-column: 1 / -1;
+}
+
+.maintenance-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.85));
+}
+
+.maintenance-block {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.maintenance-heading {
+  font-weight: 700;
+  color: #111827;
+}
+
+.maintenance-hint,
+.maintenance-file,
+.maintenance-error {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.maintenance-hint,
+.maintenance-file {
+  color: #475569;
+}
+
+.maintenance-error {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.maintenance-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.backup-input {
+  display: none;
 }
 
 mat-button-toggle-group {
@@ -38,5 +104,10 @@ mat-button-toggle-group {
 @media (max-width: 700px) {
   .settings-content {
     grid-template-columns: 1fr;
+  }
+
+  .maintenance-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

@@ -5,7 +5,6 @@ namespace Tracker.Api.Dtos.Timesheet;
 
 public sealed record TimesheetMetadataDto
 {
-    public required int HoursPerDay { get; init; }
     public required int MinutesPerDay { get; init; }
     public required int[] AllowedMinutesDayMode { get; init; }
     public required int[] AllowedMinutesHourMode { get; init; }

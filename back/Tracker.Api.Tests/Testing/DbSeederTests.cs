@@ -15,7 +15,7 @@ public sealed class DbSeederTests
         await using var _ = db;
         await using var __ = conn;
 
-        DbSeeder.SeedDevelopmentData(db, new TimeTrackingOptions { HoursPerDay = 8 });
+        DbSeeder.SeedDevelopmentData(db, new TimeTrackingOptions { MinutesPerDay = 480 });
 
         var congesTickets = db.Tickets
             .Where(t => t.Type == TicketType.ABSENT)
@@ -62,7 +62,7 @@ public sealed class DbSeederTests
         );
         await db.SaveChangesAsync();
 
-        DbSeeder.SeedDevelopmentData(db, new TimeTrackingOptions { HoursPerDay = 8 });
+        DbSeeder.SeedDevelopmentData(db, new TimeTrackingOptions { MinutesPerDay = 480 });
 
         var cpTicket = db.Tickets.Single(t => t.Type == TicketType.ABSENT && t.ExternalKey == "CP");
         var seededLeaveEntries = db.TimeEntries

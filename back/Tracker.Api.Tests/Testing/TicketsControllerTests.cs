@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Tracker.Api.Controllers;
 using Tracker.Api.Dtos.Tickets;
 using Tracker.Api.Infrastructure;
@@ -199,106 +199,6 @@ public sealed class TicketsControllerTests
         Assert.Equal(60, dto.TotalMinutes);
     }
 
-    [Fact]
-    public async Task LookupOpenByExternalKey_Should_Return_Only_Open_Non_Conges_Tickets()
-    {
-        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
-        await using var _ = db;
-        await using var __ = conn;
-
-        db.Tickets.AddRange(
-            new Ticket { Type = TicketType.DEV, ExternalKey = "65010", Label = "Open", IsCompleted = false },
-            new Ticket { Type = TicketType.DEV, ExternalKey = "65011", Label = "Archived", IsCompleted = true },
-            new Ticket { Type = TicketType.ABSENT, ExternalKey = "65012", Label = "Leave", IsCompleted = false }
-        );
-        await db.SaveChangesAsync();
-
-        var controller = new TicketsController(db);
-
-        var result = await controller.LookupOpenByExternalKey("6501", 10);
-        var ok = Assert.IsType<OkObjectResult>(result.Result);
-        var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
-
-        Assert.Single(list);
-        Assert.Equal("65010", list[0].ExternalKey);
-        Assert.False(list[0].IsCompleted);
-    }
-
-    [Fact]
-    public async Task LookupOpenByExternalKey_Should_Return_Empty_When_Query_Is_Blank()
-    {
-        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
-        await using var _ = db;
-        await using var __ = conn;
-
-        db.Tickets.Add(new Ticket { Type = TicketType.DEV, ExternalKey = "65010", Label = "Open", IsCompleted = false });
-        await db.SaveChangesAsync();
-
-        var controller = new TicketsController(db);
-
-        var result = await controller.LookupOpenByExternalKey("   ", 10);
-        var ok = Assert.IsType<OkObjectResult>(result.Result);
-        var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
-
-        Assert.Empty(list);
-    }
-
-    [Fact]
-    public async Task LookupOpenByExternalKey_Should_Clamp_Take_To_25()
-    {
-        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
-        await using var _ = db;
-        await using var __ = conn;
-
-        for (var i = 0; i < 40; i++)
-        {
-            db.Tickets.Add(new Ticket
-            {
-                Type = TicketType.DEV,
-                ExternalKey = $"650{i:00}",
-                Label = $"Ticket {i:00}",
-                IsCompleted = false
-            });
-        }
-        await db.SaveChangesAsync();
-
-        var controller = new TicketsController(db);
-
-        var result = await controller.LookupOpenByExternalKey("650", 100);
-        var ok = Assert.IsType<OkObjectResult>(result.Result);
-        var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
-
-        Assert.Equal(25, list.Count);
-    }
-
-    [Fact]
-    public async Task LookupOpenByExternalKey_Should_Order_By_Exact_Prefix_Then_Contains()
-    {
-        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
-        await using var _ = db;
-        await using var __ = conn;
-
-        db.Tickets.AddRange(
-            new Ticket { Type = TicketType.DEV, ExternalKey = "X6501", Label = "Contains 2", IsCompleted = false },
-            new Ticket { Type = TicketType.DEV, ExternalKey = "65010", Label = "Prefix", IsCompleted = false },
-            new Ticket { Type = TicketType.DEV, ExternalKey = "6501", Label = "Exact", IsCompleted = false },
-            new Ticket { Type = TicketType.DEV, ExternalKey = "16501", Label = "Contains 1", IsCompleted = false }
-        );
-        await db.SaveChangesAsync();
-
-        var controller = new TicketsController(db);
-
-        var result = await controller.LookupOpenByExternalKey("6501", 10);
-        var ok = Assert.IsType<OkObjectResult>(result.Result);
-        var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
-
-        Assert.Equal(4, list.Count);
-        Assert.Equal("6501", list[0].ExternalKey);
-        Assert.Equal("65010", list[1].ExternalKey);
-        Assert.Equal("16501", list[2].ExternalKey);
-        Assert.Equal("X6501", list[3].ExternalKey);
-    }
-
     // -------------------------
     // POST /api/tickets
     // -------------------------
@@ -312,7 +212,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Create(new CreateTicketDto(Type: (TicketType)(-1), ExternalKey: null, Label: null));
+        var result = await controller.Create(new SaveTicketDto(Type: (TicketType)(-1), ExternalKey: null, Label: null));
 
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
@@ -329,7 +229,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Create(new CreateTicketDto(Type: TicketType.SUPPORT, ExternalKey: "ABC-1", Label: "   "));
+        var result = await controller.Create(new SaveTicketDto(Type: TicketType.SUPPORT, ExternalKey: "ABC-1", Label: "   "));
 
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
@@ -346,7 +246,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Create(new CreateTicketDto(
+        var result = await controller.Create(new SaveTicketDto(
             Type: TicketType.SUPPORT,
             ExternalKey: "  ABC-123  ",
             Label: "  ABC-123 - Login bug  "));
@@ -379,7 +279,7 @@ public sealed class TicketsControllerTests
         var controller = new TicketsController(db);
 
         // Label différent -> doit retourner l'existant, sans créer un doublon
-        var result = await controller.Create(new CreateTicketDto(
+        var result = await controller.Create(new SaveTicketDto(
             Type: TicketType.SUPPORT,
             ExternalKey: "ABC-123",
             Label: "New label"));
@@ -406,7 +306,7 @@ public sealed class TicketsControllerTests
         var controller = new TicketsController(db);
 
         // externalKey null => ton code ne "dedupe" pas (il dedupe uniquement si externalKey != null)
-        var result = await controller.Create(new CreateTicketDto(Type: TicketType.SUPPORT, ExternalKey: null, Label: "L2"));
+        var result = await controller.Create(new SaveTicketDto(Type: TicketType.SUPPORT, ExternalKey: null, Label: "L2"));
 
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         var dto = Assert.IsType<TicketDto>(created.Value);
@@ -431,7 +331,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(0, new CreateTicketDto(TicketType.DEV, "X-1", "Label"));
+        var result = await controller.Update(0, new SaveTicketDto(TicketType.DEV, "X-1", "Label"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -447,7 +347,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(999, new CreateTicketDto(TicketType.DEV, "X-1", "Label"));
+        var result = await controller.Update(999, new SaveTicketDto(TicketType.DEV, "X-1", "Label"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -467,7 +367,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new CreateTicketDto((TicketType)(-1), "X-1", "Label"));
+        var result = await controller.Update(ticket.Id, new SaveTicketDto((TicketType)(-1), "X-1", "Label"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -487,7 +387,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new CreateTicketDto(TicketType.DEV, "X-1", "   "));
+        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.DEV, "X-1", "   "));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -508,7 +408,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(t2.Id, new CreateTicketDto(TicketType.DEV, "X-1", "New label"));
+        var result = await controller.Update(t2.Id, new SaveTicketDto(TicketType.DEV, "X-1", "New label"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -528,7 +428,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new CreateTicketDto(TicketType.ABSENT, "  RTT-1  ", "  Nouveau  "));
+        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.ABSENT, "  RTT-1  ", "  Nouveau  "));
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<TicketDto>(ok.Value);
 
@@ -556,7 +456,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new CreateTicketDto(TicketType.DEV, "X-1", "Updated"));
+        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.DEV, "X-1", "Updated"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);

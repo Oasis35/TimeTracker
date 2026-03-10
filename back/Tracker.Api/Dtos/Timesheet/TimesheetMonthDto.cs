@@ -1,4 +1,4 @@
-namespace Tracker.Api.Dtos.Timesheet;
+﻿namespace Tracker.Api.Dtos.Timesheet;
 
 public sealed record TimesheetMonthDto
 {

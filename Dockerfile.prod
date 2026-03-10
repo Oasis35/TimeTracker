@@ -1,0 +1,30 @@
+FROM node:22-alpine AS front-build
+WORKDIR /src/front
+
+COPY front/timetracker-front/package.json front/timetracker-front/package-lock.json ./
+RUN npm ci
+
+COPY front/timetracker-front/ ./
+RUN npm run build
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS back-build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+
+COPY back/Tracker.Api/Tracker.Api.csproj back/Tracker.Api/
+RUN dotnet restore "./back/Tracker.Api/Tracker.Api.csproj"
+
+COPY back/Tracker.Api/ back/Tracker.Api/
+COPY --from=front-build /src/front/dist/timetracker-front/browser/ back/Tracker.Api/wwwroot/
+
+WORKDIR /src/back/Tracker.Api
+RUN dotnet publish "./Tracker.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+
+EXPOSE 8080
+
+COPY --from=back-build /app/publish .
+
+ENTRYPOINT ["dotnet", "Tracker.Api.dll"]

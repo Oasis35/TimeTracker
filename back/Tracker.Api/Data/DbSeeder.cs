@@ -10,11 +10,8 @@ public static class DbSeeder
 
     public static void SeedDevelopmentData(TrackerDbContext db, TimeTrackingOptions opts)
     {
-        if (opts.HoursPerDay <= 0)
-            return;
-
-        var minutesPerDay = opts.HoursPerDay * 60;
-        if (minutesPerDay % 4 != 0)
+        var minutesPerDay = opts.MinutesPerDay;
+        if (minutesPerDay <= 0 || minutesPerDay % 4 != 0)
             return;
 
         var today = DateOnly.FromDateTime(DateTime.Today);

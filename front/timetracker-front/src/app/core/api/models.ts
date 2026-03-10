@@ -35,7 +35,6 @@ export interface CreateTicketDto {
 }
 
 export interface TimesheetMetadataDto {
-  hoursPerDay: number;
   minutesPerDay: number;
   allowedMinutesDayMode: number[];
   allowedMinutesHourMode: number[];
@@ -66,4 +65,8 @@ export interface UpsertTimeEntryDto {
   date: string;
   quantityMinutes: number;
   comment?: string | null;
+}
+
+export interface BackupRestoreResponseDto {
+  safetyBackupFileName: string;
 }

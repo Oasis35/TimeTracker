@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Tracker.Api.Models;
 using Tracker.Api.Tests.Testing;
@@ -16,7 +16,7 @@ public sealed class TimesheetApiTests : IClassFixture<TrackerApiFactory>
     }
 
     [Fact]
-    public async Task Get_Should_Return_MinutesPerDay_TicketKey_And_Zero_For_Empty_Cells()
+    public async Task Get_Should_Return_MinutesPerDay_And_Zero_For_Empty_Cells()
     {
         var t1 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "64205", "DEV 64205");
         var t2 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.SUPPORT, "", "General");
@@ -35,12 +35,10 @@ public sealed class TimesheetApiTests : IClassFixture<TrackerApiFactory>
         Assert.Contains("2026-02-03", dto.Days);
 
         var dev = Assert.Single(dto.Rows, x => x.Type == TicketType.DEV);
-        Assert.Equal("DEV-64205", dev.TicketKey);
         Assert.Equal(120, dev.Values["2026-02-03"]);
         Assert.Equal(0, dev.Values["2026-02-01"]);
 
         var support = Assert.Single(dto.Rows, x => x.Type == TicketType.SUPPORT);
-        Assert.Equal("SUPPORT", support.TicketKey);
         Assert.Equal(60, support.Values["2026-02-01"]);
         Assert.Equal(0, support.Values["2026-02-03"]);
     }
@@ -58,6 +56,5 @@ public sealed class TimesheetApiTests : IClassFixture<TrackerApiFactory>
         TicketType Type,
         string ExternalKey,
         string Label,
-        string TicketKey,
         Dictionary<string, int> Values);
 }

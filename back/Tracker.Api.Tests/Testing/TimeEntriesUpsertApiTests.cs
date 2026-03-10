@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Tracker.Api.Data;
 using Tracker.Api.Infrastructure;
 using Tracker.Api.Models;
 using Tracker.Api.Tests.Testing;
@@ -9,10 +11,12 @@ namespace Tracker.Api.Tests;
 
 public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
 {
+    private readonly TrackerApiFactory _factory;
     private readonly HttpClient _client;
 
     public TimeEntriesUpsertApiTests(TrackerApiFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
 
@@ -30,14 +34,10 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
         var d = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-23", 0, null);
         Assert.Equal(HttpStatusCode.NoContent, d.StatusCode);
 
-        var day = await _client.GetAsync("/api/timeentries/day?date=2026-02-23");
-        day.EnsureSuccessStatusCode();
-        var payload = await day.Content.ReadFromJsonAsync<DayViewDto>();
-
-        Assert.NotNull(payload);
-        Assert.Empty(payload!.Entries);
-        Assert.Equal(0, payload.TotalMinutes);
-        Assert.Equal(480, payload.MinutesPerDay);
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TrackerDbContext>();
+        var remainingEntries = db.TimeEntries.Where(e => e.TicketId == ticketId && e.Date == new DateOnly(2026, 2, 23));
+        Assert.Empty(remainingEntries);
     }
 
     [Fact]
@@ -121,17 +121,4 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
     }
 
     private static string GetCode(ApiErrorResponse problem) => problem.Code;
-
-    private sealed record DayViewDto(
-        string Date,
-        List<DayEntryDto> Entries,
-        int TotalMinutes,
-        int MinutesPerDay);
-
-    private sealed record DayEntryDto(
-        int TicketId,
-        TicketType Type,
-        string? ExternalKey,
-        string? Label,
-        int QuantityMinutes);
 }

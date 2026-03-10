@@ -1,10 +1,11 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Tracker.Api.Data;
 using Tracker.Api.Infrastructure;
 using Tracker.Api.Options;
+using Tracker.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,10 +25,14 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddSingleton<DatabaseBackupService>();
 builder.Services.Configure<TimeTrackingOptions>(
     builder.Configuration.GetSection("TimeTracking"));
 
 var app = builder.Build();
+var webRootPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+var spaIndexPath = Path.Combine(webRootPath, "index.html");
+var hasSpaAssets = File.Exists(spaIndexPath);
 
 app.UseExceptionHandler(errorApp =>
 {
@@ -88,9 +93,32 @@ else
     // Si tu veux forcer HTTPS, fais-le via le reverse proxy (Traefik/Nginx) plutot.
 }
 
+if (hasSpaAssets)
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
+
 app.UseCors("AngularDev");
 app.UseAuthorization();
 app.MapControllers();
+
+if (hasSpaAssets)
+{
+    app.MapFallback(async context =>
+    {
+        if (context.Request.Path.StartsWithSegments("/api") ||
+            (!HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        context.Response.ContentType = "text/html; charset=utf-8";
+        await context.Response.SendFileAsync(spaIndexPath);
+    });
+}
+
 app.Run();
 
 public partial class Program { }

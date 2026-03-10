@@ -8,7 +8,6 @@ public sealed record TimesheetRowDto
     public TicketType Type { get; init; }
     public string ExternalKey { get; init; } = "";
     public string Label { get; init; } = "";
-    public string TicketKey { get; init; } = "";
 
     public Dictionary<DateOnly, int> Values { get; init; } = new();
 }

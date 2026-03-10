@@ -1,0 +1,22 @@
+name: timetracker
+
+services:
+  timetracker:
+    image: timetracker-app:prod
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      args:
+        BUILD_CONFIGURATION: Release
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Main: Data Source=/data/tracker.db
+    ports:
+      - "8088:8080"
+    volumes:
+      - tracker-data:/data
+    restart: unless-stopped
+
+volumes:
+  tracker-data:

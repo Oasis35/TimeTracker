@@ -1,0 +1,10 @@
+.git
+.github
+**/.vs
+**/.angular
+**/bin
+**/obj
+**/node_modules
+**/dist
+timetracker-images-prod.tar
+timetracker-app-prod.tar

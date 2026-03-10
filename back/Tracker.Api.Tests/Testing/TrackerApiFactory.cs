@@ -21,7 +21,7 @@ public sealed class TrackerApiFactory : WebApplicationFactory<Program>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["TimeTracking:HoursPerDay"] = "8"
+                ["TimeTracking:MinutesPerDay"] = "480"
             });
         });
 
