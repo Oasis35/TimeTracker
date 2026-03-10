@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Tracker.Api.Controllers;
 using Tracker.Api.Dtos.Tickets;
 using Tracker.Api.Infrastructure;
