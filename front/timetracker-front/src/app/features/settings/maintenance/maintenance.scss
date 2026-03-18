@@ -1,0 +1,77 @@
+.setting-group-maintenance {
+  margin-top: 24px; /* marge en haut */
+
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* centre le titre horizontalement */
+
+  .setting-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  /* Wrapper pour centrer le contenu */
+  .maintenance-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center; /* centre horizontalement */
+  }
+
+  /* Carte contenant export + import */
+  .maintenance-card {
+    width: 100%;
+    max-width: 480px; /* largeur idéale centrée */
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+
+    padding: 16px;
+    border-radius: 12px;
+    background: #fafafa;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+
+    /* Optionnel: Material-like shadow */
+    /* box-shadow: 0 2px 6px rgba(0,0,0,0.12); */
+  }
+
+  .maintenance-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .maintenance-heading {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .maintenance-hint {
+    font-size: 0.9rem;
+    opacity: 0.8;
+  }
+
+  .maintenance-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .maintenance-file {
+    margin-top: 4px;
+    color: rgba(0, 0, 0, 0.7);
+    font-size: 0.9rem;
+  }
+
+  .maintenance-error {
+    color: #c62828;
+    font-weight: 500;
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  .backup-input {
+    display: none; /* input invisible */
+  }
+}

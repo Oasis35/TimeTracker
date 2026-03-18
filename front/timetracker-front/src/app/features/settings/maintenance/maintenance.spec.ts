@@ -1,17 +1,13 @@
 import { HttpHeaders, HttpResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
-import { MatDialogRef } from '@angular/material/dialog';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { TrackerApi } from '../../../core/api/tracker-api';
-import { SettingsDialogComponent } from './settings-dialog.component';
+import { MaintenancePageComponent } from './maintenance';
 
-describe('SettingsDialogComponent', () => {
-  const dialogRefMock = {
-    close: vi.fn(),
-  };
-
+describe('MaintenancePageComponent', () => {
   const apiMock = {
     exportBackup: vi.fn(),
     restoreBackup: vi.fn(),
@@ -32,46 +28,34 @@ describe('SettingsDialogComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [
-        SettingsDialogComponent,
+        MaintenancePageComponent,
+        MatSnackBarModule,
         TranslateModule.forRoot(),
       ],
       providers: [
-        { provide: MatDialogRef, useValue: dialogRefMock },
         { provide: TrackerApi, useValue: apiMock },
       ],
     }).compileComponents();
 
     const translate = TestBed.inject(TranslateService);
     translate.setTranslation('en', {
-      settings_title: 'Settings',
-      settings_language: 'Language',
-      settings_date_time: 'Date / time',
-      settings_maintenance: 'Maintenance',
-      backup_export: 'Export backup',
-      backup_export_hint: 'Download a full copy of the SQLite database.',
       backup_export_success: 'Backup exported.',
-      backup_restore: 'Restore backup',
-      backup_restore_hint: 'Restore a .db file. A safety backup will be created automatically first.',
-      backup_restore_select: 'Choose a .db file',
-      backup_restore_selected: 'Selected file: {{file}}',
+      backup_restore_success: 'Backup restored',
       backup_restore_confirm: 'Confirm restore?',
-      backup_restore_success: 'Backup restored. Safety backup created: {{file}}',
       backup_file_missing: 'Please choose a backup file.',
-      cancel: 'Cancel',
     });
     translate.use('en');
   });
 
-  it('renders the maintenance section', () => {
-    const fixture = TestBed.createComponent(SettingsDialogComponent);
+  function create() {
+    const fixture = TestBed.createComponent(MaintenancePageComponent);
     fixture.detectChanges();
+    return fixture;
+  }
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).toContain('Maintenance');
-    expect(compiled.textContent).toContain('Export backup');
-    expect(compiled.textContent).toContain('Restore backup');
-  });
-
+  // ——————————————————————————————————————
+  // EXPORT TEST
+  // ——————————————————————————————————————
   it('calls the export endpoint', async () => {
     apiMock.exportBackup.mockReturnValue(
       of(
@@ -84,17 +68,18 @@ describe('SettingsDialogComponent', () => {
       ),
     );
 
-    const fixture = TestBed.createComponent(SettingsDialogComponent);
-    fixture.detectChanges();
+    const fixture = create();
 
     await fixture.componentInstance.exportBackup();
 
     expect(apiMock.exportBackup).toHaveBeenCalledTimes(1);
   });
 
+  // ——————————————————————————————————————
+  // RESTORE TESTS
+  // ——————————————————————————————————————
   it('shows an error when restoring without a file', async () => {
-    const fixture = TestBed.createComponent(SettingsDialogComponent);
-    fixture.detectChanges();
+    const fixture = create();
 
     await fixture.componentInstance.restoreBackup();
 
@@ -102,13 +87,12 @@ describe('SettingsDialogComponent', () => {
   });
 
   it('restores the selected file after confirmation', async () => {
-    const file = new File(['backup'], 'restore.db', { type: 'application/octet-stream' });
-    apiMock.restoreBackup.mockReturnValue(of({ safetyBackupFileName: 'pre-restore-2026-03-10.db' }));
+    const file = new File(['backup'], 'restore.db');
+    apiMock.restoreBackup.mockReturnValue(of({ safetyBackupFileName: 'pre-restore.db' }));
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    const fixture = TestBed.createComponent(SettingsDialogComponent);
-    fixture.detectChanges();
-    fixture.componentInstance.onBackupFileSelected({ target: { files: [file] } } as unknown as Event);
+    const fixture = create();
+    fixture.componentInstance.onBackupFileSelected({ target: { files: [file] } } as any);
 
     await fixture.componentInstance.restoreBackup();
 

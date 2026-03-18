@@ -1,0 +1,64 @@
+<section class="setting-group setting-group-maintenance">
+
+  <div class="maintenance-card">
+    <!-- EXPORT -->
+    <div class="maintenance-block">
+      <div class="maintenance-heading">{{ 'backup_export' | translate }}</div>
+      <p class="maintenance-hint">{{ 'backup_export_hint' | translate }}</p>
+
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="exportBackup()"
+        [disabled]="exportBusy() || restoreBusy()"
+      >
+        {{ 'backup_export' | translate }}
+      </button>
+    </div>
+
+    <!-- RESTORE -->
+    <div class="maintenance-block">
+      <div class="maintenance-heading">{{ 'backup_restore' | translate }}</div>
+      <p class="maintenance-hint">{{ 'backup_restore_hint' | translate }}</p>
+
+      <input
+        #backupInput
+        type="file"
+        accept=".db"
+        class="backup-input"
+        (change)="onBackupFileSelected($event)"
+      />
+
+      <div class="maintenance-actions">
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="selectBackupFile()"
+          [disabled]="exportBusy() || restoreBusy()"
+        >
+          {{ 'backup_restore_select' | translate }}
+        </button>
+
+        <button
+          mat-flat-button
+          type="button"
+          color="primary"
+          (click)="restoreBackup()"
+          [disabled]="restoreBusy() || exportBusy()"
+        >
+          {{ 'backup_restore' | translate }}
+        </button>
+      </div>
+
+      @if (selectedBackupFileName()) {
+        <p class="maintenance-file">
+          {{ 'backup_restore_selected' | translate: { file: selectedBackupFileName() } }}
+        </p>
+      }
+    </div>
+
+    @if (maintenanceError()) {
+      <p class="maintenance-error">{{ maintenanceError() }}</p>
+    }
+  </div>
+</section>

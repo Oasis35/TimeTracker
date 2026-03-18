@@ -162,7 +162,7 @@ export class TicketDetailPageComponent {
     private readonly dateAdapter: DateAdapter<Date>,
     readonly unit: UnitService,
   ) {
-    const initial = (this.translate.currentLang || this.translate.defaultLang || 'fr') as AppLanguage;
+    const initial = (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
     this.dateAdapter.setLocale(this.dateLocale());
     this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
@@ -527,7 +527,7 @@ export class TicketDetailPageComponent {
   private showActionMessage(key: string): void {
     this.snackBar.open(this.translate.instant(key), undefined, {
       duration: 2400,
-      horizontalPosition: 'center',
+      horizontalPosition: 'right',
       verticalPosition: 'top',
     });
   }

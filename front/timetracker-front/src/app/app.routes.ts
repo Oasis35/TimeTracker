@@ -7,6 +7,13 @@ export const routes: Routes = [
     redirectTo: 'day',
   },
   {
+    path: 'maintenance',
+    loadComponent: () =>
+      import('./features/settings/maintenance/maintenance').then(
+        (m) => m.MaintenancePageComponent,
+      ),
+  },
+  {
     path: 'day',
     loadComponent: () =>
       import('./features/timesheet/timesheet-day-page/timesheet-day-page').then(

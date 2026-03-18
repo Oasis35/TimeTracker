@@ -8,7 +8,7 @@ import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-transla
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AppLanguage } from './core/i18n/app-language';
 import { UnitService } from './core/services/unit.service';
-import { SettingsDialogComponent } from './features/settings/settings-dialog/settings-dialog.component';
+import { SettingsDialogComponent } from './features/settings/settings-dialog/settings-dialog';
 
 const LANGUAGE_STORAGE_KEY = 'tt.language';
 
@@ -38,7 +38,7 @@ export class App {
     this.translate.setDefaultLang('fr');
     const initial =
       this.readStoredLanguage() ??
-      ((this.translate.currentLang || this.translate.defaultLang || 'fr') as AppLanguage);
+      ((this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage);
     void this.translate.use(initial);
     this.currentLanguage.set(initial);
     this.persistLanguage(initial);

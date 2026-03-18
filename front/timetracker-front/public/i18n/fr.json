@@ -89,7 +89,7 @@
   "ticket_no_time_entries": "Impossible de terminer un ticket sans temps saisi.",
   "ticket_completed_locked": "Ce ticket est terminé : modification et suppression désactivées.",
   "ticket_completed_no_time_entry": "Ticket terminé",
-  "ticket_already_exists": "Un ticket avec ce type et ce numéro existe déjà.",
+  "ticket_already_exists": "Un ticket ce numéro existe déjà.",
   "cannot_create_ticket": "Impossible de créer le ticket.",
   "grid_view": "Tickets",
   "timesheet_nav": "Feuille de temps",

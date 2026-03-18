@@ -1,0 +1,41 @@
+<h2 mat-dialog-title>{{ 'settings_title' | translate }}</h2>
+
+<button
+  mat-icon-button
+  type="button"
+  class="close-btn"
+  (click)="close()"
+  [attr.aria-label]="'cancel' | translate"
+>
+  <mat-icon aria-hidden="true">close</mat-icon>
+</button>
+
+<mat-dialog-content class="settings-content">
+
+  <!-- LANGUE -->
+  <section class="setting-group">
+    <mat-button-toggle-group
+      [value]="currentLanguage()"
+      (change)="onLanguageChange($event.value)"
+      aria-label="Language"
+      hideSingleSelectionIndicator
+    >
+      <mat-button-toggle value="fr">Francais</mat-button-toggle>
+      <mat-button-toggle value="en">English</mat-button-toggle>
+    </mat-button-toggle-group>
+  </section>
+
+  <!-- UNITÉ -->
+  <section class="setting-group">
+    <mat-button-toggle-group
+      [value]="unit.unitMode()"
+      (change)="onUnitChange($event.value)"
+      [attr.aria-label]="'settings_date_time' | translate"
+      hideSingleSelectionIndicator
+    >
+      <mat-button-toggle value="day">{{ 'day' | translate }}</mat-button-toggle>
+      <mat-button-toggle value="hour">{{ 'hour' | translate }}</mat-button-toggle>
+    </mat-button-toggle-group>
+  </section>
+
+</mat-dialog-content>

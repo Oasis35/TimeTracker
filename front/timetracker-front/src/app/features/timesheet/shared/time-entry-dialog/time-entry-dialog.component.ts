@@ -29,36 +29,7 @@ export type TimeEntryDialogData = {
     TranslateModule,
   ],
   templateUrl: './time-entry-dialog.component.html',
-  styles: [`
-    .entry-dialog-content {
-      display: grid;
-      gap: 0.42rem;
-      padding-top: 0.3rem;
-    }
-
-    .ticket-ref {
-      font-size: 1.02rem;
-      font-weight: 700;
-      color: var(--mat-sys-on-surface);
-    }
-
-    .ticket-label {
-      color: color-mix(in srgb, var(--mat-sys-on-surface-variant) 94%, transparent);
-    }
-
-    .entry-day {
-      color: color-mix(in srgb, var(--mat-sys-on-surface-variant) 88%, transparent);
-      font-size: 0.84rem;
-    }
-
-    mat-form-field {
-      margin-top: 0.25rem;
-    }
-
-    :host ::ng-deep .mat-mdc-form-field-subscript-wrapper {
-      display: none;
-    }
-  `],
+  styleUrl: './time-entry-dialog.component.scss'
 })
 export class TimeEntryDialogComponent {
   readonly data = inject<TimeEntryDialogData>(MAT_DIALOG_DATA);

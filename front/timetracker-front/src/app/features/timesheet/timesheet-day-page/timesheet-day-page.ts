@@ -466,7 +466,7 @@ export class TimesheetDayPageComponent {
   private showActionMessage(key: string): void {
     this.snackBar.open(this.translate.instant(key), undefined, {
       duration: 2400,
-      horizontalPosition: 'center',
+      horizontalPosition: 'right',
       verticalPosition: 'top',
     });
   }

@@ -124,7 +124,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     private readonly route: ActivatedRoute,
     readonly unit: UnitService,
   ) {
-    const initial = (this.translate.currentLang || this.translate.defaultLang || 'fr') as AppLanguage;
+    const initial = (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
     this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
       this.language.set(event.lang as AppLanguage);

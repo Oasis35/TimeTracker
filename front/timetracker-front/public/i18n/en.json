@@ -89,7 +89,7 @@
   "ticket_no_time_entries": "Cannot complete a ticket with no logged time.",
   "ticket_completed_locked": "This ticket is completed: editing and deletion are disabled.",
   "ticket_completed_no_time_entry": "Completed ticket",
-  "ticket_already_exists": "A ticket with this type and number already exists.",
+  "ticket_already_exists": "A ticket with this number already exists.",
   "cannot_create_ticket": "Unable to create ticket.",
   "grid_view": "Tickets",
   "timesheet_nav": "Timesheet",

@@ -193,7 +193,7 @@ export class TicketsGridPageComponent {
     readonly unit: UnitService,
   ) {
     const initial =
-      (this.translate.currentLang || this.translate.defaultLang || 'fr') as AppLanguage;
+      (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
     this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
       this.language.set(event.lang as AppLanguage);
@@ -380,7 +380,7 @@ export class TicketsGridPageComponent {
   private showActionMessage(key: string): void {
     this.snackBar.open(this.translate.instant(key), undefined, {
       duration: 2400,
-      horizontalPosition: 'center',
+      horizontalPosition: 'right',
       verticalPosition: 'top',
     });
   }

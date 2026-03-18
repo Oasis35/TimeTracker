@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.Tickets;
@@ -75,10 +75,10 @@ public sealed class TicketsController : ControllerBase
         {
             var existing = await _db.Tickets
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Type == type && t.ExternalKey == externalKey);
+                .FirstOrDefaultAsync(t => t.ExternalKey == externalKey);
 
             if (existing != null)
-                return Ok(new TicketDto(existing.Id, existing.Type, existing.ExternalKey, existing.Label, existing.IsCompleted));
+                return ApiProblems.BadRequest(this, ApiErrorCodes.TicketAlreadyExists);
         }
 
         var entity = new Ticket
@@ -121,7 +121,7 @@ public sealed class TicketsController : ControllerBase
         {
             var duplicate = await _db.Tickets
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Id != ticketId && t.Type == type && t.ExternalKey == externalKey);
+                .FirstOrDefaultAsync(t => t.Id != ticketId && t.ExternalKey == externalKey);
             if (duplicate is not null)
                 return ApiProblems.BadRequest(this, ApiErrorCodes.TicketAlreadyExists);
         }
