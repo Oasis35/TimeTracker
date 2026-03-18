@@ -8,7 +8,7 @@ import { MatSelectChange, MatSelectModule } from '@angular/material/select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { resolveApiErrorTranslationKey } from '../../../../core/api/api-error-messages';
-import { TimesheetMetadataDto } from '../../../../core/api/models';
+import { TicketDto, TimesheetMetadataDto } from '../../../../core/api/models';
 import { TrackerApi } from '../../../../core/api/tracker-api';
 
 @Component({
@@ -42,7 +42,7 @@ export class AddTicketDialogComponent {
 
   constructor(
     private readonly api: TrackerApi,
-    private readonly dialogRef: MatDialogRef<AddTicketDialogComponent, boolean>,
+    private readonly dialogRef: MatDialogRef<AddTicketDialogComponent, TicketDto | false>,
     private readonly translate: TranslateService,
   ) {
     effect(() => {
@@ -82,14 +82,14 @@ export class AddTicketDialogComponent {
     this.actionError.set('');
     this.busy.set(true);
     try {
-      await firstValueFrom(
+      const createdTicket = await firstValueFrom(
         this.api.createTicket({
           type,
           externalKey: externalKey || null,
           label: label || null,
         }),
       );
-      this.dialogRef.close(true);
+      this.dialogRef.close(createdTicket);
     } catch (error: unknown) {
       this.actionError.set(
         this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_create_ticket')),

@@ -366,13 +366,14 @@ export class TimesheetDayPageComponent {
       width: '560px',
       maxWidth: '95vw',
     });
-    dialogRef.afterClosed().subscribe((created) => {
-      if (!created) return;
+    dialogRef.afterClosed().subscribe((createdTicket) => {
+      if (!createdTicket) return;
       this.showActionMessage('ticket_saved');
       this.metadataRes.reload();
       this.monthRes.reload();
       this.usedTicketsRes.reload();
       this.ticketTotalsRes.reload();
+      this.openTicketEntryDialog(createdTicket);
     });
   }
 
