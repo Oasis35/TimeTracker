@@ -40,6 +40,7 @@ describe('TimesheetDayPageComponent', () => {
     usedTickets?: TicketDto[];
     ticketTotals?: TicketTotalDto[];
     dialogCloseResult?: unknown;
+    dialogCloseResults?: unknown[];
   }) {
     let capturedUpsert: unknown = null;
     const usedByMonthCalls: Array<{ year: number; month: number }> = [];
@@ -74,9 +75,10 @@ describe('TimesheetDayPageComponent', () => {
     });
 
     const fixture = TestBed.createComponent(TimesheetDayPageComponent);
-    const dialogOpen = vi.fn().mockReturnValue({
-      afterClosed: () => of(options?.dialogCloseResult ?? false),
-    });
+    const dialogResults = [...(options?.dialogCloseResults ?? [options?.dialogCloseResult ?? false])];
+    const dialogOpen = vi.fn().mockImplementation(() => ({
+      afterClosed: () => of(dialogResults.shift() ?? false),
+    }));
     (fixture.componentInstance as any).dialog = { open: dialogOpen };
     const unit = TestBed.inject(UnitService);
     return {
@@ -281,6 +283,31 @@ describe('TimesheetDayPageComponent', () => {
 
     expect(component.actionError()).toBe('day_required_before_log');
     expect(dialogOpen).not.toHaveBeenCalled();
+  });
+
+
+  it('opens time entry dialog after creating a ticket from add ticket dialog', async () => {
+    const createdTicket: TicketDto = {
+      id: 9,
+      type: 'DEV',
+      externalKey: 'NEW-9',
+      label: 'New ticket',
+      isCompleted: false,
+    };
+    const { fixture, component, dialogOpen } = setup({
+      dialogCloseResults: [createdTicket, false],
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.setSelectedDay('2026-02-01');
+    const openTicketEntrySpy = vi.spyOn(component, 'openTicketEntryDialog');
+
+    component.openAddTicketDialog();
+    await fixture.whenStable();
+
+    expect(dialogOpen).toHaveBeenCalledTimes(2);
+    expect(openTicketEntrySpy).toHaveBeenCalledWith(createdTicket);
   });
 
   it('opens time entry dialog and forwards selected minutes', async () => {
