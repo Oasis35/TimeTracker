@@ -27,6 +27,9 @@ import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { isWeekendIso, toIsoDate } from '../../../core/utils/date-helpers';
+import { formatMinutes } from '../../../core/utils/number-helpers';
+import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
+import { showSnack } from '../../../core/utils/ui-helpers';
 import {
   TicketDto,
   TicketTotalDto,
@@ -42,7 +45,6 @@ import {
 import { TicketLookupComponent } from '../../tickets/shared/ticket-lookup/ticket-lookup.component';
 
 type MonthRequest = { y: number; m: number };
-type QuickPickOption = { minutes: number; label: string };
 type DisplayRow = TimesheetRowDto & { ticketTotal: number; isCompleted: boolean };
 
 @Injectable()
@@ -251,14 +253,7 @@ export class TimesheetDayPageComponent {
   readonly quickPickOptions = computed<QuickPickOption[]>(() => {
     const meta = this.metadataRes.value();
     if (!meta) return [];
-
-    const allowed =
-      this.unit.unitMode() === 'hour' ? meta.allowedMinutesHourMode : meta.allowedMinutesDayMode;
-
-    return allowed.map((minutes) => ({
-      minutes,
-      label: this.formatEntryValue(minutes),
-    }));
+    return buildQuickPickOptions(meta, this.unit.unitMode());
   });
   readonly selectedDateValue = computed<Date | null>(() => {
     const iso = this.selectedDay();
@@ -337,9 +332,9 @@ export class TimesheetDayPageComponent {
       const selected = this.selectedDay();
       if (selected && month.days.includes(selected)) return;
 
-      const firstWeekday = month.days.find((day) => !this.isWeekendIso(day)) ?? month.days[0];
+      const firstWeekday = month.days.find((day) => !isWeekendIso(day)) ?? month.days[0];
       const defaultDay =
-        month.days.includes(this.todayIso) && !this.isWeekendIso(this.todayIso)
+        month.days.includes(this.todayIso) && !isWeekendIso(this.todayIso)
           ? this.todayIso
           : firstWeekday;
       this.selectedDay.set(defaultDay);
@@ -370,8 +365,7 @@ export class TimesheetDayPageComponent {
 
   readonly weekdayOnlyFilter = (date: Date | null): boolean => {
     if (!date) return false;
-    const iso = toIsoDate(date);
-    return !this.isWeekendIso(iso);
+    return !isWeekendIso(toIsoDate(date));
   };
 
   onDatePicked(event: MatDatepickerInputEvent<Date>): void {
@@ -390,7 +384,7 @@ export class TimesheetDayPageComponent {
 
     do {
       cursor.setDate(cursor.getDate() + delta);
-    } while (this.isWeekendIso(toIsoDate(cursor)) || toIsoDate(cursor) in holidays);
+    } while (isWeekendIso(toIsoDate(cursor)) || toIsoDate(cursor) in holidays);
 
     this.year.set(cursor.getFullYear());
     this.month.set(cursor.getMonth() + 1);
@@ -413,6 +407,8 @@ export class TimesheetDayPageComponent {
         return;
       }
       this.pinnedTicketIds.set(ticketIds);
+    } catch {
+      this.actionError.set(this.translate.instant('cannot_load_data'));
     } finally {
       this.copyBusy.set(false);
     }
@@ -446,7 +442,7 @@ export class TimesheetDayPageComponent {
     let cursor = new Date(`${fromIso}T00:00:00`);
     do {
       cursor.setDate(cursor.getDate() - 1);
-    } while (this.isWeekendIso(toIsoDate(cursor)) || toIsoDate(cursor) in holidays);
+    } while (isWeekendIso(toIsoDate(cursor)) || toIsoDate(cursor) in holidays);
     return toIsoDate(cursor);
   }
 
@@ -501,21 +497,10 @@ export class TimesheetDayPageComponent {
     }
   }
 
-  private isWeekendIso(isoDate: string): boolean {
-    return isWeekendIso(isoDate);
-  }
-
   formatEntryValue(minutes: number): string {
     const meta = this.metadataRes.value();
     if (!meta) return `${minutes} min`;
-
-    if (this.unit.unitMode() === 'hour') {
-      const value = (minutes / 60).toFixed(2).replace('.', ',');
-      return `${value} h`;
-    }
-
-    const value = (minutes / meta.minutesPerDay).toFixed(2).replace('.', ',');
-    return `${value} j`;
+    return formatMinutes(minutes, meta.minutesPerDay, this.unit.unitMode());
   }
 
   getCellMinutes(row: { values: Record<string, number> }, dayIso: string): number {
@@ -556,11 +541,7 @@ export class TimesheetDayPageComponent {
   }
 
   private showActionMessage(key: string): void {
-    this.snackBar.open(this.translate.instant(key), undefined, {
-      duration: 2400,
-      horizontalPosition: 'right',
-      verticalPosition: 'top',
-    });
+    showSnack(this.snackBar, this.translate.instant(key));
   }
 
   private dateLocale(): string {

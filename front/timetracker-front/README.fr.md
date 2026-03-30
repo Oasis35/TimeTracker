@@ -139,7 +139,8 @@ La page jour :
 - se focalise sur un jour ouvre
 - charge metadata, donnees du mois, tickets utilises et totaux
 - propose des quick picks en mode jour ou heure
-- permet de creer un ticket via le dialogue partage
+- permet de creer un ticket via le dialogue partage — deux actions : **Creer** et **Creer et saisir** (ouvre directement le dialogue de saisie apres creation)
+- permet de copier les tickets du jour ouvre precedent avec les temps a 0 via le bouton de copie (ignore les week-ends et jours feries francais ; affiche un message si le jour precedent n'a aucune saisie)
 - enregistre via `POST /api/timeentries/upsert`
 
 ### Page mois
@@ -150,6 +151,7 @@ La page mois :
 - distingue week-ends et jours feries francais
 - permet la navigation entre mois et la selection par datepicker
 - calcule les totaux de ligne cote client
+- permet de creer un ticket via le meme dialogue partage que la page jour
 
 ### Grille tickets
 

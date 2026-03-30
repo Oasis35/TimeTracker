@@ -29,12 +29,24 @@ namespace Tracker.Api.Data
                 .IsRequired();
 
             modelBuilder.Entity<Ticket>()
+                .Property(t => t.ExternalKey)
+                .HasMaxLength(64);
+
+            modelBuilder.Entity<Ticket>()
+                .Property(t => t.Label)
+                .HasMaxLength(200);
+
+            modelBuilder.Entity<Ticket>()
                 .HasIndex(t => new { t.Type, t.ExternalKey })
                 .IsUnique();
 
             modelBuilder.Entity<TimeEntry>()
                 .Property(x => x.QuantityMinutes)
                 .HasColumnType("INTEGER");
+
+            modelBuilder.Entity<TimeEntry>()
+                .Property(x => x.Comment)
+                .HasMaxLength(500);
 
             var dateOnlyConverter = new ValueConverter<DateOnly, string>(
                 d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),

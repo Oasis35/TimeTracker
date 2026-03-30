@@ -16,13 +16,13 @@ import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { isWeekendIso } from '../../../core/utils/date-helpers';
 import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
+import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
+import { showSnack } from '../../../core/utils/ui-helpers';
 import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { resource } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
-
-type QuickPickOption = { minutes: number; label: string };
 
 type MonthRequest = { y: number; m: number };
 
@@ -128,12 +128,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
   readonly quickPickOptions = computed<QuickPickOption[]>(() => {
     const meta = this.metadataRes.value();
     if (!meta) return [];
-    const allowed =
-      this.unit.unitMode() === 'hour' ? meta.allowedMinutesHourMode : meta.allowedMinutesDayMode;
-    return allowed.map((minutes) => ({
-      minutes,
-      label: this.formatEntryValue(minutes),
-    }));
+    return buildQuickPickOptions(meta, this.unit.unitMode());
   });
 
   constructor(
@@ -248,11 +243,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     });
     dialogRef.afterClosed().subscribe((result) => {
       if (!result) return;
-      this.snackBar.open(this.translate.instant('ticket_saved'), undefined, {
-        duration: 2400,
-        horizontalPosition: 'right',
-        verticalPosition: 'top',
-      });
+      showSnack(this.snackBar, this.translate.instant('ticket_saved'));
       this.metadataRes.reload();
       this.monthRes.reload();
       this.usedTicketsRes.reload();
@@ -291,17 +282,6 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
         this.usedTicketsRes.reload();
       });
     });
-  }
-
-  private formatEntryValue(minutes: number): string {
-    const meta = this.metadataRes.value();
-    if (!meta) return `${minutes} min`;
-    if (this.unit.unitMode() === 'hour') {
-      const value = (minutes / 60).toFixed(2).replace('.', ',');
-      return `${value} h`;
-    }
-    const value = (minutes / meta.minutesPerDay).toFixed(2).replace('.', ',');
-    return `${value} j`;
   }
 
   private shiftMonth(delta: -1 | 1): void {

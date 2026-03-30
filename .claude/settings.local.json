@@ -12,7 +12,11 @@
       "Bash(npm update:*)",
       "Bash(git -C /c/Users/cleme/Documents/Dev/Timetracker/TimeTracker log --oneline)",
       "Bash(grep -r \"public\\\\|private\\\\|readonly\" /c/Users/cleme/Documents/Dev/Timetracker/TimeTracker/back/Tracker.Api/Controllers/*.cs)",
-      "Bash(grep -v \"\\\\.spec\\\\.ts$\")"
+      "Bash(grep -v \"\\\\.spec\\\\.ts$\")",
+      "Read(//c/Users/cleme/.claude/projects/c--Users-cleme-Documents-Dev-Timetracker-TimeTracker/**)",
+      "Read(//c/Users/cleme/Documents/Dev/Timetracker/TimeTracker/back/Tracker.Api/Data/**)",
+      "Bash(dotnet ef:*)",
+      "Bash(dotnet tool:*)"
     ]
   }
 }

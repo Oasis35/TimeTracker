@@ -20,10 +20,11 @@ import { TrackerApi } from '../../../core/api/tracker-api';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { isWeekendIso, parseIsoDate, toIsoDate } from '../../../core/utils/date-helpers';
-import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
+import { formatMinutes } from '../../../core/utils/number-helpers';
+import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
+import { showSnack } from '../../../core/utils/ui-helpers';
 import { TicketLookupComponent } from '../shared/ticket-lookup/ticket-lookup.component';
 
-type QuickPickOption = { minutes: number; label: string };
 type EntryMonthGroup = { key: string; label: string; totalMinutes: number; entries: TicketTimeEntryDto[] };
 type MonthEntryDraft = Record<string, number>;
 
@@ -136,15 +137,9 @@ export class TicketDetailPageComponent {
   });
 
   readonly quickPickOptions = computed<QuickPickOption[]>(() => {
-    const metadata = this.metadataRes.value();
-    if (!metadata) return [];
-
-    const allowed =
-      this.unit.unitMode() === 'hour' ? metadata.allowedMinutesHourMode : metadata.allowedMinutesDayMode;
-    return allowed.map((minutes) => ({
-      minutes,
-      label: this.formatEntryValue(minutes),
-    }));
+    const meta = this.metadataRes.value();
+    if (!meta) return [];
+    return buildQuickPickOptions(meta, this.unit.unitMode());
   });
 
   readonly ticketSearchTickets = computed<TicketDto[]>(() =>
@@ -415,12 +410,9 @@ export class TicketDetailPageComponent {
   }
 
   formatEntryValue(minutes: number): string {
-    const metadata = this.metadataRes.value();
-    if (!metadata) return `${minutes} min`;
-    if (this.unit.unitMode() === 'hour') {
-      return `${formatNumberTrimmed(minutes / 60)} h`;
-    }
-    return `${formatNumberTrimmed(minutes / metadata.minutesPerDay)} j`;
+    const meta = this.metadataRes.value();
+    if (!meta) return `${minutes} min`;
+    return formatMinutes(minutes, meta.minutesPerDay, this.unit.unitMode());
   }
 
   formatEntryDate(dateIso: string): string {
@@ -525,11 +517,7 @@ export class TicketDetailPageComponent {
   }
 
   private showActionMessage(key: string): void {
-    this.snackBar.open(this.translate.instant(key), undefined, {
-      duration: 2400,
-      horizontalPosition: 'right',
-      verticalPosition: 'top',
-    });
+    showSnack(this.snackBar, this.translate.instant(key));
   }
 
   private dateLocale(): string {

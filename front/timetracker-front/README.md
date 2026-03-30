@@ -139,7 +139,8 @@ The day page:
 - focuses on one workday
 - loads metadata, month data, used tickets and ticket totals
 - supports quick picks in day or hour mode
-- creates tickets through the shared dialog
+- creates tickets through the shared dialog — two actions: **Create** and **Create & log time** (opens the time entry dialog immediately after creation)
+- copies the previous working day's tickets with 0 time via the copy button (skips weekends and French public holidays; shows a message if the previous working day has no entries)
 - writes entries through `POST /api/timeentries/upsert`
 
 ### Month Page
@@ -150,6 +151,7 @@ The month page:
 - highlights weekends and French public holidays
 - supports month navigation and month picker
 - computes row totals client-side
+- creates tickets through the same shared dialog as the day page
 
 ### Tickets Grid
 
