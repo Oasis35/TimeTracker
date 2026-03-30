@@ -3,8 +3,10 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, s
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepicker, MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { catchError, firstValueFrom, of } from 'rxjs';
@@ -17,6 +19,10 @@ import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
 import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { resource } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
+import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
+
+type QuickPickOption = { minutes: number; label: string };
 
 type MonthRequest = { y: number; m: number };
 
@@ -30,9 +36,11 @@ type MonthlyRow = TimesheetRowDto & { total: number };
     MatButtonModule,
     MatCardModule,
     MatDatepickerModule,
+    MatDialogModule,
     MatIconModule,
     MatNativeDateModule,
     MatProgressSpinnerModule,
+    MatSnackBarModule,
     MatTooltipModule,
     RouterLink,
     TranslateModule,
@@ -117,11 +125,24 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
   );
   readonly monthTotal = computed(() => this.rows().reduce((sum, row) => sum + row.total, 0));
 
+  readonly quickPickOptions = computed<QuickPickOption[]>(() => {
+    const meta = this.metadataRes.value();
+    if (!meta) return [];
+    const allowed =
+      this.unit.unitMode() === 'hour' ? meta.allowedMinutesHourMode : meta.allowedMinutesDayMode;
+    return allowed.map((minutes) => ({
+      minutes,
+      label: this.formatEntryValue(minutes),
+    }));
+  });
+
   constructor(
     private readonly api: TrackerApi,
     private readonly translate: TranslateService,
     private readonly dateAdapter: DateAdapter<Date>,
     private readonly route: ActivatedRoute,
+    private readonly dialog: MatDialog,
+    private readonly snackBar: MatSnackBar,
     readonly unit: UnitService,
   ) {
     const initial = (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
@@ -218,6 +239,69 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
 
   formatZeroAware(minutes: number): string {
     return minutes === 0 ? '0' : this.formatValue(minutes);
+  }
+
+  openAddTicketDialog(): void {
+    const dialogRef = this.dialog.open(AddTicketDialogComponent, {
+      width: '560px',
+      maxWidth: '95vw',
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result) return;
+      this.snackBar.open(this.translate.instant('ticket_saved'), undefined, {
+        duration: 2400,
+        horizontalPosition: 'right',
+        verticalPosition: 'top',
+      });
+      this.metadataRes.reload();
+      this.monthRes.reload();
+      this.usedTicketsRes.reload();
+      if (result.logTime) {
+        this.openTicketEntryDialog(result.ticket);
+      }
+    });
+  }
+
+  private openTicketEntryDialog(ticket: TicketDto): void {
+    const today = new Date();
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' }).format(today);
+
+    const data: TimeEntryDialogData = {
+      ticketId: ticket.id,
+      ticketRef: `${ticket.type} ${ticket.externalKey ?? ''}`.trim(),
+      ticketLabel: ticket.label ?? '',
+      dayLabel,
+      currentMinutes: 0,
+      options: this.quickPickOptions(),
+    };
+
+    const dialogRef = this.dialog.open(TimeEntryDialogComponent, {
+      width: '460px',
+      maxWidth: '95vw',
+      data,
+    });
+
+    dialogRef.afterClosed().subscribe((minutes) => {
+      if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
+      void firstValueFrom(
+        this.api.upsertTimeEntry({ ticketId: ticket.id, date: todayIso, quantityMinutes: minutes, comment: null }),
+      ).then(() => {
+        this.monthRes.reload();
+        this.usedTicketsRes.reload();
+      });
+    });
+  }
+
+  private formatEntryValue(minutes: number): string {
+    const meta = this.metadataRes.value();
+    if (!meta) return `${minutes} min`;
+    if (this.unit.unitMode() === 'hour') {
+      const value = (minutes / 60).toFixed(2).replace('.', ',');
+      return `${value} h`;
+    }
+    const value = (minutes / meta.minutesPerDay).toFixed(2).replace('.', ',');
+    return `${value} j`;
   }
 
   private shiftMonth(delta: -1 | 1): void {

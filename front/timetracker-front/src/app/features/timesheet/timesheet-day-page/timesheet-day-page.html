@@ -58,6 +58,16 @@
               <button
                 mat-icon-button
                 type="button"
+                (click)="copyPreviousDay()"
+                [disabled]="copyBusy() || !selectedDay()"
+                [attr.aria-label]="'copy_previous_day' | translate"
+                [matTooltip]="'copy_previous_day' | translate"
+              >
+                <mat-icon>content_copy</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                type="button"
                 class="open-ticket-dialog create-ticket-btn"
                 (click)="openAddTicketDialog()"
                 [attr.aria-label]="'new_ticket' | translate"

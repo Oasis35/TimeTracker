@@ -38,7 +38,10 @@
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button type="button" (click)="close()">{{ 'cancel' | translate }}</button>
-  <button mat-flat-button type="button" (click)="submit()" [disabled]="busy()">
+  <button mat-stroked-button type="button" (click)="submit(false)" [disabled]="busy()">
     {{ 'add' | translate }}
+  </button>
+  <button mat-flat-button type="button" (click)="submit(true)" [disabled]="busy()">
+    {{ 'add_and_log_time' | translate }}
   </button>
 </mat-dialog-actions>

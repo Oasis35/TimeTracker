@@ -28,79 +28,10 @@
   gap: 0.45rem;
 }
 
-/* Title inside block */
-.setting-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.setting-title mat-icon {
-  width: 18px;
-  height: 18px;
-  font-size: 18px;
-  color: #2563eb;
-}
-
 /* Maintenance section goes across full width */
-.setting-group-maintenance {
+app-maintenance-page {
   grid-column: 1 / -1;
-  margin-top: 0.75rem; /* meilleure respiration */
-}
-
-/* Card containing export/import blocks */
-.maintenance-card {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.85));
-}
-
-/* Each block (export / restore) */
-.maintenance-block {
-  display: grid;
-  gap: 0.45rem;
-}
-
-.maintenance-heading {
-  font-weight: 700;
-  color: #111827;
-}
-
-/* Text styling */
-.maintenance-hint,
-.maintenance-file,
-.maintenance-error {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.35;
-}
-
-.maintenance-hint,
-.maintenance-file {
-  color: #475569;
-}
-
-.maintenance-error {
-  color: #b91c1c;
-  font-weight: 600;
-  text-align: center;
-}
-
-/* Buttons row */
-.maintenance-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-
-/* Hide native input file */
-.backup-input {
-  display: none;
+  margin-top: 0.75rem;
 }
 
 /* Toggle group styling */
@@ -116,10 +47,5 @@ mat-button-toggle-group {
 @media (max-width: 700px) {
   .settings-content {
     grid-template-columns: 1fr;
-  }
-
-  .maintenance-actions {
-    flex-direction: column;
-    align-items: stretch;
   }
 }

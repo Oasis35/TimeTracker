@@ -31,6 +31,15 @@
           </button>
         </div>
         <div class="header-right">
+          <button
+            mat-icon-button
+            type="button"
+            [matTooltip]="'new_ticket' | translate"
+            [attr.aria-label]="'new_ticket' | translate"
+            (click)="openAddTicketDialog()"
+          >
+            <mat-icon>add</mat-icon>
+          </button>
           <button mat-stroked-button type="button" (click)="goToCurrentMonth()" [disabled]="isCurrentMonth()">
             {{ 'month_current' | translate }}
           </button>

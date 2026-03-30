@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnDestroy, ViewChild, signal } from '@angular/core';
+import { Component, OnDestroy, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -8,6 +8,7 @@ import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-transla
 import { Subscription } from 'rxjs';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { TimeUnit, UnitService } from '../../../core/services/unit.service';
+import { MaintenancePageComponent } from '../maintenance/maintenance';
 
 @Component({
   selector: 'app-settings-dialog',
@@ -19,22 +20,14 @@ import { TimeUnit, UnitService } from '../../../core/services/unit.service';
     MatButtonToggleModule,
     MatIconModule,
     TranslateModule,
+    MaintenancePageComponent,
   ],
   templateUrl: './settings-dialog.html',
   styleUrls: ['./settings-dialog.scss'],
 })
 export class SettingsDialogComponent implements OnDestroy {
 
-  // ———————————————————————————————————
-  // SIGNALS
-  // ———————————————————————————————————
   readonly currentLanguage = signal<AppLanguage>('fr');
-  readonly exportBusy = signal(false);
-  readonly restoreBusy = signal(false);
-  readonly selectedBackupFileName = signal('');
-  readonly maintenanceError = signal('');
-
-  @ViewChild('backupInput') backupInput?: ElementRef<HTMLInputElement>;
 
   private readonly langSubscription: Subscription;
 

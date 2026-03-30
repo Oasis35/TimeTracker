@@ -43,6 +43,40 @@ public sealed class TimesheetApiTests : IClassFixture<TrackerApiFactory>
         Assert.Equal(0, support.Values["2026-02-03"]);
     }
 
+    [Fact]
+    public async Task Get_Should_Return_Correct_TotalsByDay()
+    {
+        var t1 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "TS-TOT-1", "Ticket 1");
+        var t2 = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "TS-TOT-2", "Ticket 2");
+
+        await ApiTestHelpers.UpsertAsync(_client, t1, "2026-04-01", 120);
+        await ApiTestHelpers.UpsertAsync(_client, t2, "2026-04-01", 240);
+        await ApiTestHelpers.UpsertAsync(_client, t1, "2026-04-02", 480);
+
+        var r = await _client.GetAsync("/api/timesheet?year=2026&month=4");
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+
+        var dto = await r.Content.ReadFromJsonAsync<TimesheetMonthViewDto>();
+        Assert.NotNull(dto);
+
+        // Day 1: 120 + 240 = 360
+        Assert.Equal(360, dto!.TotalsByDay["2026-04-01"]);
+        // Day 2: 480
+        Assert.Equal(480, dto.TotalsByDay["2026-04-02"]);
+    }
+
+    [Fact]
+    public async Task Get_Should_Return_Empty_Rows_For_Month_With_No_Entries()
+    {
+        var r = await _client.GetAsync("/api/timesheet?year=2099&month=1");
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+
+        var dto = await r.Content.ReadFromJsonAsync<TimesheetMonthViewDto>();
+        Assert.NotNull(dto);
+        Assert.Empty(dto!.Rows);
+        Assert.Equal(31, dto.Days.Count);
+    }
+
     private sealed record TimesheetMonthViewDto(
         int Year,
         int Month,

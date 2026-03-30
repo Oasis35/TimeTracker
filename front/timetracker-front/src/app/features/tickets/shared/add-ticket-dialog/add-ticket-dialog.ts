@@ -42,7 +42,7 @@ export class AddTicketDialogComponent {
 
   constructor(
     private readonly api: TrackerApi,
-    private readonly dialogRef: MatDialogRef<AddTicketDialogComponent, TicketDto | false>,
+    private readonly dialogRef: MatDialogRef<AddTicketDialogComponent, { ticket: TicketDto; logTime: boolean } | false>,
     private readonly translate: TranslateService,
   ) {
     effect(() => {
@@ -74,7 +74,7 @@ export class AddTicketDialogComponent {
     this.dialogRef.close(false);
   }
 
-  async submit(): Promise<void> {
+  async submit(logTime: boolean): Promise<void> {
     const type = this.newTicketType().trim();
     const externalKey = this.newTicketExternalKey().trim();
     const label = this.newTicketLabel().trim();
@@ -89,7 +89,7 @@ export class AddTicketDialogComponent {
           label: label || null,
         }),
       );
-      this.dialogRef.close(createdTicket);
+      this.dialogRef.close({ ticket: createdTicket, logTime });
     } catch (error: unknown) {
       this.actionError.set(
         this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_create_ticket')),

@@ -20,7 +20,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
-import { firstValueFrom } from 'rxjs';
+import { catchError, firstValueFrom, of } from 'rxjs';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
@@ -140,6 +140,14 @@ export class TimesheetDayPageComponent {
     loader: () => firstValueFrom(this.api.getTicketTotals()),
   });
 
+  readonly publicHolidaysRes = resource<Record<string, string>, number>({
+    params: () => 0,
+    loader: () => firstValueFrom(this.api.getPublicHolidaysMetropole().pipe(catchError(() => of({})))),
+  });
+
+  readonly pinnedTicketIds = signal<Set<number>>(new Set());
+  readonly copyBusy = signal<boolean>(false);
+
   readonly loading = computed(() =>
     this.metadataRes.isLoading() ||
     this.monthRes.isLoading() ||
@@ -152,6 +160,7 @@ export class TimesheetDayPageComponent {
     const month = this.monthRes.value();
     const totals = this.ticketTotalsRes.value();
     const selectedDay = this.selectedDay();
+    const pinnedIds = this.pinnedTicketIds();
     if (!usedTickets || !month) return [];
 
     const totalsByTicketId = new Map<number, number>();
@@ -163,6 +172,8 @@ export class TimesheetDayPageComponent {
     for (const row of month.rows) {
       rowsByTicketId.set(row.ticketId, row);
     }
+
+    const usedTicketIds = new Set(usedTickets.map((t) => t.id));
 
     const rows = usedTickets.map((ticket) => {
       const existing = rowsByTicketId.get(ticket.id);
@@ -185,9 +196,31 @@ export class TimesheetDayPageComponent {
       };
     });
 
+    // Ajouter les tickets épinglés qui ne sont pas dans usedTickets du mois courant
+    if (pinnedIds.size > 0) {
+      const allTickets = this.metadataRes.value()?.tickets ?? [];
+      for (const ticket of allTickets) {
+        if (pinnedIds.has(ticket.id) && !usedTicketIds.has(ticket.id) && !ticket.isCompleted) {
+          rows.push({
+            ticketId: ticket.id,
+            type: ticket.type,
+            externalKey: ticket.externalKey ?? '',
+            label: ticket.label ?? '',
+            values: {},
+            ticketTotal: totalsByTicketId.get(ticket.id) ?? 0,
+            isCompleted: false,
+          });
+        }
+      }
+    }
+
     if (!selectedDay) return [];
 
-    return rows.filter((row) => (row.values?.[selectedDay] ?? 0) > 0);
+    return rows.filter(
+      (row) =>
+        (row.values?.[selectedDay] ?? 0) > 0 ||
+        (!row.isCompleted && pinnedIds.has(row.ticketId)),
+    );
   });
 
   readonly error = computed(() => {
@@ -311,6 +344,12 @@ export class TimesheetDayPageComponent {
           : firstWeekday;
       this.selectedDay.set(defaultDay);
     });
+
+    // Effacer les tickets épinglés quand le jour change
+    effect(() => {
+      this.selectedDay();
+      this.pinnedTicketIds.set(new Set());
+    });
   }
 
   setSelectedDay(day: string): void {
@@ -346,11 +385,12 @@ export class TimesheetDayPageComponent {
 
   private shiftWorkday(delta: -1 | 1): void {
     const startIso = this.selectedDay() || this.todayIso;
+    const holidays = this.publicHolidaysRes.value() ?? {};
     let cursor = new Date(`${startIso}T00:00:00`);
 
     do {
       cursor.setDate(cursor.getDate() + delta);
-    } while (this.isWeekendIso(toIsoDate(cursor)));
+    } while (this.isWeekendIso(toIsoDate(cursor)) || toIsoDate(cursor) in holidays);
 
     this.year.set(cursor.getFullYear());
     this.month.set(cursor.getMonth() + 1);
@@ -361,19 +401,70 @@ export class TimesheetDayPageComponent {
     this.actionError.set('');
   }
 
+  async copyPreviousDay(): Promise<void> {
+    const selectedDay = this.selectedDay();
+    if (!selectedDay || this.copyBusy()) return;
+
+    this.copyBusy.set(true);
+    try {
+      const ticketIds = await this.resolveTicketsToCopy(selectedDay);
+      if (!ticketIds || ticketIds.size === 0) {
+        this.showActionMessage('no_previous_day_data');
+        return;
+      }
+      this.pinnedTicketIds.set(ticketIds);
+    } finally {
+      this.copyBusy.set(false);
+    }
+  }
+
+  private async resolveTicketsToCopy(selectedDay: string): Promise<Set<number> | null> {
+    const prevDay = this.getPreviousWorkingDay(selectedDay);
+    const prevYear = parseInt(prevDay.slice(0, 4), 10);
+    const prevMonth = parseInt(prevDay.slice(5, 7), 10);
+    const isSameMonth = prevYear === this.year() && prevMonth === this.month();
+
+    const prevMonthData: TimesheetMonthDto | null | undefined = isSameMonth
+      ? this.monthRes.value()
+      : await firstValueFrom(this.api.getMonth(prevYear, prevMonth));
+
+    if ((prevMonthData?.totalsByDay?.[prevDay] ?? 0) === 0) return null;
+
+    return this.extractTicketIds(prevMonthData!, prevDay);
+  }
+
+  private extractTicketIds(monthData: TimesheetMonthDto, day: string): Set<number> {
+    return new Set(
+      monthData.rows
+        .filter((row) => (row.values?.[day] ?? 0) > 0)
+        .map((row) => row.ticketId),
+    );
+  }
+
+  private getPreviousWorkingDay(fromIso: string): string {
+    const holidays = this.publicHolidaysRes.value() ?? {};
+    let cursor = new Date(`${fromIso}T00:00:00`);
+    do {
+      cursor.setDate(cursor.getDate() - 1);
+    } while (this.isWeekendIso(toIsoDate(cursor)) || toIsoDate(cursor) in holidays);
+    return toIsoDate(cursor);
+  }
+
   openAddTicketDialog(): void {
     const dialogRef = this.dialog.open(AddTicketDialogComponent, {
       width: '560px',
       maxWidth: '95vw',
     });
-    dialogRef.afterClosed().subscribe((createdTicket) => {
-      if (!createdTicket) return;
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result) return;
       this.showActionMessage('ticket_saved');
       this.metadataRes.reload();
       this.monthRes.reload();
       this.usedTicketsRes.reload();
       this.ticketTotalsRes.reload();
-      this.openTicketEntryDialog(createdTicket);
+      if (result.logTime) {
+        this.openTicketEntryDialog(result.ticket);
+      }
     });
   }
 

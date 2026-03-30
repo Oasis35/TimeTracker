@@ -113,6 +113,28 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
         Assert.Equal(ApiErrorCodes.TicketCompletedLocked, GetCode(problem));
     }
 
+    [Fact]
+    public async Task Upsert_Should_Accept_Exactly_MinutesPerDay()
+    {
+        var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "U-MAX", "U-MAX");
+
+        var r = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-03-01", 480);
+
+        Assert.True(r.StatusCode is HttpStatusCode.Created or HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task Upsert_Should_Reject_One_Minute_Above_MinutesPerDay()
+    {
+        var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "U-OVER", "U-OVER");
+
+        var r = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-03-02", 481);
+
+        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        var p = await ReadProblemAsync(r);
+        Assert.Equal(ApiErrorCodes.MinutesOutOfRange, GetCode(p));
+    }
+
     private static async Task<ApiErrorResponse> ReadProblemAsync(HttpResponseMessage response)
     {
         var problem = await response.Content.ReadFromJsonAsync<ApiErrorResponse>();

@@ -295,7 +295,7 @@ describe('TimesheetDayPageComponent', () => {
       isCompleted: false,
     };
     const { fixture, component, dialogOpen } = setup({
-      dialogCloseResults: [createdTicket, false],
+      dialogCloseResults: [{ ticket: createdTicket, logTime: true }, false],
     });
     fixture.detectChanges();
     await fixture.whenStable();
@@ -308,6 +308,30 @@ describe('TimesheetDayPageComponent', () => {
 
     expect(dialogOpen).toHaveBeenCalledTimes(2);
     expect(openTicketEntrySpy).toHaveBeenCalledWith(createdTicket);
+  });
+
+  it('does not open time entry dialog when logTime is false after ticket creation', async () => {
+    const createdTicket: TicketDto = {
+      id: 9,
+      type: 'DEV',
+      externalKey: 'NEW-9',
+      label: 'New ticket',
+      isCompleted: false,
+    };
+    const { fixture, component, dialogOpen } = setup({
+      dialogCloseResults: [{ ticket: createdTicket, logTime: false }],
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    component.setSelectedDay('2026-02-01');
+    const openTicketEntrySpy = vi.spyOn(component, 'openTicketEntryDialog');
+
+    component.openAddTicketDialog();
+    await fixture.whenStable();
+
+    expect(dialogOpen).toHaveBeenCalledTimes(1);
+    expect(openTicketEntrySpy).not.toHaveBeenCalled();
   });
 
   it('opens time entry dialog and forwards selected minutes', async () => {
