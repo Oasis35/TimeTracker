@@ -127,5 +127,6 @@
   "ticket_detail_total_time": "Temps total : {{value}}",
   "ticket_detail_days_count": "Jours saisis: {{count}}",
   "ticket_detail_empty": "Aucune saisie pour ce ticket.",
-  "ticket_add_entry": "Ajouter une saisie"
+  "ticket_add_entry": "Ajouter une saisie",
+  "ticket_total_alltime": "Temps total pointé : {{value}}"
 }

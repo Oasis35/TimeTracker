@@ -115,8 +115,8 @@ export class TicketsGridPageComponent {
   readonly displayedColumns: readonly string[] = [
     'type',
     'externalKey',
-    'label',
     'loggedTime',
+    'label',
     'completed',
     'actions',
   ];

@@ -106,7 +106,11 @@
 
           <ng-container matColumnDef="loggedTime">
             <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ loggedTimeHeader() }}</th>
-            <td mat-cell *matCellDef="let row">{{ formatLoggedTime(row.totalMinutes) }}</td>
+            <td mat-cell *matCellDef="let row">
+              <span class="time-chip" [class.time-chip--zero]="row.totalMinutes === 0">
+                {{ formatLoggedTime(row.totalMinutes) }}
+              </span>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="completed">

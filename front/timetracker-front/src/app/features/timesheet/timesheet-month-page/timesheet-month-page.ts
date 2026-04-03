@@ -11,7 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { catchError, firstValueFrom, of } from 'rxjs';
 import { TrackerApi } from '../../../core/api/tracker-api';
-import { TicketDto, TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
+import { TicketDto, TicketTotalDto, TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { isWeekendIso } from '../../../core/utils/date-helpers';
@@ -71,6 +71,15 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     params: () => ({ y: this.year(), m: this.month() }),
     loader: ({ params }) => firstValueFrom(this.api.getUsedByMonth(params.y, params.m)),
   });
+  readonly allTimeTotalsRes = resource<TicketTotalDto[], number>({
+    params: () => 0,
+    loader: () => firstValueFrom(this.api.getTicketTotals()),
+  });
+  readonly allTimeTotalsMap = computed(() => {
+    const totals = this.allTimeTotalsRes.value() ?? [];
+    return new Map(totals.map((t) => [t.ticketId, t.total]));
+  });
+
   readonly publicHolidaysRes = resource<Record<string, string>, number>({
     params: () => 0,
     loader: () =>
@@ -217,6 +226,13 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
 
   isAlternateWeekBlock(dayIndex: number): boolean {
     return Math.floor(dayIndex / 7) % 2 === 1;
+  }
+
+  getTicketAllTimeTooltip(ticketId: number): string {
+    const total = this.allTimeTotalsMap().get(ticketId) ?? 0;
+    if (total === 0) return '';
+    const unit = this.unit.unitMode() === 'hour' ? 'h' : 'j';
+    return this.translate.instant('ticket_total_alltime', { value: `${this.formatValue(total)}${unit}` });
   }
 
   getCellMinutes(row: MonthlyRow, dayIso: string): number {

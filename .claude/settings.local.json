@@ -16,7 +16,8 @@
       "Read(//c/Users/cleme/.claude/projects/c--Users-cleme-Documents-Dev-Timetracker-TimeTracker/**)",
       "Read(//c/Users/cleme/Documents/Dev/Timetracker/TimeTracker/back/Tracker.Api/Data/**)",
       "Bash(dotnet ef:*)",
-      "Bash(dotnet tool:*)"
+      "Bash(dotnet tool:*)",
+      "Bash(docker compose:*)"
     ]
   }
 }

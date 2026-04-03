@@ -115,7 +115,12 @@
                   <td>{{ row.type }}</td>
                   <td>
                     @if (row.externalKey) {
-                      <a class="ticket-number-link" [routerLink]="['/ticket', row.ticketId]">
+                      <a
+                        class="ticket-number-link"
+                        [routerLink]="['/ticket', row.ticketId]"
+                        [matTooltip]="getTicketAllTimeTooltip(row.ticketId)"
+                        [matTooltipDisabled]="!getTicketAllTimeTooltip(row.ticketId)"
+                      >
                         {{ row.externalKey }}
                       </a>
                     } @else {

@@ -127,5 +127,6 @@
   "ticket_detail_total_time": "Total time: {{value}}",
   "ticket_detail_days_count": "Logged days: {{count}}",
   "ticket_detail_empty": "No entry for this ticket.",
-  "ticket_add_entry": "Add entry"
+  "ticket_add_entry": "Add entry",
+  "ticket_total_alltime": "Total all time: {{value}}"
 }

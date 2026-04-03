@@ -120,12 +120,13 @@ table {
 
 .mat-column-label {
   width: 100%;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .mat-column-loggedTime {
-  width: 108px;
-  min-width: 108px;
-  max-width: 108px;
+  width: 96px;
+  min-width: 96px;
+  max-width: 96px;
   white-space: nowrap;
   text-align: center;
 }
@@ -213,6 +214,26 @@ table {
   transition: color 120ms ease, border-color 120ms ease;
 }
 
+.time-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.4rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 65%, transparent);
+  color: var(--mat-sys-on-primary-container);
+}
+
+.time-chip--zero {
+  background: color-mix(in srgb, var(--mat-sys-outline-variant) 28%, transparent);
+  color: var(--mat-sys-on-surface-variant);
+  font-weight: 400;
+}
+
 .ticket-number-link:hover {
   color: color-mix(in srgb, var(--mat-sys-primary) 78%, var(--mat-sys-on-surface));
   border-bottom-color: color-mix(in srgb, var(--mat-sys-primary) 44%, transparent);
@@ -245,20 +266,23 @@ table {
   line-height: 1.2;
 }
 
-.mat-mdc-cell.mat-column-loggedTime,
-.mat-mdc-header-cell.mat-column-loggedTime {
-  text-align: center;
-  padding-right: 0.2rem;
-}
-
 .mat-mdc-cell.mat-column-completed,
 .mat-mdc-header-cell.mat-column-completed {
   text-align: center;
 }
 
-:host ::ng-deep .mat-mdc-header-cell.mat-column-loggedTime .mat-sort-header-container {
+:host ::ng-deep .mat-mdc-cell.mat-column-loggedTime,
+:host ::ng-deep .mat-mdc-header-cell.mat-column-loggedTime {
+  text-align: center;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+:host ::ng-deep .mat-mdc-header-cell.mat-column-loggedTime .mat-sort-header-container,
+:host ::ng-deep .mat-mdc-header-cell.mat-column-loggedTime .mat-sort-header-button {
+  display: flex;
   width: 100%;
-  justify-content: center;
+  justify-content: center !important;
 }
 
 .mat-mdc-cell.mat-column-actions,
@@ -267,9 +291,6 @@ table {
   padding-right: 0.25rem;
 }
 
-.mat-column-label {
-  color: var(--mat-sys-on-surface-variant);
-}
 
 .loading-wrap {
   display: flex;
