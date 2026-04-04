@@ -2,7 +2,7 @@
 
 This folder contains the .NET backend for TimeTracker.
 
-The API is built with ASP.NET Core, SQLite and EF Core. It manages tickets, time entry upserts, monthly timesheet data, UI metadata, and database backup / restore for the maintenance section in the frontend settings dialog.
+The API is built with ASP.NET Core, SQLite and EF Core. It manages tickets, time entry upserts, monthly timesheet data, UI metadata, database backup / restore for the maintenance section in the frontend settings dialog, and persistent application settings.
 
 ## Contents
 
@@ -72,6 +72,9 @@ Main entities:
   - `Date`
   - `QuantityMinutes`
   - `Comment`
+- `AppSetting`
+  - `Key` (primary key, max 64 chars)
+  - `Value` (max 512 chars)
 
 Important EF Core constraints:
 
@@ -198,6 +201,19 @@ Metadata currently contains:
 
 There is no longer any `hoursPerDay` field in the API contract.
 
+### Settings
+
+- `GET /api/settings`
+  - returns all settings as a flat `{ key: value }` dictionary
+- `PUT /api/settings/{key}`
+  - creates or updates a setting (upsert, atomic)
+  - body: `{ "value": "..." }`
+  - key max length: 64 chars
+- `DELETE /api/settings/{key}`
+  - removes a setting; returns `204` even if the key does not exist
+
+Settings are used by the frontend to persist user preferences (language, unit mode, external link base URL) server-side instead of in localStorage.
+
 ### Backup
 
 - `POST /api/backup/export`
@@ -244,6 +260,7 @@ The test project includes coverage for:
 - time entry upsert validation
 - backup export / restore service behavior
 - shared rule logic in `TimeEntryRules`
+- settings CRUD (upsert, idempotency, delete, validation)
 
 ## Docker
 

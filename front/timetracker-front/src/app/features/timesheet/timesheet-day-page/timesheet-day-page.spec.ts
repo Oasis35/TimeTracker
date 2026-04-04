@@ -62,6 +62,9 @@ describe('TimesheetDayPageComponent', () => {
         capturedUpsert = dto;
         return of(void 0);
       }),
+      getSettings: vi.fn(() => of({})),
+      setSetting: vi.fn(() => of(void 0)),
+      deleteSetting: vi.fn(() => of(void 0)),
     };
     TestBed.configureTestingModule({
       imports: [

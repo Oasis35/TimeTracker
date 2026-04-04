@@ -13,6 +13,9 @@
           <button mat-stroked-button type="button" (click)="prevMonth()">
             {{ 'month_previous' | translate }}
           </button>
+          <button mat-stroked-button type="button" (click)="goToCurrentMonth()" [disabled]="isCurrentMonth()">
+            {{ 'month_current' | translate }}
+          </button>
           <button mat-stroked-button type="button" (click)="nextMonth()">
             {{ 'month_next' | translate }}
           </button>
@@ -32,16 +35,23 @@
         </div>
         <div class="header-right">
           <button
-            mat-icon-button
+            mat-stroked-button
             type="button"
-            [matTooltip]="'new_ticket' | translate"
+            [matTooltip]="'log_time_dialog_title' | translate"
+            [attr.aria-label]="'log_time_dialog_title' | translate"
+            (click)="openLogTimeDialog()"
+          >
+            <mat-icon>more_time</mat-icon>
+            {{ 'log_time_dialog_title' | translate }}
+          </button>
+          <button
+            mat-stroked-button
+            type="button"
             [attr.aria-label]="'new_ticket' | translate"
             (click)="openAddTicketDialog()"
           >
             <mat-icon>add</mat-icon>
-          </button>
-          <button mat-stroked-button type="button" (click)="goToCurrentMonth()" [disabled]="isCurrentMonth()">
-            {{ 'month_current' | translate }}
+            {{ 'new_ticket' | translate }}
           </button>
         </div>
       </div>
@@ -123,6 +133,7 @@
                       >
                         {{ row.externalKey }}
                       </a>
+                      <app-ticket-ext-link [externalKey]="row.externalKey" />
                     } @else {
                       -
                     }

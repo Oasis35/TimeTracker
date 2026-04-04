@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
 import { Component, computed, effect, resource, signal, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -38,6 +39,7 @@ type MonthEntryDraft = Record<string, number>;
     MatSnackBarModule,
     MatTooltipModule,
     RouterLink,
+    TicketExtLinkComponent,
     TicketLookupComponent,
     TranslateModule,
   ],

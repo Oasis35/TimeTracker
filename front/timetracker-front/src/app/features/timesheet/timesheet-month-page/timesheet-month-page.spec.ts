@@ -47,6 +47,9 @@ describe('TimesheetMonthPageComponent', () => {
       ),
       getPublicHolidaysMetropole: vi.fn(() => of({ '2026-02-02': 'Lundi test' })),
       upsertTimeEntry: vi.fn(() => of(void 0)),
+      getSettings: vi.fn(() => of({})),
+      setSetting: vi.fn(() => of(void 0)),
+      deleteSetting: vi.fn(() => of(void 0)),
     };
 
     TestBed.configureTestingModule({

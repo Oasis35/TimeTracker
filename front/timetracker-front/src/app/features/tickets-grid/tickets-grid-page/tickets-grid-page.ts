@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
 import { Component, Injectable, OnDestroy, ViewChild, computed, effect, resource, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -92,6 +93,7 @@ class GridPaginatorIntl extends MatPaginatorIntl implements OnDestroy {
     MatTableModule,
     MatTooltipModule,
     RouterLink,
+    TicketExtLinkComponent,
     TranslateModule,
   ],
   templateUrl: './tickets-grid-page.html',

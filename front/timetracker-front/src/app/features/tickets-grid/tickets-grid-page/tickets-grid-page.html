@@ -63,6 +63,7 @@
                   <a class="ticket-number-link" [routerLink]="['/ticket', row.id]">
                     {{ row.externalKey }}
                   </a>
+                  <app-ticket-ext-link [externalKey]="row.externalKey" />
                 } @else {
                   -
                 }

@@ -82,4 +82,16 @@ export class TrackerApi {
   getPublicHolidaysMetropole(): Observable<Record<string, string>> {
     return this.http.get<Record<string, string>>('https://calendrier.api.gouv.fr/jours-feries/metropole.json');
   }
+
+  getSettings(): Observable<Record<string, string>> {
+    return this.http.get<Record<string, string>>('/api/settings');
+  }
+
+  setSetting(key: string, value: string): Observable<void> {
+    return this.http.put<void>(`/api/settings/${key}`, { value });
+  }
+
+  deleteSetting(key: string): Observable<void> {
+    return this.http.delete<void>(`/api/settings/${key}`);
+  }
 }

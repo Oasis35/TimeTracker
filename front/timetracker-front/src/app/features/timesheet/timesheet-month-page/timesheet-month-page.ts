@@ -23,6 +23,8 @@ import { resource } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
+import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
+import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
 
 type MonthRequest = { y: number; m: number };
 
@@ -43,6 +45,7 @@ type MonthlyRow = TimesheetRowDto & { total: number };
     MatSnackBarModule,
     MatTooltipModule,
     RouterLink,
+    TicketExtLinkComponent,
     TranslateModule,
   ],
   providers: [{ provide: MAT_DATE_LOCALE, useValue: 'fr-FR' }],
@@ -71,6 +74,11 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     params: () => ({ y: this.year(), m: this.month() }),
     loader: ({ params }) => firstValueFrom(this.api.getUsedByMonth(params.y, params.m)),
   });
+  readonly allTicketsRes = resource<TicketDto[], number>({
+    params: () => 0,
+    loader: () => firstValueFrom(this.api.getAllTickets()),
+  });
+
   readonly allTimeTotalsRes = resource<TicketTotalDto[], number>({
     params: () => 0,
     loader: () => firstValueFrom(this.api.getTicketTotals()),
@@ -266,6 +274,33 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
       if (result.logTime) {
         this.openTicketEntryDialog(result.ticket);
       }
+    });
+  }
+
+  openLogTimeDialog(): void {
+    const data: LogTimeDialogData = {
+      year: this.year(),
+      month: this.month(),
+      defaultTickets: this.usedTicketsRes.value() ?? [],
+      allTickets: this.allTicketsRes.value() ?? [],
+      options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      publicHolidays: this.publicHolidaysRes.value() ?? {},
+    };
+    const dialogRef = this.dialog.open(LogTimeDialogComponent, {
+      width: '460px',
+      maxWidth: '95vw',
+      data,
+    });
+    dialogRef.afterClosed().subscribe((result: LogTimeDialogResult | undefined) => {
+      if (!result) return;
+      void firstValueFrom(
+        this.api.upsertTimeEntry({ ticketId: result.ticketId, date: result.date, quantityMinutes: result.minutes }),
+      ).then(() => {
+        showSnack(this.snackBar, this.translate.instant('time_saved'));
+        this.monthRes.reload();
+        this.usedTicketsRes.reload();
+      });
     });
   }
 

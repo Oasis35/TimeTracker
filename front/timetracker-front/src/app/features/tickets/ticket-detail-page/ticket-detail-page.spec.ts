@@ -29,6 +29,9 @@ describe('TicketDetailPageComponent', () => {
       upsertTimeEntry: () => of(void 0),
       setTicketCompletion: () =>
         of({ id: 1, type: 'DEV', externalKey: '65010', label: 'Refonte', isCompleted: !isCompleted }),
+      getSettings: () => of({}),
+      setSetting: () => of(void 0),
+      deleteSetting: () => of(void 0),
     };
 
     TestBed.configureTestingModule({

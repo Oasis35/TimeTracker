@@ -25,7 +25,9 @@ Il fournit :
 - `src/app/app.routes.ts` : routes de l'application
 - `src/app/core/api/` : client backend partage, DTOs et mapping des erreurs
 - `src/app/core/i18n/` : types de langue et cles de traduction
-- `src/app/core/services/unit.service.ts` : etat persiste de l'unite
+- `src/app/core/services/app-settings.service.ts` : charge et persiste tous les parametres utilisateur via l'API backend
+- `src/app/core/services/unit.service.ts` : facade fine sur `AppSettingsService` pour l'unite de temps
+- `src/app/core/services/external-link.service.ts` : facade fine sur `AppSettingsService` pour l'URL de base des liens externes
 - `src/app/features/timesheet/` : pages jour et mois
 - `src/app/features/tickets-grid/` : grille tickets
 - `src/app/features/tickets/` : page detail ticket et UI partagee
@@ -81,8 +83,7 @@ Le dialogue de parametres contient actuellement :
 
 Etat UI persiste :
 
-- langue stockee dans `localStorage` sous `tt.language`
-- unite stockee dans `localStorage` sous `tt.unitMode`
+Les preferences utilisateur (langue, unite de temps, URL de base pour les liens externes) sont chargees depuis le backend au demarrage via `GET /api/settings` et sauvegardees a chaque changement via `PUT /api/settings/{key}`. `AppSettingsService` est la source de verite unique, initialisee via `APP_INITIALIZER` avant le rendu de l'application. Le localStorage n'est plus utilise pour les parametres.
 
 ## Routing
 
@@ -117,6 +118,9 @@ Appels backend actuels :
 - `POST /api/timeentries/upsert`
 - `POST /api/backup/export`
 - `POST /api/backup/restore`
+- `GET /api/settings`
+- `PUT /api/settings/{key}`
+- `DELETE /api/settings/{key}`
 
 Appel externe :
 
@@ -211,6 +215,7 @@ npm run test:ci
 Couverture ciblee recente :
 
 - shell applicatif
+- `AppSettingsService` (load, set, remove, fallbacks, resilience aux erreurs)
 - maintenance du dialogue de parametres
 - pages jour et mois
 - grille tickets

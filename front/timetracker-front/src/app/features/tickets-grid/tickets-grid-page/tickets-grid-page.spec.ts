@@ -40,6 +40,9 @@ describe('TicketsGridPageComponent', () => {
       updateTicket: vi.fn().mockReturnValue(
         of({ id: ticketId, type: 'DEV', externalKey: '64205', label: 'Securite API', isCompleted }),
       ),
+      getSettings: vi.fn().mockReturnValue(of({})),
+      setSetting: vi.fn().mockReturnValue(of(void 0)),
+      deleteSetting: vi.fn().mockReturnValue(of(void 0)),
     };
     const dialogMock = {
       open: vi.fn().mockReturnValue({ afterClosed: () => of(false) }),
