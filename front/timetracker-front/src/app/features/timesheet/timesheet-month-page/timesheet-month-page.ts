@@ -11,7 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { catchError, firstValueFrom, of } from 'rxjs';
 import { TrackerApi } from '../../../core/api/tracker-api';
-import { TicketDto, TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
+import { TicketDto, TicketTotalDto, TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { isWeekendIso } from '../../../core/utils/date-helpers';
@@ -23,6 +23,8 @@ import { resource } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
+import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
+import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
 
 type MonthRequest = { y: number; m: number };
 
@@ -43,6 +45,7 @@ type MonthlyRow = TimesheetRowDto & { total: number };
     MatSnackBarModule,
     MatTooltipModule,
     RouterLink,
+    TicketExtLinkComponent,
     TranslateModule,
   ],
   providers: [{ provide: MAT_DATE_LOCALE, useValue: 'fr-FR' }],
@@ -71,6 +74,20 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     params: () => ({ y: this.year(), m: this.month() }),
     loader: ({ params }) => firstValueFrom(this.api.getUsedByMonth(params.y, params.m)),
   });
+  readonly allTicketsRes = resource<TicketDto[], number>({
+    params: () => 0,
+    loader: () => firstValueFrom(this.api.getAllTickets()),
+  });
+
+  readonly allTimeTotalsRes = resource<TicketTotalDto[], number>({
+    params: () => 0,
+    loader: () => firstValueFrom(this.api.getTicketTotals()),
+  });
+  readonly allTimeTotalsMap = computed(() => {
+    const totals = this.allTimeTotalsRes.value() ?? [];
+    return new Map(totals.map((t) => [t.ticketId, t.total]));
+  });
+
   readonly publicHolidaysRes = resource<Record<string, string>, number>({
     params: () => 0,
     loader: () =>
@@ -219,6 +236,13 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     return Math.floor(dayIndex / 7) % 2 === 1;
   }
 
+  getTicketAllTimeTooltip(ticketId: number): string {
+    const total = this.allTimeTotalsMap().get(ticketId) ?? 0;
+    if (total === 0) return '';
+    const unit = this.unit.unitMode() === 'hour' ? 'h' : 'j';
+    return this.translate.instant('ticket_total_alltime', { value: `${this.formatValue(total)}${unit}` });
+  }
+
   getCellMinutes(row: MonthlyRow, dayIso: string): number {
     return row.values?.[dayIso] ?? 0;
   }
@@ -253,17 +277,54 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  openLogTimeDialog(): void {
+    const data: LogTimeDialogData = {
+      year: this.year(),
+      month: this.month(),
+      defaultTickets: this.usedTicketsRes.value() ?? [],
+      allTickets: this.allTicketsRes.value() ?? [],
+      options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      publicHolidays: this.publicHolidaysRes.value() ?? {},
+    };
+    const dialogRef = this.dialog.open(LogTimeDialogComponent, {
+      width: '460px',
+      maxWidth: '95vw',
+      data,
+    });
+    dialogRef.afterClosed().subscribe((result: LogTimeDialogResult | undefined) => {
+      if (!result) return;
+      void firstValueFrom(
+        this.api.upsertTimeEntry({ ticketId: result.ticketId, date: result.date, quantityMinutes: result.minutes }),
+      ).then(() => {
+        showSnack(this.snackBar, this.translate.instant('time_saved'));
+        this.monthRes.reload();
+        this.usedTicketsRes.reload();
+      });
+    });
+  }
+
+  onCellClick(row: MonthlyRow, day: string): void {
+    if (isWeekendIso(day) || this.isHolidayIso(day)) return;
+    const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' })
+      .format(new Date(`${day}T00:00:00`));
+    this.openTicketDayDialog(row.ticketId, `${row.type} ${row.externalKey ?? ''}`.trim(), row.label ?? '', day, dayLabel, this.getCellMinutes(row, day));
+  }
+
   private openTicketEntryDialog(ticket: TicketDto): void {
     const today = new Date();
     const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' }).format(today);
+    this.openTicketDayDialog(ticket.id, `${ticket.type} ${ticket.externalKey ?? ''}`.trim(), ticket.label ?? '', todayIso, dayLabel, 0);
+  }
 
+  private openTicketDayDialog(ticketId: number, ticketRef: string, ticketLabel: string, dateIso: string, dayLabel: string, currentMinutes: number): void {
     const data: TimeEntryDialogData = {
-      ticketId: ticket.id,
-      ticketRef: `${ticket.type} ${ticket.externalKey ?? ''}`.trim(),
-      ticketLabel: ticket.label ?? '',
+      ticketId,
+      ticketRef,
+      ticketLabel,
       dayLabel,
-      currentMinutes: 0,
+      currentMinutes,
       options: this.quickPickOptions(),
     };
 
@@ -276,7 +337,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     dialogRef.afterClosed().subscribe((minutes) => {
       if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
       void firstValueFrom(
-        this.api.upsertTimeEntry({ ticketId: ticket.id, date: todayIso, quantityMinutes: minutes, comment: null }),
+        this.api.upsertTimeEntry({ ticketId, date: dateIso, quantityMinutes: minutes }),
       ).then(() => {
         this.monthRes.reload();
         this.usedTicketsRes.reload();

@@ -129,14 +129,12 @@ public sealed class TicketsControllerTests
                 TicketId = ticket.Id,
                 Date = new DateOnly(2026, 3, 11),
                 QuantityMinutes = 120,
-                Comment = "A"
             },
             new TimeEntry
             {
                 TicketId = ticket.Id,
                 Date = new DateOnly(2026, 3, 12),
                 QuantityMinutes = 240,
-                Comment = "B"
             });
         await db.SaveChangesAsync();
 
@@ -176,14 +174,12 @@ public sealed class TicketsControllerTests
                 TicketId = ticket.Id,
                 Date = new DateOnly(2026, 3, 13),
                 QuantityMinutes = 0,
-                Comment = null
             },
             new TimeEntry
             {
                 TicketId = ticket.Id,
                 Date = new DateOnly(2026, 3, 12),
                 QuantityMinutes = 60,
-                Comment = null
             });
         await db.SaveChangesAsync();
 
@@ -809,9 +805,9 @@ public sealed class TicketsControllerTests
         await db.SaveChangesAsync();
 
         db.TimeEntries.AddRange(
-            new TimeEntry { TicketId = t1.Id, Date = new DateOnly(2026, 2, 1), QuantityMinutes = 30, Comment = null },
-            new TimeEntry { TicketId = t1.Id, Date = new DateOnly(2026, 2, 2), QuantityMinutes = 15, Comment = null },
-            new TimeEntry { TicketId = t2.Id, Date = new DateOnly(2026, 2, 1), QuantityMinutes = 60, Comment = null }
+            new TimeEntry { TicketId = t1.Id, Date = new DateOnly(2026, 2, 1), QuantityMinutes = 30 },
+            new TimeEntry { TicketId = t1.Id, Date = new DateOnly(2026, 2, 2), QuantityMinutes = 15 },
+            new TimeEntry { TicketId = t2.Id, Date = new DateOnly(2026, 2, 1), QuantityMinutes = 60 }
         );
         await db.SaveChangesAsync();
 

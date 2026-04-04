@@ -20,13 +20,18 @@ describe('TicketDetailPageComponent', () => {
       getTicketDetail: () =>
         of({
           ticket: { id: 1, type: 'DEV', externalKey: '65010', label: 'Refonte', isCompleted },
-          entries: [{ date: '2026-03-10', quantityMinutes: 240, comment: 'A' }],
+          entries: [{ date: '2026-03-10', quantityMinutes: 240 }],
           totalMinutes: 240,
+          currentMonthMinutes: 0,
+          previousMonthMinutes: 240,
         }),
       getPublicHolidaysMetropole: () => of({}),
       upsertTimeEntry: () => of(void 0),
       setTicketCompletion: () =>
         of({ id: 1, type: 'DEV', externalKey: '65010', label: 'Refonte', isCompleted: !isCompleted }),
+      getSettings: () => of({}),
+      setSetting: () => of(void 0),
+      deleteSetting: () => of(void 0),
     };
 
     TestBed.configureTestingModule({
@@ -52,30 +57,26 @@ describe('TicketDetailPageComponent', () => {
     expect(compiled.textContent).toContain('65010');
   });
 
-  it('does not render date/quantity filter controls', async () => {
+  it('does not render edit controls when ticket is completed', async () => {
     const fixture = setup(true);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const filters = fixture.nativeElement.querySelector('.new-entry-row');
-    expect(filters).toBeNull();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.entry-edit-btn')).toBeNull();
+    expect(compiled.querySelector('.month-add-btn')).toBeNull();
   });
 
-  it('requires month edit action before showing month quantity selectors', async () => {
+  it('renders entry rows with edit button when ticket is open', async () => {
     const fixture = setup(false);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.month-chip-list-edit mat-select')).toBeNull();
-
-    const editButton = compiled.querySelector('.month-edit-btn') as HTMLButtonElement | null;
-    expect(editButton).not.toBeNull();
-    editButton?.click();
-    fixture.detectChanges();
-
-    expect(compiled.querySelector('.month-chip-list-edit mat-select')).not.toBeNull();
+    expect(compiled.querySelector('.entry-row')).not.toBeNull();
+    expect(compiled.querySelector('.entry-edit-btn')).not.toBeNull();
+    expect(compiled.querySelector('.month-add-btn')).not.toBeNull();
   });
 });

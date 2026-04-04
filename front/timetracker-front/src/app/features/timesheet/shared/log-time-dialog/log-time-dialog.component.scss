@@ -1,0 +1,40 @@
+.log-time-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  min-width: 320px;
+
+  app-ticket-lookup {
+    display: contents;
+  }
+
+  mat-form-field {
+    width: 100%;
+  }
+}
+
+.field-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant);
+  margin-bottom: -0.25rem;
+}
+
+.selected-ticket {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 40%, transparent);
+  color: var(--mat-sys-on-surface);
+  margin-top: -0.25rem;
+}
+
+.ticket-ref {
+  font-weight: 650;
+  color: color-mix(in srgb, var(--mat-sys-primary) 70%, var(--mat-sys-on-surface));
+}
+
+.ticket-label {
+  color: var(--mat-sys-on-surface-variant);
+}

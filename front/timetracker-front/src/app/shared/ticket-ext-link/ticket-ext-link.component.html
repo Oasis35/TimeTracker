@@ -1,0 +1,13 @@
+@if (url()) {
+  <a
+    class="ext-link"
+    [href]="url()"
+    target="_blank"
+    rel="noopener noreferrer"
+    [attr.aria-label]="externalKey"
+    [matTooltip]="url()"
+    (click)="$event.stopPropagation()"
+  >
+    <mat-icon class="ext-link-icon">open_in_new</mat-icon>
+  </a>
+}

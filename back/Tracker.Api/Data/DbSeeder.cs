@@ -5,7 +5,6 @@ namespace Tracker.Api.Data;
 
 public static class DbSeeder
 {
-    private const string SeedMarkerComment = "__DEV_SEED_V2__";
     private const string SingleLeaveExternalKey = "CP";
 
     public static void SeedDevelopmentData(TrackerDbContext db, TimeTrackingOptions opts)
@@ -84,7 +83,7 @@ public static class DbSeeder
                 TicketId = GetTicketId(key),
                 Date = date,
                 QuantityMinutes = minutesPerDay,
-                Comment = SeedMarkerComment
+                IsSeed = true
             });
         }
 
@@ -106,7 +105,7 @@ public static class DbSeeder
                     TicketId = ticketId,
                     Date = day,
                     QuantityMinutes = minutesPerDay,
-                    Comment = SeedMarkerComment
+                    IsSeed = true
                 });
             }
         }
@@ -174,7 +173,7 @@ public static class DbSeeder
         var leaveTicketsById = leaveTickets.ToDictionary(t => t.Id);
 
         var seededLeaveEntries = db.TimeEntries
-            .Where(e => e.Comment == SeedMarkerComment && e.TicketId != null)
+            .Where(e => e.IsSeed && e.TicketId != null)
             .ToList();
         var seededLeaveEntryPairs = seededLeaveEntries
             .Where(e => e.TicketId is int ticketId && leaveTicketsById.ContainsKey(ticketId))

@@ -19,13 +19,14 @@ export interface TicketTotalDto {
 export interface TicketTimeEntryDto {
   date: string;
   quantityMinutes: number;
-  comment?: string | null;
 }
 
 export interface TicketDetailDto {
   ticket: TicketDto;
   entries: TicketTimeEntryDto[];
   totalMinutes: number;
+  currentMonthMinutes: number;
+  previousMonthMinutes: number;
 }
 
 export interface CreateTicketDto {
@@ -64,7 +65,6 @@ export interface UpsertTimeEntryDto {
   ticketId: number;
   date: string;
   quantityMinutes: number;
-  comment?: string | null;
 }
 
 export interface BackupRestoreResponseDto {

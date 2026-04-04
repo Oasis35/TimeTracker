@@ -330,6 +330,14 @@ tbody td.num:hover {
   color: color-mix(in srgb, var(--mat-sys-primary) 86%, var(--mat-sys-on-surface));
 }
 
+tbody td.cell-clickable {
+  cursor: pointer;
+}
+
+tbody td.cell-clickable:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mat-sys-primary) 35%, transparent);
+}
+
 .weekend-end {
   border-right: 2px solid color-mix(in srgb, var(--mat-sys-outline) 74%, transparent);
 }

@@ -25,7 +25,9 @@ It provides:
 - `src/app/app.routes.ts`: app routes
 - `src/app/core/api/`: shared backend client, DTOs and API error mapping
 - `src/app/core/i18n/`: language types and translation keys
-- `src/app/core/services/unit.service.ts`: persisted unit state
+- `src/app/core/services/app-settings.service.ts`: loads and persists all user settings via the backend API
+- `src/app/core/services/unit.service.ts`: thin façade over `AppSettingsService` for unit mode
+- `src/app/core/services/external-link.service.ts`: thin façade over `AppSettingsService` for the external link base URL
 - `src/app/features/timesheet/`: day and month pages
 - `src/app/features/tickets-grid/`: tickets grid
 - `src/app/features/tickets/`: ticket detail page and shared ticket UI
@@ -81,8 +83,7 @@ The settings dialog currently includes:
 
 Persisted UI state:
 
-- language is stored in `localStorage` under `tt.language`
-- unit is stored in `localStorage` under `tt.unitMode`
+User preferences (language, unit mode, external link base URL) are loaded from the backend at startup via `GET /api/settings` and saved on change via `PUT /api/settings/{key}`. `AppSettingsService` is the single source of truth, initialized through `APP_INITIALIZER` before the app renders. localStorage is no longer used for settings.
 
 ## Routing
 
@@ -117,6 +118,9 @@ Current backend calls:
 - `POST /api/timeentries/upsert`
 - `POST /api/backup/export`
 - `POST /api/backup/restore`
+- `GET /api/settings`
+- `PUT /api/settings/{key}`
+- `DELETE /api/settings/{key}`
 
 External call:
 
@@ -211,6 +215,7 @@ npm run test:ci
 Recent targeted coverage includes:
 
 - app shell
+- `AppSettingsService` (load, set, remove, fallbacks, error resilience)
 - settings dialog maintenance actions
 - day and month pages
 - tickets grid

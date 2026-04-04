@@ -1,37 +1,15 @@
-import { Injectable, signal } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
+import { AppSettingsService } from './app-settings.service';
+
 export type TimeUnit = 'day' | 'hour';
-const UNIT_MODE_STORAGE_KEY = 'tt.unitMode';
 
 @Injectable({ providedIn: 'root' })
 export class UnitService {
-  readonly unitMode = signal<TimeUnit>('day');
+  private readonly appSettings = inject(AppSettingsService);
 
-  constructor() {
-    const stored = this.readStoredUnitMode();
-    if (stored) {
-      this.unitMode.set(stored);
-    }
-  }
+  readonly unitMode = this.appSettings.unitMode;
 
   setUnitMode(unit: TimeUnit): void {
-    this.unitMode.set(unit);
-    this.persistUnitMode(unit);
-  }
-
-  private readStoredUnitMode(): TimeUnit | null {
-    try {
-      const raw = localStorage.getItem(UNIT_MODE_STORAGE_KEY);
-      return raw === 'day' || raw === 'hour' ? raw : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private persistUnitMode(unit: TimeUnit): void {
-    try {
-      localStorage.setItem(UNIT_MODE_STORAGE_KEY, unit);
-    } catch {
-      // Ignore storage errors (private mode, blocked storage).
-    }
+    this.appSettings.set('unitMode', unit).subscribe();
   }
 }

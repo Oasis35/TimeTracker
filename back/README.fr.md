@@ -2,7 +2,7 @@
 
 Ce dossier contient le backend .NET de TimeTracker.
 
-L'API est construite avec ASP.NET Core, SQLite et EF Core. Elle gere les tickets, les upserts de saisie de temps, les donnees mensuelles du timesheet, les metadonnees UI, ainsi que l'export / restauration de la base pour la zone maintenance du frontend.
+L'API est construite avec ASP.NET Core, SQLite et EF Core. Elle gere les tickets, les upserts de saisie de temps, les donnees mensuelles du timesheet, les metadonnees UI, l'export / restauration de la base pour la zone maintenance du frontend, ainsi que les parametres applicatifs persistants.
 
 ## Contenu
 
@@ -72,6 +72,9 @@ Entites principales :
   - `Date`
   - `QuantityMinutes`
   - `Comment`
+- `AppSetting`
+  - `Key` (cle primaire, max 64 caracteres)
+  - `Value` (max 512 caracteres)
 
 Contraintes EF Core importantes :
 
@@ -198,6 +201,19 @@ La metadata contient actuellement :
 
 Le contrat API n'expose plus `hoursPerDay`.
 
+### Parametres
+
+- `GET /api/settings`
+  - retourne tous les parametres sous forme de dictionnaire plat `{ cle: valeur }`
+- `PUT /api/settings/{key}`
+  - cree ou met a jour un parametre (upsert atomique)
+  - body : `{ "value": "..." }`
+  - longueur max de la cle : 64 caracteres
+- `DELETE /api/settings/{key}`
+  - supprime un parametre ; retourne `204` meme si la cle n'existe pas
+
+Les parametres sont utilises par le frontend pour persister les preferences utilisateur (langue, unite de temps, URL de base pour les liens externes) cote serveur plutot que dans le localStorage.
+
 ### Sauvegarde
 
 - `POST /api/backup/export`
@@ -244,6 +260,7 @@ Le projet de tests couvre notamment :
 - la validation des upserts de saisie
 - le service d'export / restauration de sauvegarde
 - la logique partagee `TimeEntryRules`
+- le CRUD parametres (upsert, idempotence, suppression, validation)
 
 ## Docker
 

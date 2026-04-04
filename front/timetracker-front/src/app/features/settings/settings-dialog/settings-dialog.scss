@@ -34,6 +34,38 @@ app-maintenance-page {
   margin-top: 0.75rem;
 }
 
+/* External link section spans full width */
+.setting-group:has(.url-field) {
+  grid-column: 1 / -1;
+}
+
+.setting-group-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.url-field {
+  width: 100%;
+}
+
+.url-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+  word-break: break-all;
+
+  .url-preview-icon {
+    font-size: 0.9rem;
+    width: 0.9rem;
+    height: 0.9rem;
+    flex-shrink: 0;
+    color: var(--mat-sys-primary);
+  }
+}
+
 /* Toggle group styling */
 mat-button-toggle-group {
   --mat-standard-button-toggle-height: 40px;

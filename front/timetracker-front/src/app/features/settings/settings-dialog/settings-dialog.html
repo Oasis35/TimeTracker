@@ -39,6 +39,27 @@
   </section>
 
 
+  <!-- LIEN EXTERNE -->
+  <section class="setting-group">
+    <div class="setting-group-label">{{ 'settings_external_link' | translate }}</div>
+    <mat-form-field appearance="outline" class="url-field">
+      <mat-label>{{ 'settings_external_base_url' | translate }}</mat-label>
+      <input
+        matInput
+        type="url"
+        [value]="externalBaseUrl()"
+        (input)="onExternalBaseUrlChange($any($event.target).value)"
+        [placeholder]="'settings_external_base_url_placeholder' | translate"
+      />
+    </mat-form-field>
+    @if (externalUrlPreview()) {
+      <div class="url-preview">
+        <mat-icon class="url-preview-icon">open_in_new</mat-icon>
+        <span>{{ externalUrlPreview() }}</span>
+      </div>
+    }
+  </section>
+
   <!-- MAINTENANCE -->
   <app-maintenance-page />
 

@@ -1,0 +1,54 @@
+<h2 mat-dialog-title>{{ 'log_time_dialog_title' | translate }}</h2>
+
+<mat-dialog-content class="log-time-dialog-content">
+  <div class="field-label">{{ 'ticket_search_label' | translate }}</div>
+  <app-ticket-lookup
+    [defaultTickets]="data.defaultTickets"
+    [searchableTickets]="data.allTickets"
+    (ticketSelected)="onTicketSelected($event)"
+  />
+
+  @if (selectedTicket(); as ticket) {
+    <div class="selected-ticket">
+      <span class="ticket-ref">{{ ticket.type }} {{ ticket.externalKey }}</span>
+      @if (ticket.label) {
+        <span class="ticket-label"> – {{ ticket.label }}</span>
+      }
+    </div>
+  }
+
+  <mat-form-field appearance="outline">
+    <mat-label>{{ 'log_time_date_label' | translate }}</mat-label>
+    <input
+      matInput
+      [matDatepicker]="logTimePicker"
+      [min]="minDate"
+      [max]="maxDate"
+      [matDatepickerFilter]="dateFilter"
+      [value]="selectedDate()"
+      (dateChange)="onDateChange($event.value)"
+      readonly
+    />
+    <mat-datepicker-toggle matIconSuffix [for]="logTimePicker" />
+    <mat-datepicker #logTimePicker />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>{{ 'logged_time' | translate }}</mat-label>
+    <mat-select
+      [value]="selectedMinutes()"
+      (selectionChange)="selectedMinutes.set($event.value)"
+    >
+      @for (option of data.options; track option.minutes) {
+        <mat-option [value]="option.minutes">{{ option.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="close()">{{ 'cancel' | translate }}</button>
+  <button mat-flat-button type="button" [disabled]="!canSave()" (click)="save()">
+    {{ 'save_ticket' | translate }}
+  </button>
+</mat-dialog-actions>

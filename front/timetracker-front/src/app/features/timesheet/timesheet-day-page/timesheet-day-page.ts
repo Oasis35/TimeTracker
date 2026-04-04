@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
 import { Component, Injectable, computed, effect, resource, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -99,6 +100,7 @@ const DAY_PAGE_DATE_FORMATS = {
     MatSnackBarModule,
     MatTooltipModule,
     RouterLink,
+    TicketExtLinkComponent,
     TicketLookupComponent,
     TranslateModule,
   ],
@@ -481,7 +483,6 @@ export class TimesheetDayPageComponent {
           ticketId,
           date,
           quantityMinutes,
-          comment: null,
         }),
       );
       this.showActionMessage('time_saved');

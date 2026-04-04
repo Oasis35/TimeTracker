@@ -25,13 +25,13 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
     {
         var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "U-1", "U-1");
 
-        var c = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-23", 120, "A");
+        var c = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-23", 120);
         Assert.Equal(HttpStatusCode.Created, c.StatusCode);
 
-        var u = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-23", 240, "B");
+        var u = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-23", 240);
         Assert.Equal(HttpStatusCode.NoContent, u.StatusCode);
 
-        var d = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-23", 0, null);
+        var d = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-23", 0);
         Assert.Equal(HttpStatusCode.NoContent, d.StatusCode);
 
         using var scope = _factory.Services.CreateScope();

@@ -11,6 +11,7 @@ namespace Tracker.Api.Data
 
         public DbSet<Ticket> Tickets => Set<Ticket>();
         public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
+        public DbSet<AppSetting> AppSettings => Set<AppSetting>();
 
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
@@ -44,10 +45,6 @@ namespace Tracker.Api.Data
                 .Property(x => x.QuantityMinutes)
                 .HasColumnType("INTEGER");
 
-            modelBuilder.Entity<TimeEntry>()
-                .Property(x => x.Comment)
-                .HasMaxLength(500);
-
             var dateOnlyConverter = new ValueConverter<DateOnly, string>(
                 d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 s => DateOnly.ParseExact(s, "yyyy-MM-dd", CultureInfo.InvariantCulture));
@@ -61,6 +58,20 @@ namespace Tracker.Api.Data
             modelBuilder.Entity<TimeEntry>()
                 .HasIndex(x => new { x.TicketId, x.Date })
                 .IsUnique();
+
+            modelBuilder.Entity<AppSetting>()
+                .HasKey(s => s.Key);
+
+            modelBuilder.Entity<AppSetting>()
+                .Property(s => s.Key)
+                .HasMaxLength(64)
+                .IsRequired()
+                .ValueGeneratedNever();
+
+            modelBuilder.Entity<AppSetting>()
+                .Property(s => s.Value)
+                .HasMaxLength(512)
+                .IsRequired();
 
             base.OnModelCreating(modelBuilder);
         }

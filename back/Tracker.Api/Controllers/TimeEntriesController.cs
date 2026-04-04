@@ -74,8 +74,6 @@ public sealed class TimeEntriesController : ControllerBase
             return NoContent();
         }
 
-        var comment = string.IsNullOrWhiteSpace(dto.Comment) ? null : dto.Comment.Trim();
-
         if (existing is null)
         {
             var entry = new TimeEntry
@@ -83,7 +81,6 @@ public sealed class TimeEntriesController : ControllerBase
                 TicketId = dto.TicketId,
                 Date = dto.Date,
                 QuantityMinutes = dto.QuantityMinutes,
-                Comment = comment
             };
 
             _db.TimeEntries.Add(entry);
@@ -93,7 +90,6 @@ public sealed class TimeEntriesController : ControllerBase
         }
 
         existing.QuantityMinutes = dto.QuantityMinutes;
-        existing.Comment = comment;
         await _db.SaveChangesAsync();
 
         return NoContent();

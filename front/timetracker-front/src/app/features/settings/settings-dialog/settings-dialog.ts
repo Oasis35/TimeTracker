@@ -1,13 +1,16 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, signal } from '@angular/core';
+import { Component, OnDestroy, computed, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { TimeUnit, UnitService } from '../../../core/services/unit.service';
+import { ExternalLinkService } from '../../../core/services/external-link.service';
 import { MaintenancePageComponent } from '../maintenance/maintenance';
 
 @Component({
@@ -18,7 +21,9 @@ import { MaintenancePageComponent } from '../maintenance/maintenance';
     MatDialogModule,
     MatButtonModule,
     MatButtonToggleModule,
+    MatFormFieldModule,
     MatIconModule,
+    MatInputModule,
     TranslateModule,
     MaintenancePageComponent,
   ],
@@ -31,11 +36,19 @@ export class SettingsDialogComponent implements OnDestroy {
 
   private readonly langSubscription: Subscription;
 
+  readonly externalBaseUrl = signal<string>('');
+  readonly externalUrlPreview = computed(() => {
+    const base = this.externalBaseUrl();
+    return base ? `${base}ABC-123` : '';
+  });
+
   constructor(
     private readonly dialogRef: MatDialogRef<SettingsDialogComponent>,
     private readonly translate: TranslateService,
     readonly unit: UnitService,
+    readonly extLink: ExternalLinkService,
   ) {
+    this.externalBaseUrl.set(extLink.baseUrl());
     const initialLang = (translate.getCurrentLang() || translate.getFallbackLang || 'fr') as AppLanguage;
     this.currentLanguage.set(initialLang);
 
@@ -54,6 +67,11 @@ export class SettingsDialogComponent implements OnDestroy {
 
   onUnitChange(unit: TimeUnit): void {
     this.unit.setUnitMode(unit);
+  }
+
+  onExternalBaseUrlChange(value: string): void {
+    this.externalBaseUrl.set(value);
+    this.extLink.setBaseUrl(value.trim());
   }
 
   close(): void {
