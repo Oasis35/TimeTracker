@@ -128,5 +128,19 @@
   "ticket_detail_days_count": "Jours saisis: {{count}}",
   "ticket_detail_empty": "Aucune saisie pour ce ticket.",
   "ticket_add_entry": "Ajouter une saisie",
-  "ticket_total_alltime": "Temps total pointé : {{value}}"
+  "ticket_total_alltime": "Total saisi : {{value}}",
+  "ticket_detail_current_month": "Ce mois : {{value}}",
+  "ticket_detail_prev_month": "Mois préc. : {{value}}",
+  "delete_entry": "Supprimer la saisie",
+  "confirm_delete_entry": "Supprimer cette saisie ?",
+  "confirm_discard_changes": "Des modifications non enregistrées seront perdues. Continuer ?",
+  "confirm": "Confirmer",
+  "stat_total": "Total",
+  "stat_this_month": "Ce mois",
+  "stat_prev_month": "Mois préc.",
+  "stat_days": "Jours",
+  "entry_dialog_add_title": "Nouvelle saisie",
+  "entry_dialog_edit_title": "Modifier la saisie",
+  "entry_dialog_date": "Date",
+  "entry_dialog_quantity": "Temps"
 }

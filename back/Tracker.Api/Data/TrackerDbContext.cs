@@ -44,10 +44,6 @@ namespace Tracker.Api.Data
                 .Property(x => x.QuantityMinutes)
                 .HasColumnType("INTEGER");
 
-            modelBuilder.Entity<TimeEntry>()
-                .Property(x => x.Comment)
-                .HasMaxLength(500);
-
             var dateOnlyConverter = new ValueConverter<DateOnly, string>(
                 d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 s => DateOnly.ParseExact(s, "yyyy-MM-dd", CultureInfo.InvariantCulture));

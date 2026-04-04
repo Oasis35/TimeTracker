@@ -7,6 +7,6 @@
         public Ticket? Ticket { get; set; }
         public DateOnly Date { get; set; }
         public int QuantityMinutes { get; set; }
-        public string? Comment { get; set; }
+        public bool IsSeed { get; set; }
     }
 }

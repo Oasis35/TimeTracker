@@ -19,13 +19,12 @@ public static class ApiTestHelpers
         return dto!.Id;
     }
 
-    public static Task<HttpResponseMessage> UpsertAsync(HttpClient client, int ticketId, string date, int minutes, string? comment = null)
+    public static Task<HttpResponseMessage> UpsertAsync(HttpClient client, int ticketId, string date, int minutes)
         => client.PostAsJsonAsync("/api/timeentries/upsert", new
         {
             ticketId,
             date,
             quantityMinutes = minutes,
-            comment
         });
 
     private sealed record TicketDto(int Id, TicketType Type, string? ExternalKey, string? Label);

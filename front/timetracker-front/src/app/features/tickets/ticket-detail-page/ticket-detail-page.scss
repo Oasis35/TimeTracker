@@ -1,5 +1,5 @@
 .page-shell {
-  max-width: 1200px;
+  max-width: 860px;
   margin: 1rem auto;
   padding: 0 0.8rem 1.2rem;
 }
@@ -14,6 +14,8 @@
   padding: 0.8rem 0.9rem;
 }
 
+// ── Header ────────────────────────────────────────────────────
+
 .header-row {
   display: flex;
   justify-content: space-between;
@@ -21,15 +23,69 @@
   gap: 0.7rem;
 }
 
+.header-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.05rem;
+}
+
+.back-btn {
+  align-self: flex-start;
+  height: 26px;
+  min-width: 0;
+  padding: 0 0.4rem;
+  font-size: 0.8rem;
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 26px;
+
+  .mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    margin-right: 0.2rem;
+  }
+}
+
 .title-block {
   min-width: 0;
 }
 
-.title-block h2 {
+.title-line {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.title-line h2 {
   margin: 0;
   font-size: 1.55rem;
   line-height: 1.05;
   letter-spacing: -0.01em;
+}
+
+.badge-archived {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.18rem;
+  padding: 0.12rem 0.45rem 0.12rem 0.28rem;
+  border-radius: 5px;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 62%, transparent);
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 80%, var(--mat-sys-surface));
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: help;
+  vertical-align: middle;
+
+  .mat-icon {
+    width: 13px;
+    height: 13px;
+    font-size: 13px;
+    line-height: 13px;
+  }
 }
 
 .header-subtitle {
@@ -41,7 +97,7 @@
 .header-right {
   margin-left: auto;
   width: auto;
-  min-width: min(520px, 100%);
+  flex-shrink: 0;
 }
 
 .header-controls {
@@ -52,7 +108,7 @@
 }
 
 .header-search {
-  width: clamp(260px, 34vw, 390px);
+  width: clamp(180px, 22vw, 260px);
 }
 
 .completion-toggle {
@@ -106,41 +162,55 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-.summary-row {
-  margin-top: 0.45rem;
+// ── Stats bar ─────────────────────────────────────────────────
+
+.stats-bar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.45rem;
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.65rem;
+  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 52%, #fff);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 42%, transparent);
+  border-radius: 10px;
+  gap: 0;
 }
 
-.summary-chip {
-  display: inline-flex;
+.stat-item {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  min-height: 28px;
-  padding: 0 0.62rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 58%, transparent);
-  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 60%, #fff);
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.8rem;
+  padding: 0 0.85rem;
+
+  &:first-child { padding-left: 0.3rem; }
+  &:last-child  { padding-right: 0.3rem; }
+}
+
+.stat-label {
+  font-size: 0.67rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
-.summary-chip-archived {
-  gap: 0.28rem;
-  border-color: color-mix(in srgb, var(--mat-sys-error) 62%, transparent);
-  background: color-mix(in srgb, var(--mat-sys-error-container) 72%, var(--mat-sys-surface));
-  color: color-mix(in srgb, var(--mat-sys-error) 90%, #7a0019);
-  cursor: help;
+.stat-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--mat-sys-on-surface);
+  line-height: 1.25;
+  white-space: nowrap;
 }
 
-.summary-chip-archived .mat-icon {
-  width: 14px;
-  height: 14px;
-  font-size: 14px;
-  line-height: 14px;
+.stat-divider {
+  width: 1px;
+  height: 30px;
+  background: color-mix(in srgb, var(--mat-sys-outline-variant) 52%, transparent);
+  flex-shrink: 0;
 }
+
+// ── Feedback ──────────────────────────────────────────────────
 
 .feedback-row {
   min-height: 1.2rem;
@@ -149,16 +219,48 @@
   gap: 0.5rem;
 }
 
+.error-banner {
+  margin: 1rem 0;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+}
+
 .error {
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
   font-size: 0.75rem;
-}
-
-.error {
   color: var(--mat-sys-error);
   background: color-mix(in srgb, var(--mat-sys-error-container) 62%, var(--mat-sys-surface));
 }
+
+// ── Empty state ───────────────────────────────────────────────
+
+.empty-state {
+  margin-top: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  padding: 0.65rem 0.75rem;
+  border: 1px dashed color-mix(in srgb, var(--mat-sys-outline-variant) 62%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, #f7fafd 74%, var(--mat-sys-surface));
+  font-size: 0.88rem;
+}
+
+.empty-state-btn {
+  height: 32px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+
+  .mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+// ── Month groups ──────────────────────────────────────────────
 
 .entries-groups {
   margin-top: 0.55rem;
@@ -176,9 +278,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.65rem;
-  min-height: 40px;
-  padding: 0.15rem 0.1rem;
+  gap: 0.5rem;
+  min-height: 36px;
+  padding: 0.1rem 0.1rem;
 }
 
 .month-header-left {
@@ -191,7 +293,6 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
 }
 
 .month-toggle {
@@ -225,66 +326,33 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-.month-action-btn {
-  min-width: 96px;
-  height: 32px;
-  border-radius: 10px;
-  padding-inline: 0.72rem;
-  font-size: 0.78rem;
-  font-weight: 650;
-  letter-spacing: 0.01em;
-}
-
-.month-edit-btn {
-  --mdc-icon-button-state-layer-size: 32px;
-  min-width: 34px;
-  width: 34px;
-  height: 32px;
-  padding: 0;
+.month-add-btn {
+  height: 30px;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 70%, transparent);
-  background: color-mix(in srgb, var(--mat-sys-surface-container-high) 56%, #fff);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.month-edit-btn .mat-icon {
-  width: 18px;
-  height: 18px;
-  font-size: 18px;
-  line-height: 18px;
-  margin: 0;
-}
-
-:host ::ng-deep .month-edit-btn .mdc-button__label {
-  width: 100%;
-  height: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.month-save-btn {
-  border-color: color-mix(in srgb, var(--mat-sys-primary) 36%, transparent);
-  background: color-mix(in srgb, var(--mat-sys-primary-container) 28%, var(--mat-sys-surface));
-}
-
-.month-cancel-btn {
-  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 72%, transparent);
+  padding-inline: 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-color: color-mix(in srgb, var(--mat-sys-outline-variant) 70%, transparent);
   color: var(--mat-sys-on-surface-variant);
+
+  .mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+    margin-right: 0.1rem;
+  }
 }
+
+// ── Entry list collapse ───────────────────────────────────────
 
 .entry-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  margin-bottom: 0.1rem;
   max-height: 1400px;
   opacity: 1;
   overflow: hidden;
   transition: max-height 160ms ease, opacity 160ms ease;
+  margin-bottom: 0.1rem;
 }
 
 .entry-list.is-collapsed {
@@ -293,193 +361,94 @@
   pointer-events: none;
 }
 
-.month-add-row {
+// ── Entry rows ────────────────────────────────────────────────
+
+.entry-view-list {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.35rem;
+}
+
+.entry-row {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.2rem 0 0.45rem 1.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 28%, transparent);
+
+  &:last-child { border-bottom: none; }
 }
 
-.month-add-date {
-  width: 170px;
-}
-
-.month-add-qty {
-  width: 124px;
-}
-
-.month-add-btn {
-  min-width: 122px;
-  height: 32px;
-  border-radius: 10px;
-  padding-inline: 0.78rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  box-shadow: 0 3px 8px color-mix(in srgb, var(--mat-sys-primary) 18%, transparent);
-}
-
-.month-chip-list {
+.entry-row-link {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  padding: 0.1rem 0 0.5rem 1.5rem;
-}
-
-.month-chip-list-edit {
-  gap: 0.4rem;
-}
-
-.entry-chip {
-  display: inline-flex;
   align-items: center;
-  gap: 0.24rem;
-  min-height: 32px;
-  padding: 0 0.5rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 56%, transparent);
-  background: color-mix(in srgb, #f6faff 78%, var(--mat-sys-surface));
-  color: color-mix(in srgb, var(--mat-sys-on-surface) 94%, transparent);
+  flex: 1;
+  padding: 0.45rem 0.55rem 0.45rem 1.75rem;
   text-decoration: none;
-  cursor: pointer;
-  transition: border-color 120ms ease, background-color 120ms ease;
+  color: var(--mat-sys-on-surface);
+  transition: background 100ms ease;
+  min-width: 0;
+
+  &:hover {
+    background: color-mix(in srgb, var(--mat-sys-primary) 5%, transparent);
+  }
 }
 
-.entry-chip:hover {
-  border-color: color-mix(in srgb, var(--mat-sys-primary) 30%, transparent);
-  background: color-mix(in srgb, #edf5ff 88%, var(--mat-sys-surface));
-}
-
-.entry-chip-day {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: color-mix(in srgb, #114b8a 68%, var(--mat-sys-on-surface));
-  font: inherit;
-  font-size: 0.84rem;
+.entry-row-date {
+  font-size: 0.88rem;
   font-weight: 700;
-  letter-spacing: 0.004em;
+  color: color-mix(in srgb, var(--mat-sys-primary) 68%, var(--mat-sys-on-surface));
+  min-width: 48px;
 }
 
-.entry-chip-sep {
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.8rem;
+.entry-row-value {
+  margin-left: auto;
+  font-size: 0.88rem;
   font-weight: 600;
+  color: var(--mat-sys-on-surface);
+  padding-right: 0.5rem;
 }
 
-.entry-chip-value {
-  font-size: 0.84rem;
-  font-weight: 700;
-}
-
-.entry-chip-edit {
-  align-items: center;
-  padding-right: 0.15rem;
-}
-
-.entry-chip-date-field {
-  width: 112px;
-}
-
-.entry-chip-edit .action-btn {
-  --mdc-icon-button-state-layer-size: 28px;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  margin-left: 0.05rem;
-  align-self: center;
-}
-
-.entry-chip-edit .action-btn .mat-icon {
+.entry-row-arrow {
   width: 18px;
   height: 18px;
   font-size: 18px;
   line-height: 18px;
-}
-
-.entry-chip-select {
-  width: 98px;
-}
-
-.action-delete {
-  color: color-mix(in srgb, var(--mat-sys-error) 80%, var(--mat-sys-on-surface));
-}
-
-.empty-state {
-  margin-top: 0.6rem;
   color: var(--mat-sys-on-surface-variant);
-  padding: 0.65rem 0.75rem;
-  border: 1px dashed color-mix(in srgb, var(--mat-sys-outline-variant) 62%, transparent);
-  border-radius: 10px;
-  background: color-mix(in srgb, #f7fafd 74%, var(--mat-sys-surface));
-  font-size: 0.88rem;
+  opacity: 0.38;
+  margin-right: 0.4rem;
 }
 
-:host ::ng-deep .entry-list .mat-mdc-form-field-subscript-wrapper {
-  display: none;
-}
-
-:host ::ng-deep .entry-chip-select .mat-mdc-text-field-wrapper {
+.entry-edit-btn {
+  --mdc-icon-button-state-layer-size: 30px;
+  width: 30px;
   height: 30px;
+  margin-right: 0.4rem;
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0;
+  transition: opacity 120ms ease;
+  flex-shrink: 0;
+
+  .mat-icon {
+    font-size: 17px;
+    width: 17px;
+    height: 17px;
+  }
 }
 
-:host ::ng-deep .entry-chip-select .mat-mdc-form-field-infix {
-  min-height: 30px;
-  padding-top: 5px;
-  padding-bottom: 5px;
+.entry-row:hover .entry-edit-btn {
+  opacity: 1;
 }
 
-:host ::ng-deep .entry-chip-date-field .mat-mdc-text-field-wrapper {
-  height: 30px;
-  border-radius: 6px;
-}
+// ── Loading ───────────────────────────────────────────────────
 
-:host ::ng-deep .entry-chip-date-field .mat-mdc-form-field-infix {
-  min-height: 30px;
-  padding-top: 4px;
-  padding-bottom: 4px;
-  padding-left: 8px;
-  padding-right: 2px;
-}
-
-:host ::ng-deep .entry-chip-date-field .mat-mdc-form-field-icon-suffix {
-  display: inline-flex;
-  align-items: center;
-  padding-right: 2px;
-}
-
-:host ::ng-deep .entry-chip-date-field .mat-datepicker-toggle {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
+.loading-wrap {
+  min-height: 40vh;
+  display: flex;
   justify-content: center;
-}
-
-:host ::ng-deep .entry-chip-date-field .mat-datepicker-toggle .mat-icon-button {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.75rem;
 }
 
-:host ::ng-deep .entry-chip-date-field .mat-datepicker-toggle-default-icon {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-}
-
-:host ::ng-deep .entry-chip-date-field .mat-mdc-input-element {
-  color: color-mix(in srgb, #114b8a 68%, var(--mat-sys-on-surface));
-  font-size: 0.84rem;
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: 0.004em;
-}
+// ── Search field overrides ────────────────────────────────────
 
 :host ::ng-deep .header-search .mat-mdc-form-field-subscript-wrapper {
   display: none;
@@ -496,20 +465,16 @@
   padding-bottom: 7px;
 }
 
-.loading-wrap {
-  min-height: 40vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.75rem;
-}
+// ── Responsive ────────────────────────────────────────────────
 
-@media (max-width: 920px) {
+@media (max-width: 700px) {
   .header-row {
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
   }
+
+  .header-left { gap: 0.1rem; }
 
   .header-right {
     width: 100%;
@@ -522,12 +487,16 @@
     gap: 0.35rem;
   }
 
-  .header-search {
-    width: 100%;
+  .header-search { width: 100%; }
+
+  .completion-toggle { width: fit-content; }
+
+  .stats-bar {
+    padding: 0.45rem 0.6rem;
   }
 
-  .completion-toggle {
-    width: fit-content;
+  .stat-item {
+    padding: 0 0.65rem;
   }
 
   .entry-group-header {
@@ -538,7 +507,6 @@
   .month-header-right {
     width: 100%;
     margin-left: 0;
-    justify-content: space-between;
   }
 
   .month-header-left {
@@ -546,25 +514,9 @@
     gap: 0.35rem;
   }
 
-  .month-meta {
-    padding-left: 1.45rem;
-  }
+  .month-meta { padding-left: 1.45rem; }
 
-  .month-chip-list {
-    padding-left: 1.45rem;
-    gap: 0.3rem;
-  }
+  .entry-row-link { padding-left: 1.45rem; }
 
-  .entry-chip {
-    min-height: 30px;
-    padding: 0 0.42rem;
-  }
-
-  .entry-chip-select {
-    width: 90px;
-  }
-
-  .entry-chip-date-field {
-    width: 108px;
-  }
+  .entry-edit-btn { opacity: 1; }
 }

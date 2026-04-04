@@ -269,17 +269,27 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  onCellClick(row: MonthlyRow, day: string): void {
+    if (isWeekendIso(day) || this.isHolidayIso(day)) return;
+    const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' })
+      .format(new Date(`${day}T00:00:00`));
+    this.openTicketDayDialog(row.ticketId, `${row.type} ${row.externalKey ?? ''}`.trim(), row.label ?? '', day, dayLabel, this.getCellMinutes(row, day));
+  }
+
   private openTicketEntryDialog(ticket: TicketDto): void {
     const today = new Date();
     const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' }).format(today);
+    this.openTicketDayDialog(ticket.id, `${ticket.type} ${ticket.externalKey ?? ''}`.trim(), ticket.label ?? '', todayIso, dayLabel, 0);
+  }
 
+  private openTicketDayDialog(ticketId: number, ticketRef: string, ticketLabel: string, dateIso: string, dayLabel: string, currentMinutes: number): void {
     const data: TimeEntryDialogData = {
-      ticketId: ticket.id,
-      ticketRef: `${ticket.type} ${ticket.externalKey ?? ''}`.trim(),
-      ticketLabel: ticket.label ?? '',
+      ticketId,
+      ticketRef,
+      ticketLabel,
       dayLabel,
-      currentMinutes: 0,
+      currentMinutes,
       options: this.quickPickOptions(),
     };
 
@@ -292,7 +302,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     dialogRef.afterClosed().subscribe((minutes) => {
       if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
       void firstValueFrom(
-        this.api.upsertTimeEntry({ ticketId: ticket.id, date: todayIso, quantityMinutes: minutes, comment: null }),
+        this.api.upsertTimeEntry({ ticketId, date: dateIso, quantityMinutes: minutes }),
       ).then(() => {
         this.monthRes.reload();
         this.usedTicketsRes.reload();

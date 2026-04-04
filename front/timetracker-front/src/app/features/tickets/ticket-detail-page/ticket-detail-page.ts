@@ -2,13 +2,9 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, effect, resource, signal, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { DateAdapter, MAT_DATE_FORMATS, MAT_DATE_LOCALE, MatDateFormats, MatNativeDateModule } from '@angular/material/core';
-import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -19,26 +15,15 @@ import { TicketDetailDto, TicketDto, TicketTimeEntryDto, TimesheetMetadataDto } 
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
-import { isWeekendIso, parseIsoDate, toIsoDate } from '../../../core/utils/date-helpers';
+import { isWeekendIso, toIsoDate } from '../../../core/utils/date-helpers';
 import { formatMinutes } from '../../../core/utils/number-helpers';
 import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
 import { showSnack } from '../../../core/utils/ui-helpers';
+import { TimeEntryDialogComponent, TimeEntryDialogData, TimeEntryDialogResult } from '../../../shared/time-entry-dialog.component';
 import { TicketLookupComponent } from '../shared/ticket-lookup/ticket-lookup.component';
 
 type EntryMonthGroup = { key: string; label: string; totalMinutes: number; entries: TicketTimeEntryDto[] };
 type MonthEntryDraft = Record<string, number>;
-
-const TICKET_DATE_FORMATS: MatDateFormats = {
-  parse: {
-    dateInput: 'dd/MM',
-  },
-  display: {
-    dateInput: { day: '2-digit', month: '2-digit' },
-    monthYearLabel: { month: 'long', year: 'numeric' },
-    dateA11yLabel: { day: '2-digit', month: '2-digit', year: 'numeric' },
-    monthYearA11yLabel: { month: 'long', year: 'numeric' },
-  },
-};
 
 @Component({
   selector: 'app-ticket-detail-page',
@@ -47,22 +32,14 @@ const TICKET_DATE_FORMATS: MatDateFormats = {
     CommonModule,
     MatButtonModule,
     MatCardModule,
-    MatDatepickerModule,
-    MatFormFieldModule,
+    MatDialogModule,
     MatIconModule,
-    MatInputModule,
-    MatNativeDateModule,
     MatProgressSpinnerModule,
-    MatSelectModule,
     MatSnackBarModule,
     MatTooltipModule,
     RouterLink,
     TicketLookupComponent,
     TranslateModule,
-  ],
-  providers: [
-    { provide: MAT_DATE_LOCALE, useValue: 'fr-FR' },
-    { provide: MAT_DATE_FORMATS, useValue: TICKET_DATE_FORMATS },
   ],
   templateUrl: './ticket-detail-page.html',
   styleUrl: './ticket-detail-page.scss',
@@ -71,12 +48,9 @@ export class TicketDetailPageComponent {
   readonly ticketId = signal<number | null>(null);
   readonly language = signal<AppLanguage>('fr');
   readonly completionBusy = signal<boolean>(false);
-  readonly busyMonthKey = signal<string | null>(null);
+  readonly busy = signal<boolean>(false);
   readonly actionError = signal<string>('');
   readonly expandedMonths = signal<Record<string, boolean>>({});
-  readonly editingMonthKey = signal<string | null>(null);
-  readonly editingMonthValues = signal<MonthEntryDraft>({});
-  readonly editingMonthOriginalValues = signal<MonthEntryDraft>({});
 
   readonly metadataRes = resource<TimesheetMetadataDto, number>({
     params: () => 0,
@@ -136,6 +110,10 @@ export class TicketDetailPageComponent {
     return null;
   });
 
+  readonly todayIso = toIsoDate(new Date());
+  readonly currentMonthMinutes = computed(() => this.detailRes.value()?.currentMonthMinutes ?? 0);
+  readonly previousMonthMinutes = computed(() => this.detailRes.value()?.previousMonthMinutes ?? 0);
+
   readonly quickPickOptions = computed<QuickPickOption[]>(() => {
     const meta = this.metadataRes.value();
     if (!meta) return [];
@@ -154,15 +132,13 @@ export class TicketDetailPageComponent {
     private readonly router: Router,
     private readonly translate: TranslateService,
     private readonly snackBar: MatSnackBar,
-    private readonly dateAdapter: DateAdapter<Date>,
+    private readonly dialog: MatDialog,
     readonly unit: UnitService,
   ) {
     const initial = (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
-    this.dateAdapter.setLocale(this.dateLocale());
     this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
       this.language.set(event.lang as AppLanguage);
-      this.dateAdapter.setLocale(this.dateLocale());
     });
     this.route.paramMap.subscribe((params) => {
       const ticketId = Number(params.get('ticketId'));
@@ -183,16 +159,6 @@ export class TicketDetailPageComponent {
       }
       this.expandedMonths.set(next);
     });
-
-    effect(() => {
-      const editingMonth = this.editingMonthKey();
-      if (!editingMonth) return;
-      const exists = this.entryGroups().some((group) => group.key === editingMonth);
-      if (!exists) {
-        this.resetMonthEditingState();
-      }
-    });
-
   }
 
   onTicketLookupSelected(ticket: TicketDto): void {
@@ -202,10 +168,8 @@ export class TicketDetailPageComponent {
 
   async onCompletionChange(nextValue: boolean): Promise<void> {
     const ticket = this.ticket();
-    if (!ticket || ticket.isCompleted === nextValue) return;
+    if (!ticket || ticket.isCompleted === nextValue || this.busy()) return;
 
-    // Leaving edit mode is intentional here: completing a ticket discards local unsaved draft edits.
-    this.resetMonthEditingState();
     this.clearActionState();
     this.completionBusy.set(true);
     try {
@@ -222,182 +186,55 @@ export class TicketDetailPageComponent {
     }
   }
 
-  isMonthEditing(monthKey: string): boolean {
-    return this.editingMonthKey() === monthKey;
+  addEntry(monthKey: string): void {
+    const usedDates = (this.entryGroups().find((g) => g.key === monthKey)?.entries ?? []).map((e) => e.date);
+    const suggestedDate = this.nextAvailableDateInMonth(monthKey, Object.fromEntries(usedDates.map((d) => [d, 1])));
+    void this.openEntryDialog(null, monthKey, suggestedDate ?? undefined);
   }
 
-  isMonthBusy(monthKey: string): boolean {
-    return this.busyMonthKey() === monthKey;
-  }
-
-  startMonthEdit(monthKey: string): void {
-    if (this.isArchived() || this.busyMonthKey()) return;
-    const group = this.entryGroups().find((item) => item.key === monthKey);
-    if (!group) return;
-
-    const monthValues = this.toMonthDraft(group.entries);
-    this.editingMonthKey.set(monthKey);
-    this.editingMonthOriginalValues.set(monthValues);
-    this.editingMonthValues.set({ ...monthValues });
-    this.expandedMonths.update((expanded) => ({ ...expanded, [monthKey]: true }));
-    this.clearActionState();
-  }
-
-  cancelMonthEdit(): void {
-    this.resetMonthEditingState();
-  }
-
-  monthEntriesForDisplay(monthKey: string): TicketTimeEntryDto[] {
-    if (!this.isMonthEditing(monthKey)) return [];
-    return Object.entries(this.editingMonthValues())
-      .map(([date, quantityMinutes]) => ({ date, quantityMinutes }))
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }
-
-  onMonthEntryMinutesChange(dateIso: string, minutes: number): void {
-    if (!this.editingMonthKey()) return;
-    this.editingMonthValues.update((values) => ({
-      ...values,
-      [dateIso]: minutes,
-    }));
-  }
-
-  onMonthEntryDateChange(fromDateIso: string, toDateIso: string): void {
-    const monthKey = this.editingMonthKey();
-    if (!monthKey || !toDateIso || fromDateIso === toDateIso) return;
-    if (!toDateIso.startsWith(`${monthKey}-`)) return;
-    if (!this.isSelectableWorkdayIso(toDateIso)) {
-      this.actionError.set(this.translate.instant('cannot_log_time'));
-      return;
-    }
-
-    this.editingMonthValues.update((values) => {
-      if (!(fromDateIso in values)) return values;
-      if (toDateIso in values && toDateIso !== fromDateIso) return values;
-
-      const minutes = values[fromDateIso];
-      const next = { ...values };
-      delete next[fromDateIso];
-      next[toDateIso] = minutes;
-      return next;
-    });
-    this.actionError.set('');
-  }
-
-  onMonthEntryDatePicked(fromDateIso: string, pickedDate: Date | null): void {
-    if (!pickedDate) return;
-    this.onMonthEntryDateChange(fromDateIso, toIsoDate(pickedDate));
-  }
-
-  monthMinDateAsDate(monthKey: string): Date | null {
-    return parseIsoDate(`${monthKey}-01`);
-  }
-
-  monthMaxDateAsDate(monthKey: string): Date | null {
-    const [yearRaw, monthRaw] = monthKey.split('-');
-    const year = Number(yearRaw);
-    const month = Number(monthRaw);
-    if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
-      return null;
-    }
-    const daysInMonth = new Date(year, month, 0).getDate();
-    return parseIsoDate(`${monthKey}-${String(daysInMonth).padStart(2, '0')}`);
-  }
-
-  entryDateAsDate(dateIso: string): Date | null {
-    return parseIsoDate(dateIso);
-  }
-
-  datePickerFilterForMonth(monthKey: string, currentDateIso: string): (date: Date | null) => boolean {
-    const usedDates = new Set(
-      Object.keys(this.editingMonthValues()).filter((dateIso) => dateIso !== currentDateIso),
-    );
-
-    return (date: Date | null): boolean => {
-      if (!date) return false;
-      const dateIso = toIsoDate(date);
-      if (!dateIso.startsWith(`${monthKey}-`)) return false;
-      if (usedDates.has(dateIso)) return false;
-      return this.isSelectableWorkdayIso(dateIso);
-    };
-  }
-
-  removeMonthEntry(dateIso: string): void {
-    if (!this.editingMonthKey()) return;
-    this.editingMonthValues.update((values) => {
-      const next = { ...values };
-      delete next[dateIso];
-      return next;
-    });
-  }
-
-  addMonthEntry(monthKey: string): void {
-    if (!this.isMonthEditing(monthKey)) return;
-
-    const currentValues = this.editingMonthValues();
-    const dateIso = this.nextAvailableDateInMonth(monthKey, currentValues);
-    if (!dateIso) {
-      this.actionError.set(this.translate.instant('cannot_log_time'));
-      return;
-    }
-    const minutes = this.defaultPositiveMinutes();
-    if (minutes <= 0) {
-      this.actionError.set(this.translate.instant('cannot_log_time'));
-      return;
-    }
-
-    this.editingMonthValues.update((values) => ({
-      ...values,
-      [dateIso]: minutes,
-    }));
-    this.actionError.set('');
-  }
-
-  async saveMonth(monthKey: string): Promise<void> {
+  async openEntryDialog(existing: TicketTimeEntryDto | null, monthKey: string, defaultDate?: string): Promise<void> {
     const ticketId = this.ticketId();
     const ticket = this.ticket();
     if (!ticketId || !ticket || ticket.isCompleted) return;
-    if (!this.isMonthEditing(monthKey) || this.busyMonthKey()) return;
 
-    const originalValues = this.editingMonthOriginalValues();
-    const currentValues = this.editingMonthValues();
-    const dates = new Set<string>([
-      ...Object.keys(originalValues),
-      ...Object.keys(currentValues),
-    ]);
+    const usedDates = (this.entryGroups().find((g) => g.key === monthKey)?.entries ?? [])
+      .map((e) => e.date)
+      .filter((d) => d !== existing?.date);
 
-    const operations = Array.from(dates)
-      .sort((a, b) => a.localeCompare(b))
-      .flatMap((dateIso) => {
-        const original = originalValues[dateIso];
-        const current = currentValues[dateIso];
-        if (original === undefined && current === undefined) return [];
-        if (original === current) return [];
-        return [{ dateIso, quantityMinutes: current ?? 0 }];
-      });
+    const result: TimeEntryDialogResult = await firstValueFrom(
+      this.dialog
+        .open(TimeEntryDialogComponent, {
+          data: {
+            date: existing?.date ?? defaultDate ?? null,
+            quantityMinutes: existing?.quantityMinutes ?? this.defaultPositiveMinutes(),
+            monthKey,
+            usedDates,
+            quickPickOptions: this.quickPickOptions(),
+            publicHolidays: this.publicHolidaysRes.value() ?? {},
+            locale: this.dateLocale(),
+            isNew: existing === null,
+          } satisfies TimeEntryDialogData,
+          width: '400px',
+        })
+        .afterClosed(),
+    );
 
-    if (operations.length === 0) {
-      this.showActionMessage('time_saved');
-      this.resetMonthEditingState();
-      return;
-    }
+    if (!result) return;
 
     this.clearActionState();
-    this.busyMonthKey.set(monthKey);
+    this.busy.set(true);
     try {
-      for (const operation of operations) {
+      if (result.action === 'save') {
+        if (existing && result.date !== existing.date) {
+          await firstValueFrom(this.api.upsertTimeEntry({ ticketId, date: existing.date, quantityMinutes: 0 }));
+        }
         await firstValueFrom(
-          this.api.upsertTimeEntry({
-            ticketId,
-            date: operation.dateIso,
-            quantityMinutes: operation.quantityMinutes,
-            comment: null,
-          }),
+          this.api.upsertTimeEntry({ ticketId, date: result.date, quantityMinutes: result.quantityMinutes }),
         );
+      } else if (result.action === 'delete') {
+        await firstValueFrom(this.api.upsertTimeEntry({ ticketId, date: existing!.date, quantityMinutes: 0 }));
       }
-
       this.showActionMessage('time_saved');
-      this.resetMonthEditingState();
       this.detailRes.reload();
       this.metadataRes.reload();
     } catch (error: unknown) {
@@ -405,8 +242,20 @@ export class TicketDetailPageComponent {
         this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')),
       );
     } finally {
-      this.busyMonthKey.set(null);
+      this.busy.set(false);
     }
+  }
+
+  isMonthExpanded(monthKey: string): boolean {
+    const value = this.expandedMonths()[monthKey];
+    return typeof value === 'boolean' ? value : this.isDefaultExpandedMonth(monthKey);
+  }
+
+  toggleMonth(monthKey: string): void {
+    this.expandedMonths.update((expanded) => ({
+      ...expanded,
+      [monthKey]: !this.isMonthExpanded(monthKey),
+    }));
   }
 
   formatEntryValue(minutes: number): string {
@@ -421,18 +270,6 @@ export class TicketDetailPageComponent {
     const [, month, day] = parts;
     if (!month || !day) return dateIso;
     return `${day}/${month}`;
-  }
-
-  isMonthExpanded(monthKey: string): boolean {
-    const value = this.expandedMonths()[monthKey];
-    return typeof value === 'boolean' ? value : this.isDefaultExpandedMonth(monthKey);
-  }
-
-  toggleMonth(monthKey: string): void {
-    this.expandedMonths.update((expanded) => ({
-      ...expanded,
-      [monthKey]: !this.isMonthExpanded(monthKey),
-    }));
   }
 
   private formatMonthLabel(monthKey: string): string {
@@ -457,14 +294,6 @@ export class TicketDetailPageComponent {
     const previousDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const previousMonthKey = `${previousDate.getFullYear()}-${String(previousDate.getMonth() + 1).padStart(2, '0')}`;
     return monthKey === currentMonthKey || monthKey === previousMonthKey;
-  }
-
-  private toMonthDraft(entries: TicketTimeEntryDto[]): MonthEntryDraft {
-    const values: MonthEntryDraft = {};
-    for (const entry of entries) {
-      values[entry.date] = entry.quantityMinutes;
-    }
-    return values;
   }
 
   private defaultPositiveMinutes(): number {
@@ -504,12 +333,6 @@ export class TicketDetailPageComponent {
     }
 
     return null;
-  }
-
-  private resetMonthEditingState(): void {
-    this.editingMonthKey.set(null);
-    this.editingMonthValues.set({});
-    this.editingMonthOriginalValues.set({});
   }
 
   private clearActionState(): void {

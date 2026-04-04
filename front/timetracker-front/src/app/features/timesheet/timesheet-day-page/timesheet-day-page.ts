@@ -481,7 +481,6 @@ export class TimesheetDayPageComponent {
           ticketId,
           date,
           quantityMinutes,
-          comment: null,
         }),
       );
       this.showActionMessage('time_saved');

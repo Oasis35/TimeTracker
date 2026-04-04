@@ -144,6 +144,8 @@
                       [class.weekend-end]="isSundayIso(day) && !isHolidayIso(day)"
                       [class.value-active]="getCellMinutes(row, day) > 0"
                       [class.value-zero]="getCellMinutes(row, day) === 0"
+                      [class.cell-clickable]="!isWeekendIso(day) && !isHolidayIso(day)"
+                      (click)="onCellClick(row, day)"
                     >
                       {{ formatZeroAware(getCellMinutes(row, day)) }}
                     </td>

@@ -43,21 +43,21 @@ public sealed class DbSeederTests
                 TicketId = cp.Id,
                 Date = new DateOnly(2025, 8, 5),
                 QuantityMinutes = 480,
-                Comment = "__DEV_SEED_V2__"
+                IsSeed = true
             },
             new TimeEntry
             {
                 TicketId = legacy.Id,
                 Date = new DateOnly(2025, 8, 5),
                 QuantityMinutes = 480,
-                Comment = "__DEV_SEED_V2__"
+                IsSeed = true
             },
             new TimeEntry
             {
                 TicketId = legacy.Id,
                 Date = new DateOnly(2025, 8, 6),
                 QuantityMinutes = 480,
-                Comment = "__DEV_SEED_V2__"
+                IsSeed = true
             }
         );
         await db.SaveChangesAsync();
@@ -66,7 +66,7 @@ public sealed class DbSeederTests
 
         var cpTicket = db.Tickets.Single(t => t.Type == TicketType.ABSENT && t.ExternalKey == "CP");
         var seededLeaveEntries = db.TimeEntries
-            .Where(e => e.Comment == "__DEV_SEED_V2__" && e.TicketId != null)
+            .Where(e => e.IsSeed && e.TicketId != null)
             .Join(
                 db.Tickets.Where(t => t.Type == TicketType.ABSENT),
                 e => e.TicketId!.Value,

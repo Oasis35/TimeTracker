@@ -252,13 +252,23 @@ public sealed class TicketsController : ControllerBase
             .OrderByDescending(e => e.Date)
             .Select(e => new TicketTimeEntryDto(
                 e.Date,
-                e.QuantityMinutes,
-                e.Comment))
+                e.QuantityMinutes))
             .ToListAsync();
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var currentMonthMinutes = entries
+            .Where(e => e.Date.Year == today.Year && e.Date.Month == today.Month)
+            .Sum(e => e.QuantityMinutes);
+        var prevMonth = today.AddMonths(-1);
+        var previousMonthMinutes = entries
+            .Where(e => e.Date.Year == prevMonth.Year && e.Date.Month == prevMonth.Month)
+            .Sum(e => e.QuantityMinutes);
 
         return Ok(new TicketDetailDto(
             Ticket: ticket,
             Entries: entries,
-            TotalMinutes: entries.Sum(e => e.QuantityMinutes)));
+            TotalMinutes: entries.Sum(e => e.QuantityMinutes),
+            CurrentMonthMinutes: currentMonthMinutes,
+            PreviousMonthMinutes: previousMonthMinutes));
     }
 }
