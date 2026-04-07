@@ -24,7 +24,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
 import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
-import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
+import { ExternalLinkService } from '../../../core/services/external-link.service';
 
 type MonthRequest = { y: number; m: number };
 
@@ -45,7 +45,6 @@ type MonthlyRow = TimesheetRowDto & { total: number };
     MatSnackBarModule,
     MatTooltipModule,
     RouterLink,
-    TicketExtLinkComponent,
     TranslateModule,
   ],
   providers: [{ provide: MAT_DATE_LOCALE, useValue: 'fr-FR' }],
@@ -156,6 +155,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     private readonly dialog: MatDialog,
     private readonly snackBar: MatSnackBar,
     readonly unit: UnitService,
+    private readonly extLinkService: ExternalLinkService,
   ) {
     const initial = (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
@@ -234,6 +234,10 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
 
   isAlternateWeekBlock(dayIndex: number): boolean {
     return Math.floor(dayIndex / 7) % 2 === 1;
+  }
+
+  buildExtUrl(externalKey: string): string {
+    return this.extLinkService.buildUrl(externalKey);
   }
 
   getTicketAllTimeTooltip(ticketId: number): string {

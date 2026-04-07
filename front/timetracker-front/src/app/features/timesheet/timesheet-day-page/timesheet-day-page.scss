@@ -263,6 +263,10 @@
   max-width: 150px;
   justify-self: end;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
 }
 
 .ticket-head {

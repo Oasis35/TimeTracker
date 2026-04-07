@@ -124,21 +124,30 @@
                 <tr>
                   <td>{{ row.type }}</td>
                   <td>
-                    @if (row.externalKey) {
+                    @if (row.externalKey && buildExtUrl(row.externalKey)) {
                       <a
                         class="ticket-number-link"
-                        [routerLink]="['/ticket', row.ticketId]"
-                        [matTooltip]="getTicketAllTimeTooltip(row.ticketId)"
-                        [matTooltipDisabled]="!getTicketAllTimeTooltip(row.ticketId)"
+                        [href]="buildExtUrl(row.externalKey)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        (click)="$event.stopPropagation()"
                       >
                         {{ row.externalKey }}
                       </a>
-                      <app-ticket-ext-link [externalKey]="row.externalKey" />
                     } @else {
-                      -
+                      {{ row.externalKey || '-' }}
                     }
                   </td>
-                  <td>{{ row.label || '-' }}</td>
+                  <td>
+                    <a
+                      class="ticket-label-link"
+                      [routerLink]="['/ticket', row.ticketId]"
+                      [matTooltip]="getTicketAllTimeTooltip(row.ticketId)"
+                      [matTooltipDisabled]="!getTicketAllTimeTooltip(row.ticketId)"
+                    >
+                      {{ row.label || '-' }}
+                    </a>
+                  </td>
                   <td
                     class="num total-cell"
                     [class.value-active]="row.total > 0"

@@ -235,6 +235,19 @@ tfoot td:nth-child(n + 5) {
   border-bottom-color: color-mix(in srgb, var(--mat-sys-primary) 44%, transparent);
 }
 
+.ticket-label-link {
+  display: inline-block;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid transparent;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.ticket-label-link:hover {
+  color: color-mix(in srgb, var(--mat-sys-primary) 78%, var(--mat-sys-on-surface));
+  border-bottom-color: color-mix(in srgb, var(--mat-sys-primary) 44%, transparent);
+}
+
 .total-cell,
 th.col-total {
   border-left: 1px solid color-mix(in srgb, var(--mat-sys-outline) 66%, transparent);
