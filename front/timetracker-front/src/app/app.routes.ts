@@ -4,7 +4,7 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'day',
+    redirectTo: 'month',
   },
   {
     path: 'maintenance',

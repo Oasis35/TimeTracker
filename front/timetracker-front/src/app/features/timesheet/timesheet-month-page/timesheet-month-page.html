@@ -10,14 +10,24 @@
     <mat-card class="month-card">
       <div class="header-row">
         <div class="header-left">
-          <button mat-stroked-button type="button" (click)="prevMonth()">
-            {{ 'month_previous' | translate }}
+          <button
+            mat-stroked-button
+            type="button"
+            [attr.aria-label]="'new_ticket' | translate"
+            (click)="openAddTicketDialog()"
+          >
+            <mat-icon>add</mat-icon>
+            {{ 'new_ticket' | translate }}
           </button>
-          <button mat-stroked-button type="button" (click)="goToCurrentMonth()" [disabled]="isCurrentMonth()">
-            {{ 'month_current' | translate }}
-          </button>
-          <button mat-stroked-button type="button" (click)="nextMonth()">
-            {{ 'month_next' | translate }}
+          <button
+            mat-stroked-button
+            type="button"
+            [matTooltip]="'log_time_dialog_title' | translate"
+            [attr.aria-label]="'log_time_dialog_title' | translate"
+            (click)="openLogTimeDialog()"
+          >
+            <mat-icon>more_time</mat-icon>
+            {{ 'log_time_dialog_title' | translate }}
           </button>
         </div>
         <div class="header-center">
@@ -32,45 +42,34 @@
           >
             <mat-icon>calendar_month</mat-icon>
           </button>
+          <input
+            class="month-picker-input"
+            type="text"
+            [matDatepicker]="monthPicker"
+            [value]="selectedMonthDate()"
+            readonly
+            aria-hidden="true"
+            tabindex="-1"
+          />
+          <mat-datepicker
+            #monthPicker
+            startView="year"
+            [startAt]="selectedMonthDate()"
+            (monthSelected)="onMonthSelected($event, monthPicker)"
+          ></mat-datepicker>
         </div>
         <div class="header-right">
-          <button
-            mat-stroked-button
-            type="button"
-            [matTooltip]="'log_time_dialog_title' | translate"
-            [attr.aria-label]="'log_time_dialog_title' | translate"
-            (click)="openLogTimeDialog()"
-          >
-            <mat-icon>more_time</mat-icon>
-            {{ 'log_time_dialog_title' | translate }}
+          <button mat-stroked-button type="button" (click)="prevMonth()">
+            {{ 'month_previous' | translate }}
           </button>
-          <button
-            mat-stroked-button
-            type="button"
-            [attr.aria-label]="'new_ticket' | translate"
-            (click)="openAddTicketDialog()"
-          >
-            <mat-icon>add</mat-icon>
-            {{ 'new_ticket' | translate }}
+          <button mat-stroked-button type="button" (click)="goToCurrentMonth()" [disabled]="isCurrentMonth()">
+            {{ 'month_current' | translate }}
+          </button>
+          <button mat-stroked-button type="button" (click)="nextMonth()">
+            {{ 'month_next' | translate }}
           </button>
         </div>
       </div>
-      <input
-        class="month-picker-input"
-        type="text"
-        [matDatepicker]="monthPicker"
-        [value]="selectedMonthDate()"
-        readonly
-        aria-hidden="true"
-        tabindex="-1"
-      />
-      <mat-datepicker
-        #monthPicker
-        startView="year"
-        [startAt]="selectedMonthDate()"
-        (monthSelected)="onMonthSelected($event, monthPicker)"
-      ></mat-datepicker>
-
       <div class="table-wrap" [style.--sticky-col-type-width.px]="stickyTypeWidth()">
         <table>
           <colgroup>
@@ -142,8 +141,6 @@
                     <a
                       class="ticket-label-link"
                       [routerLink]="['/ticket', row.ticketId]"
-                      [matTooltip]="getTicketAllTimeTooltip(row.ticketId)"
-                      [matTooltipDisabled]="!getTicketAllTimeTooltip(row.ticketId)"
                     >
                       {{ row.label || '-' }}
                     </a>

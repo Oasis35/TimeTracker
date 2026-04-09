@@ -29,6 +29,7 @@
 }
 
 .header-center {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -65,6 +66,9 @@
 
 .month-picker-input {
   position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
   opacity: 0;
   pointer-events: none;
   width: 0;

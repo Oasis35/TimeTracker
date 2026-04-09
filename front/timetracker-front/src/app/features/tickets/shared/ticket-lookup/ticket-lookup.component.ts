@@ -45,11 +45,15 @@ export class TicketLookupComponent {
       if (externalKey === query) return 0;
       if (externalKey.startsWith(query)) return 1;
       if (externalKey.includes(query)) return 2;
-      return 3;
+      if ((ticket.label ?? '').toLowerCase().includes(query)) return 3;
+      return 4;
     };
 
     return deduped
-      .filter((ticket) => (ticket.externalKey ?? '').toLowerCase().includes(query))
+      .filter((ticket) =>
+        (ticket.externalKey ?? '').toLowerCase().includes(query) ||
+        (ticket.label ?? '').toLowerCase().includes(query)
+      )
       .sort((a, b) => rank(a) - rank(b) || this.compareByTicketNumber(a, b))
       .slice(0, this.maxResults);
   });
