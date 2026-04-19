@@ -179,9 +179,11 @@ thead th {
 }
 
 .col-day-header {
-  width: 160px;
-  min-width: 140px;
+  position: sticky;
+  left: 0;
+  z-index: 5;
   white-space: nowrap;
+  background: inherit;
 }
 
 .col-ticket {
@@ -343,7 +345,7 @@ tfoot td {
 .foot-label {
   position: sticky;
   left: 0;
-  z-index: 3;
+  z-index: 4;
   background: color-mix(in srgb, var(--mat-sys-primary-container) 16%, var(--mat-sys-surface));
   box-shadow: 1px 0 0 color-mix(in srgb, var(--mat-sys-outline-variant) 56%, transparent);
   color: color-mix(in srgb, var(--mat-sys-primary) 85%, var(--mat-sys-on-surface));
@@ -356,7 +358,7 @@ tfoot td {
 
 .row-alltime td {
   background: color-mix(in srgb, var(--mat-sys-surface-container) 60%, var(--mat-sys-surface));
-  font-style: italic;
+  font-weight: 400;
   opacity: 0.8;
 }
 

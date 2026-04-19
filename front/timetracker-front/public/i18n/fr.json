@@ -57,7 +57,7 @@
   "month_previous": "Précédent",
   "month_current": "Mois en cours",
   "month_next": "Suivant",
-  "month_view_title": "Vue mensuelle - {{month}}",
+  "month_view_title": "{{month}}",
   "month_view_empty": "Aucun ticket pointé sur ce mois.",
   "month_total": "Total mensuel",
   "alltime_total": "Total général",

@@ -57,7 +57,7 @@
   "month_previous": "Previous",
   "month_current": "Current month",
   "month_next": "Next",
-  "month_view_title": "Monthly view - {{month}}",
+  "month_view_title": "{{month}}",
   "month_view_empty": "No ticket logged for this month.",
   "month_total": "Monthly total",
   "alltime_total": "Overall total",

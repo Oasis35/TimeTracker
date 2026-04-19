@@ -1,8 +1,8 @@
 # Docker Guide
 
-This repository currently ships Docker support for the backend API only.
+This guide covers the backend-only Docker stack (dev mode).
 
-There is no frontend container image or full front + back compose stack yet.
+For the full production stack (frontend + backend in a single image), see [README.docker.prod.fr.md](README.docker.prod.fr.md).
 
 ## Docker Files
 
@@ -98,7 +98,7 @@ Recommended local flow:
 2. Run the frontend locally with `npm start`
 3. Let Angular proxy `/api` to `http://localhost:8080`
 
-That matches the current frontend proxy configuration in [proxy.conf.json](/c:/Git/TimeTracker/front/timetracker-front/proxy.conf.json).
+That matches the current frontend proxy configuration in [proxy.conf.json](front/timetracker-front/proxy.conf.json).
 
 ## Notes
 
@@ -109,8 +109,5 @@ That matches the current frontend proxy configuration in [proxy.conf.json](/c:/G
 
 ## Current Limitations
 
-- no frontend Docker image
-- no root compose file for front + back
-- no reverse proxy / TLS termination
 - no healthcheck in the compose file
 - published but effectively unused port `8081`

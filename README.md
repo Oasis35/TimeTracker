@@ -45,4 +45,4 @@ Default development URLs then come from `launchSettings.json`:
 - HTTP: `http://localhost:5021`
 - HTTPS: `https://localhost:7227`
 
-If you use this mode with the Angular dev server, update [proxy.conf.json](/c:/Git/TimeTracker/front/timetracker-front/proxy.conf.json) or start the frontend against the matching API URL.
+If you use this mode with the Angular dev server, update [proxy.conf.json](front/timetracker-front/proxy.conf.json) or start the frontend against the matching API URL.

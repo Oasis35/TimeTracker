@@ -59,6 +59,9 @@ namespace Tracker.Api.Data
                 .HasIndex(x => new { x.TicketId, x.Date })
                 .IsUnique();
 
+            modelBuilder.Entity<TimeEntry>()
+                .HasIndex(x => x.Date);
+
             modelBuilder.Entity<AppSetting>()
                 .HasKey(s => s.Key);
 

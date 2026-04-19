@@ -46,7 +46,7 @@ Les URLs de dev par defaut viennent alors de `launchSettings.json` :
 - HTTP : `http://localhost:5021`
 - HTTPS : `https://localhost:7227`
 
-Si tu utilises ce mode avec le frontend Angular, pense a ajuster [proxy.conf.json](/c:/Git/TimeTracker/front/timetracker-front/proxy.conf.json) ou a faire pointer le frontend vers la bonne URL d'API.
+Si tu utilises ce mode avec le frontend Angular, pense a ajuster [proxy.conf.json](front/timetracker-front/proxy.conf.json) ou a faire pointer le frontend vers la bonne URL d'API.
 
 ## Exporter l'image Docker prod en `.tar`
 
