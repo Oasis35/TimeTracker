@@ -34,7 +34,7 @@ public sealed class DatabaseBackupService
         {
             EnsureDatabaseExists();
             Directory.CreateDirectory(_backupsDirectory);
-            BackupDatabase(_databasePath, tempPath);
+            await BackupDatabaseAsync(_databasePath, tempPath);
 
             var content = await File.ReadAllBytesAsync(tempPath, cancellationToken);
             return new BackupExportPayload($"timetracker-backup-{timestamp}.db", content);
@@ -42,7 +42,7 @@ public sealed class DatabaseBackupService
         finally
         {
             _gate.Release();
-            TryDelete(tempPath);
+            await TryDeleteAsync(tempPath);
         }
     }
 
@@ -67,25 +67,25 @@ public sealed class DatabaseBackupService
             if (!await IsValidBackupAsync(uploadedPath, cancellationToken))
                 throw new InvalidBackupException();
 
-            BackupDatabase(_databasePath, safetyBackupPath);
-            BackupDatabase(uploadedPath, _databasePath);
+            await BackupDatabaseAsync(_databasePath, safetyBackupPath);
+            await BackupDatabaseAsync(uploadedPath, _databasePath);
 
             return new BackupRestoreResult(safetyBackupFileName);
         }
         finally
         {
             _gate.Release();
-            TryDelete(uploadedPath);
+            await TryDeleteAsync(uploadedPath);
         }
     }
 
-    private void BackupDatabase(string sourcePath, string destinationPath)
+    private async Task BackupDatabaseAsync(string sourcePath, string destinationPath)
     {
         var destinationDirectory = Path.GetDirectoryName(destinationPath);
         if (!string.IsNullOrWhiteSpace(destinationDirectory))
             Directory.CreateDirectory(destinationDirectory);
 
-        TryDelete(destinationPath);
+        await TryDeleteAsync(destinationPath);
 
         try
         {
@@ -143,7 +143,7 @@ public sealed class DatabaseBackupService
             throw new FileNotFoundException("SQLite database file was not found.", _databasePath);
     }
 
-    private static void TryDelete(string path)
+    private static async Task TryDeleteAsync(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             return;
@@ -158,12 +158,12 @@ public sealed class DatabaseBackupService
             catch (IOException)
             {
                 if (attempt == 4) return;
-                Thread.Sleep(50);
+                await Task.Delay(50);
             }
             catch (UnauthorizedAccessException)
             {
                 if (attempt == 4) return;
-                Thread.Sleep(50);
+                await Task.Delay(50);
             }
         }
     }

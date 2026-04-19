@@ -84,6 +84,8 @@ namespace Tracker.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Date");
+
                     b.HasIndex("TicketId", "Date")
                         .IsUnique();
 
