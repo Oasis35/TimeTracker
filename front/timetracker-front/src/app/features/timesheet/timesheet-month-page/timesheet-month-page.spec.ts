@@ -2,9 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { TimesheetMonthPageComponent } from './timesheet-month-page';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter } from '@angular/router';
 
 describe('TimesheetMonthPageComponent', () => {
@@ -35,9 +36,6 @@ describe('TimesheetMonthPageComponent', () => {
 
   function setup(options?: { dialogResults?: unknown[] }) {
     const dialogResults = [...(options?.dialogResults ?? [false])];
-    const dialogOpen = vi.fn().mockImplementation(() => ({
-      afterClosed: () => of(dialogResults.shift() ?? false),
-    }));
 
     const apiMock = {
       getMetadata: vi.fn(() => of(baseMetadata)),
@@ -54,16 +52,21 @@ describe('TimesheetMonthPageComponent', () => {
     };
 
     TestBed.configureTestingModule({
-      imports: [TimesheetMonthPageComponent, TranslateModule.forRoot()],
+      imports: [TimesheetMonthPageComponent, MatDialogModule, TranslateModule.forRoot()],
       providers: [
         { provide: TrackerApi, useValue: apiMock },
-        { provide: MatDialog, useValue: { open: dialogOpen } },
+        provideAnimationsAsync(),
         provideRouter([]),
       ],
     });
 
     const fixture = TestBed.createComponent(TimesheetMonthPageComponent);
-    return { fixture, component: fixture.componentInstance, apiMock, dialogOpen };
+    const component = fixture.componentInstance;
+    const dialogOpen = vi.spyOn((component as any).dialog, 'open').mockImplementation(() => ({
+      afterClosed: () => of(dialogResults.shift() ?? false),
+    }) as any);
+
+    return { fixture, component, apiMock, dialogOpen };
   }
 
   it('renders monthly matrix with days and values', async () => {
