@@ -71,7 +71,7 @@ Main entities:
   - `TicketId`
   - `Date`
   - `QuantityMinutes`
-  - `Comment`
+  - `IsSeed`
 - `AppSetting`
   - `Key` (primary key, max 64 chars)
   - `Value` (max 512 chars)
@@ -80,6 +80,7 @@ Important EF Core constraints:
 
 - unique index on `(Ticket.Type, Ticket.ExternalKey)`
 - unique index on `(TimeEntry.TicketId, TimeEntry.Date)`
+- index on `TimeEntry.Date` (for date-based queries)
 - `DateOnly` stored as `yyyy-MM-dd`
 - `QuantityMinutes` stored as `INTEGER`
 

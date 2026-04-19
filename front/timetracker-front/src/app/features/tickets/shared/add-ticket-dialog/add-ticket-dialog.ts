@@ -8,7 +8,7 @@ import { MatSelectChange, MatSelectModule } from '@angular/material/select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { resolveApiErrorTranslationKey } from '../../../../core/api/api-error-messages';
-import { TicketDto, TimesheetMetadataDto } from '../../../../core/api/models';
+import { TicketDto, TicketType, TimesheetMetadataDto } from '../../../../core/api/models';
 import { TrackerApi } from '../../../../core/api/tracker-api';
 
 @Component({
@@ -27,11 +27,11 @@ import { TrackerApi } from '../../../../core/api/tracker-api';
   styleUrl: './add-ticket-dialog.scss',
 })
 export class AddTicketDialogComponent {
-  readonly ticketTypeOptions: readonly string[] = ['DEV', 'SUPPORT', 'CONGES'];
+  readonly ticketTypeOptions: readonly TicketType[] = ['DEV', 'SUPPORT'];
   readonly busy = signal<boolean>(false);
   readonly actionError = signal<string>('');
 
-  readonly newTicketType = signal<string>('');
+  readonly newTicketType = signal<TicketType | ''>('');
   readonly newTicketExternalKey = signal<string>('');
   readonly newTicketLabel = signal<string>('');
 
@@ -49,7 +49,7 @@ export class AddTicketDialogComponent {
       const meta = this.metadataRes.value();
       if (!meta || this.newTicketType().trim()) return;
 
-      const defaultType = (meta.defaultType ?? '').toUpperCase();
+      const defaultType = (meta.defaultType ?? '').toUpperCase() as TicketType;
       this.newTicketType.set(
         this.ticketTypeOptions.includes(defaultType) ? defaultType : this.ticketTypeOptions[0],
       );
@@ -57,7 +57,7 @@ export class AddTicketDialogComponent {
   }
 
   onTicketTypeChange(event: MatSelectChange): void {
-    this.newTicketType.set((event.value ?? '').toString());
+    this.newTicketType.set((event.value ?? '') as TicketType | '');
   }
 
   onTicketExternalInput(event: Event): void {
@@ -75,7 +75,7 @@ export class AddTicketDialogComponent {
   }
 
   async submit(logTime: boolean): Promise<void> {
-    const type = this.newTicketType().trim();
+    const type = this.newTicketType() as TicketType;
     const externalKey = this.newTicketExternalKey().trim();
     const label = this.newTicketLabel().trim();
 

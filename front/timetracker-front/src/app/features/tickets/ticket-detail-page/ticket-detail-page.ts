@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
-import { Component, computed, effect, resource, signal, untracked } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, resource, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -10,10 +11,11 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
-import { catchError, firstValueFrom, of } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { TicketDetailDto, TicketDto, TicketTimeEntryDto, TimesheetMetadataDto } from '../../../core/api/models';
 import { TrackerApi } from '../../../core/api/tracker-api';
+import { PublicHolidaysService } from '../../../core/services/public-holidays.service';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { isWeekendIso, toIsoDate } from '../../../core/utils/date-helpers';
@@ -57,13 +59,6 @@ export class TicketDetailPageComponent {
   readonly metadataRes = resource<TimesheetMetadataDto, number>({
     params: () => 0,
     loader: () => firstValueFrom(this.api.getMetadata()),
-  });
-  readonly publicHolidaysRes = resource<Record<string, string>, number>({
-    params: () => 0,
-    loader: () =>
-      firstValueFrom(
-        this.api.getPublicHolidaysMetropole().pipe(catchError(() => of({}))),
-      ),
   });
   readonly detailRes = resource<TicketDetailDto | null, number | null>({
     params: () => this.ticketId(),
@@ -136,13 +131,16 @@ export class TicketDetailPageComponent {
     private readonly snackBar: MatSnackBar,
     private readonly dialog: MatDialog,
     readonly unit: UnitService,
+    readonly publicHolidays: PublicHolidaysService,
   ) {
+    const destroyRef = inject(DestroyRef);
+    void publicHolidays.load();
     const initial = (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
-    this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(destroyRef)).subscribe((event: LangChangeEvent) => {
       this.language.set(event.lang as AppLanguage);
     });
-    this.route.paramMap.subscribe((params) => {
+    this.route.paramMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
       const ticketId = Number(params.get('ticketId'));
       if (Number.isInteger(ticketId) && ticketId > 0) {
         this.ticketId.set(ticketId);
@@ -212,7 +210,7 @@ export class TicketDetailPageComponent {
             monthKey,
             usedDates,
             quickPickOptions: this.quickPickOptions(),
-            publicHolidays: this.publicHolidaysRes.value() ?? {},
+            publicHolidays: this.publicHolidays.holidays() ?? {},
             locale: this.dateLocale(),
             isNew: existing === null,
           } satisfies TimeEntryDialogData,
@@ -351,6 +349,6 @@ export class TicketDetailPageComponent {
 
   private isSelectableWorkdayIso(isoDate: string): boolean {
     if (isWeekendIso(isoDate)) return false;
-    return !this.publicHolidaysRes.value()?.[isoDate];
+    return !this.publicHolidays.holidays()?.[isoDate];
   }
 }

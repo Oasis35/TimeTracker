@@ -6,7 +6,7 @@ import { vi } from 'vitest';
 import { App } from './app';
 import { AppSettingsService } from './core/services/app-settings.service';
 import { UnitService } from './core/services/unit.service';
-import { SettingsDialogComponent } from './features/settings/settings-dialog/settings-dialog.component';
+import { SettingsDialogComponent } from './features/settings/settings-dialog/settings-dialog';
 import { of } from 'rxjs';
 
 function makeAppSettingsMock(initial: Record<string, string> = {}) {

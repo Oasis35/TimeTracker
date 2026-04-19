@@ -64,6 +64,9 @@ public sealed class TicketsController : ControllerBase
         if (!Enum.IsDefined(dto.Type))
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketTypeRequired);
 
+        if (dto.Type == TicketType.ABSENT)
+            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketTypeNotAllowed);
+
         var type = dto.Type;
         var externalKey = string.IsNullOrWhiteSpace(dto.ExternalKey) ? null : dto.ExternalKey.Trim();
         var label = string.IsNullOrWhiteSpace(dto.Label) ? null : dto.Label.Trim();

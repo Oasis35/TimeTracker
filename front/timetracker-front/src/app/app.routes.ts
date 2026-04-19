@@ -4,7 +4,7 @@ export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'day',
+    redirectTo: 'month',
   },
   {
     path: 'maintenance',
@@ -18,6 +18,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/timesheet/timesheet-day-page/timesheet-day-page').then(
         (m) => m.TimesheetDayPageComponent,
+      ),
+  },
+  {
+    path: 'week',
+    loadComponent: () =>
+      import('./features/timesheet/timesheet-week-page/timesheet-week-page').then(
+        (m) => m.TimesheetWeekPageComponent,
       ),
   },
   {

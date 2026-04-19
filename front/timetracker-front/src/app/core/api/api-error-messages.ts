@@ -15,10 +15,13 @@ const API_ERROR_TRANSLATION_BY_CODE: Record<string, TranslationKey> = {
   TT_TICKET_NO_TIME_ENTRIES: 'ticket_no_time_entries',
   TT_TICKET_COMPLETED_LOCKED: 'ticket_completed_locked',
   TT_TICKET_ALREADY_EXISTS: 'ticket_already_exists',
+  TT_TICKET_TYPE_NOT_ALLOWED: 'ticket_type_not_allowed',
   TT_FILTER_YEAR_MONTH_REQUIRED: 'filter_year_month_required',
   TT_MINUTES_OUT_OF_RANGE: 'minutes_out_of_range',
   TT_STEP_15: 'minutes_step_15',
   TT_OVERFLOW_DAY: 'overflow_day',
+  TT_SETTING_KEY_INVALID: 'setting_key_invalid',
+  TT_SETTING_VALUE_REQUIRED: 'setting_value_required',
 };
 
 export function resolveApiErrorTranslationKey(

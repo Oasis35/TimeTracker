@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
-import { Component, Injectable, computed, effect, resource, signal } from '@angular/core';
+import { Component, DestroyRef, Injectable, computed, effect, inject, resource, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/datepicker';
@@ -21,9 +22,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
-import { catchError, firstValueFrom, of } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { TrackerApi } from '../../../core/api/tracker-api';
+import { PublicHolidaysService } from '../../../core/services/public-holidays.service';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
@@ -144,10 +146,6 @@ export class TimesheetDayPageComponent {
     loader: () => firstValueFrom(this.api.getTicketTotals()),
   });
 
-  readonly publicHolidaysRes = resource<Record<string, string>, number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getPublicHolidaysMetropole().pipe(catchError(() => of({})))),
-  });
 
   readonly pinnedTicketIds = signal<Set<number>>(new Set());
   readonly copyBusy = signal<boolean>(false);
@@ -310,14 +308,17 @@ export class TimesheetDayPageComponent {
     private readonly snackBar: MatSnackBar,
     private readonly route: ActivatedRoute,
     readonly unit: UnitService,
+    readonly publicHolidays: PublicHolidaysService,
   ) {
+    const destroyRef = inject(DestroyRef);
+    void publicHolidays.load();
     const initial =
       (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
-    this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(destroyRef)).subscribe((event: LangChangeEvent) => {
       this.language.set(event.lang as AppLanguage);
     });
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
       const date = params.get('date');
       if (!date) return;
       this.applyRouteDate(date);
@@ -381,7 +382,7 @@ export class TimesheetDayPageComponent {
 
   private shiftWorkday(delta: -1 | 1): void {
     const startIso = this.selectedDay() || this.todayIso;
-    const holidays = this.publicHolidaysRes.value() ?? {};
+    const holidays = this.publicHolidays.holidays() ?? {};
     let cursor = new Date(`${startIso}T00:00:00`);
 
     do {
@@ -440,7 +441,7 @@ export class TimesheetDayPageComponent {
   }
 
   private getPreviousWorkingDay(fromIso: string): string {
-    const holidays = this.publicHolidaysRes.value() ?? {};
+    const holidays = this.publicHolidays.holidays() ?? {};
     let cursor = new Date(`${fromIso}T00:00:00`);
     do {
       cursor.setDate(cursor.getDate() - 1);

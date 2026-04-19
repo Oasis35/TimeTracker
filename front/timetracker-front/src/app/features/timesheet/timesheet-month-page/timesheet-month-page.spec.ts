@@ -2,9 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { TimesheetMonthPageComponent } from './timesheet-month-page';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideRouter } from '@angular/router';
 
 describe('TimesheetMonthPageComponent', () => {
@@ -35,9 +36,6 @@ describe('TimesheetMonthPageComponent', () => {
 
   function setup(options?: { dialogResults?: unknown[] }) {
     const dialogResults = [...(options?.dialogResults ?? [false])];
-    const dialogOpen = vi.fn().mockImplementation(() => ({
-      afterClosed: () => of(dialogResults.shift() ?? false),
-    }));
 
     const apiMock = {
       getMetadata: vi.fn(() => of(baseMetadata)),
@@ -46,6 +44,7 @@ describe('TimesheetMonthPageComponent', () => {
         of([{ id: 1, type: 'DEV', externalKey: '64205', label: 'Securite API', isCompleted: false }]),
       ),
       getPublicHolidaysMetropole: vi.fn(() => of({ '2026-02-02': 'Lundi test' })),
+      getTicketTotals: vi.fn(() => of([{ ticketId: 1, type: 'DEV', externalKey: '64205', label: 'Securite API', total: 900 }])),
       upsertTimeEntry: vi.fn(() => of(void 0)),
       getSettings: vi.fn(() => of({})),
       setSetting: vi.fn(() => of(void 0)),
@@ -53,16 +52,21 @@ describe('TimesheetMonthPageComponent', () => {
     };
 
     TestBed.configureTestingModule({
-      imports: [TimesheetMonthPageComponent, TranslateModule.forRoot()],
+      imports: [TimesheetMonthPageComponent, MatDialogModule, TranslateModule.forRoot()],
       providers: [
         { provide: TrackerApi, useValue: apiMock },
-        { provide: MatDialog, useValue: { open: dialogOpen } },
+        provideAnimationsAsync(),
         provideRouter([]),
       ],
     });
 
     const fixture = TestBed.createComponent(TimesheetMonthPageComponent);
-    return { fixture, component: fixture.componentInstance, apiMock, dialogOpen };
+    const component = fixture.componentInstance;
+    const dialogOpen = vi.spyOn((component as any).dialog, 'open').mockImplementation(() => ({
+      afterClosed: () => of(dialogResults.shift() ?? false),
+    }) as any);
+
+    return { fixture, component, apiMock, dialogOpen };
   }
 
   it('renders monthly matrix with days and values', async () => {
@@ -77,15 +81,18 @@ describe('TimesheetMonthPageComponent', () => {
     expect(el.textContent).toContain('Securite API');
   });
 
-  it('alternates week block every 7 day columns', () => {
-    const { fixture } = setup();
-    const component = fixture.componentInstance;
+  it('alternates week block based on ISO week parity', async () => {
+    const { fixture, component } = setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
 
-    expect(component.isAlternateWeekBlock(0)).toBe(false);
-    expect(component.isAlternateWeekBlock(6)).toBe(false);
-    expect(component.isAlternateWeekBlock(7)).toBe(true);
-    expect(component.isAlternateWeekBlock(13)).toBe(true);
-    expect(component.isAlternateWeekBlock(14)).toBe(false);
+    // baseMonth has days: ['2026-02-01', '2026-02-02']
+    // 2026-02-01 = Sunday, ISO week 5 (odd)  → true
+    // 2026-02-02 = Monday, ISO week 6 (even) → false
+    expect(component.isAlternateWeekBlock(0)).toBe(true);
+    expect(component.isAlternateWeekBlock(1)).toBe(false);
+    // out-of-range index returns false
+    expect(component.isAlternateWeekBlock(99)).toBe(false);
   });
 
   it('computes correct month total across all tickets and days', async () => {

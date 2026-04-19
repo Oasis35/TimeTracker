@@ -18,12 +18,10 @@
           </a>
           <div class="title-block">
             <div class="title-line">
-              <h2>
-              {{ currentTicket.type }} {{ currentTicket.externalKey }}
+              <h2>{{ currentTicket.type }} {{ currentTicket.externalKey }}</h2>
               @if (currentTicket.externalKey) {
                 <app-ticket-ext-link [externalKey]="currentTicket.externalKey" />
               }
-            </h2>
               @if (isArchived()) {
                 <span class="badge-archived" [matTooltip]="'ticket_archived_readonly' | translate">
                   <mat-icon>lock</mat-icon>{{ 'ticket_archived_badge' | translate }}

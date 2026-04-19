@@ -71,7 +71,7 @@ Entites principales :
   - `TicketId`
   - `Date`
   - `QuantityMinutes`
-  - `Comment`
+  - `IsSeed`
 - `AppSetting`
   - `Key` (cle primaire, max 64 caracteres)
   - `Value` (max 512 caracteres)
@@ -80,6 +80,7 @@ Contraintes EF Core importantes :
 
 - index unique sur `(Ticket.Type, Ticket.ExternalKey)`
 - index unique sur `(TimeEntry.TicketId, TimeEntry.Date)`
+- index sur `TimeEntry.Date` (pour les requetes filtrées par date)
 - `DateOnly` stocke en `yyyy-MM-dd`
 - `QuantityMinutes` stocke en `INTEGER`
 

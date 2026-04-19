@@ -18,6 +18,15 @@
       <a
         mat-button
         class="nav-pill"
+        routerLink="/week"
+        routerLinkActive="nav-pill-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        {{ 'week' | translate }}
+      </a>
+      <a
+        mat-button
+        class="nav-pill"
         routerLink="/month"
         routerLinkActive="nav-pill-active"
         [routerLinkActiveOptions]="{ exact: true }"

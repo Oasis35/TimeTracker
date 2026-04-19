@@ -123,9 +123,6 @@
                     <a class="ticket-title ticket-link" [routerLink]="['/ticket', r.ticketId]">
                       {{ r.type }} {{ r.externalKey }}
                     </a>
-                    @if (r.externalKey) {
-                      <app-ticket-ext-link [externalKey]="r.externalKey" />
-                    }
                     @if (r.isCompleted) {
                       <span class="ticket-state ticket-state-completed">
                         {{ 'ticket_state_completed' | translate }}
@@ -136,6 +133,9 @@
                 </div>
 
                 <div class="ticket-meta">
+                  @if (r.externalKey) {
+                    <app-ticket-ext-link [externalKey]="r.externalKey" />
+                  }
                   <div class="week-total">
                     {{ 'total_ticket_row' | translate:{ value: formatEntryValue(r.ticketTotal) } }}
                   </div>

@@ -32,8 +32,32 @@
           >
             <mat-icon>calendar_month</mat-icon>
           </button>
+          <input
+            class="month-picker-input"
+            type="text"
+            [matDatepicker]="monthPicker"
+            [value]="selectedMonthDate()"
+            readonly
+            aria-hidden="true"
+            tabindex="-1"
+          />
+          <mat-datepicker
+            #monthPicker
+            startView="year"
+            [startAt]="selectedMonthDate()"
+            (monthSelected)="onMonthSelected($event, monthPicker)"
+          ></mat-datepicker>
         </div>
         <div class="header-right">
+          <button
+            mat-stroked-button
+            type="button"
+            [attr.aria-label]="'new_ticket' | translate"
+            (click)="openAddTicketDialog()"
+          >
+            <mat-icon>add</mat-icon>
+            {{ 'new_ticket' | translate }}
+          </button>
           <button
             mat-stroked-button
             type="button"
@@ -44,33 +68,8 @@
             <mat-icon>more_time</mat-icon>
             {{ 'log_time_dialog_title' | translate }}
           </button>
-          <button
-            mat-stroked-button
-            type="button"
-            [attr.aria-label]="'new_ticket' | translate"
-            (click)="openAddTicketDialog()"
-          >
-            <mat-icon>add</mat-icon>
-            {{ 'new_ticket' | translate }}
-          </button>
         </div>
       </div>
-      <input
-        class="month-picker-input"
-        type="text"
-        [matDatepicker]="monthPicker"
-        [value]="selectedMonthDate()"
-        readonly
-        aria-hidden="true"
-        tabindex="-1"
-      />
-      <mat-datepicker
-        #monthPicker
-        startView="year"
-        [startAt]="selectedMonthDate()"
-        (monthSelected)="onMonthSelected($event, monthPicker)"
-      ></mat-datepicker>
-
       <div class="table-wrap" [style.--sticky-col-type-width.px]="stickyTypeWidth()">
         <table>
           <colgroup>
@@ -78,16 +77,25 @@
             <col class="cg-number" />
             <col class="cg-label" />
             <col class="cg-total" />
+            <col class="cg-alltime" />
             @for (day of days(); track day) {
               <col class="cg-day" />
             }
           </colgroup>
           <thead>
+            <tr class="week-numbers-row">
+              <th #typeHeaderCell class="col-type" rowspan="2">{{ 'type' | translate }}</th>
+              <th class="col-number" rowspan="2">{{ 'external_key' | translate }}</th>
+              <th class="col-label" rowspan="2">{{ 'label' | translate }}</th>
+              <th class="col-total" rowspan="2">{{ 'month_total' | translate }}</th>
+              <th class="col-alltime" rowspan="2">{{ 'alltime_total' | translate }}</th>
+              @for (block of weekBlocks(); track block.week) {
+                <th class="col-week-number" [attr.colspan]="block.span">
+                  <a class="week-number-link" [routerLink]="['/week']" [queryParams]="{ year: block.weekYear, week: block.week }">S{{ block.week }}</a>
+                </th>
+              }
+            </tr>
             <tr>
-              <th #typeHeaderCell class="col-type">{{ 'type' | translate }}</th>
-              <th class="col-number">{{ 'external_key' | translate }}</th>
-              <th class="col-label">{{ 'label' | translate }}</th>
-                <th class="col-total">{{ 'month_total' | translate }}</th>
               @for (day of days(); track day; let dayIndex = $index) {
                 <th
                   class="col-day"
@@ -117,34 +125,48 @@
           <tbody>
             @if (rows().length === 0) {
               <tr>
-                <td class="empty-state" [attr.colspan]="days().length + 4">{{ 'month_view_empty' | translate }}</td>
+                <td class="empty-state" [attr.colspan]="days().length + 5">{{ 'month_view_empty' | translate }}</td>
               </tr>
             } @else {
               @for (row of rows(); track row.ticketId) {
                 <tr>
                   <td>{{ row.type }}</td>
                   <td>
-                    @if (row.externalKey) {
+                    @if (row.externalKey && buildExtUrl(row.externalKey)) {
                       <a
                         class="ticket-number-link"
-                        [routerLink]="['/ticket', row.ticketId]"
-                        [matTooltip]="getTicketAllTimeTooltip(row.ticketId)"
-                        [matTooltipDisabled]="!getTicketAllTimeTooltip(row.ticketId)"
+                        [href]="buildExtUrl(row.externalKey)"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        (click)="$event.stopPropagation()"
                       >
                         {{ row.externalKey }}
                       </a>
-                      <app-ticket-ext-link [externalKey]="row.externalKey" />
                     } @else {
-                      -
+                      {{ row.externalKey || '-' }}
                     }
                   </td>
-                  <td>{{ row.label || '-' }}</td>
+                  <td>
+                    <a
+                      class="ticket-label-link"
+                      [routerLink]="['/ticket', row.ticketId]"
+                    >
+                      {{ row.label || '-' }}
+                    </a>
+                  </td>
                   <td
                     class="num total-cell"
                     [class.value-active]="row.total > 0"
                     [class.value-zero]="row.total === 0"
                   >
                     {{ formatZeroAware(row.total) }}
+                  </td>
+                  <td
+                    class="num alltime-cell"
+                    [class.value-active]="(allTimeTotalsMap().get(row.ticketId) ?? 0) > 0"
+                    [class.value-zero]="(allTimeTotalsMap().get(row.ticketId) ?? 0) === 0"
+                  >
+                    {{ formatZeroAware(allTimeTotalsMap().get(row.ticketId) ?? 0) }}
                   </td>
                   @for (day of days(); track day; let dayIndex = $index) {
                     <td
@@ -175,6 +197,7 @@
               >
                 {{ formatZeroAware(monthTotal()) }}
               </td>
+              <td class="alltime-cell"></td>
               @for (day of days(); track day; let dayIndex = $index) {
                   <td
                     class="num"

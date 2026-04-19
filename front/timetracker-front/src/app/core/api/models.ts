@@ -1,8 +1,10 @@
 export type UnitMode = 'day' | 'hour';
 
+export type TicketType = 'DEV' | 'SUPPORT' | 'ABSENT';
+
 export interface TicketDto {
   id: number;
-  type: string;
+  type: TicketType;
   externalKey?: string | null;
   label?: string | null;
   isCompleted: boolean;
@@ -10,7 +12,7 @@ export interface TicketDto {
 
 export interface TicketTotalDto {
   ticketId: number;
-  type: string;
+  type: TicketType;
   externalKey: string;
   label: string;
   total: number;
@@ -30,7 +32,7 @@ export interface TicketDetailDto {
 }
 
 export interface CreateTicketDto {
-  type: string;
+  type: TicketType;
   externalKey?: string | null;
   label?: string | null;
 }
@@ -40,13 +42,13 @@ export interface TimesheetMetadataDto {
   allowedMinutesDayMode: number[];
   allowedMinutesHourMode: number[];
   defaultUnit: UnitMode;
-  defaultType: string;
+  defaultType: TicketType;
   tickets: TicketDto[];
 }
 
 export interface TimesheetRowDto {
   ticketId: number;
-  type: string;
+  type: TicketType;
   externalKey: string;
   label: string;
   values: Record<string, number>;

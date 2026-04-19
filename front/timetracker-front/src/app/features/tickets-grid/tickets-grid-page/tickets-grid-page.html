@@ -63,11 +63,17 @@
                   <a class="ticket-number-link" [routerLink]="['/ticket', row.id]">
                     {{ row.externalKey }}
                   </a>
-                  <app-ticket-ext-link [externalKey]="row.externalKey" />
                 } @else {
                   -
                 }
               }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="extLink">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let row">
+              <app-ticket-ext-link [externalKey]="row.externalKey" />
             </td>
           </ng-container>
 

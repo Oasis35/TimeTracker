@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, signal } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepicker, MatDatepickerModule } from '@angular/material/datepicker';
@@ -9,12 +10,14 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
-import { catchError, firstValueFrom, of } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { TrackerApi } from '../../../core/api/tracker-api';
+import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
+import { PublicHolidaysService } from '../../../core/services/public-holidays.service';
 import { TicketDto, TicketTotalDto, TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
-import { isWeekendIso } from '../../../core/utils/date-helpers';
+import { isWeekendIso, isoWeekNumber, isoWeekYear } from '../../../core/utils/date-helpers';
 import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
 import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
 import { showSnack } from '../../../core/utils/ui-helpers';
@@ -24,7 +27,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
 import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
-import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
+import { ExternalLinkService } from '../../../core/services/external-link.service';
 
 type MonthRequest = { y: number; m: number };
 
@@ -45,7 +48,6 @@ type MonthlyRow = TimesheetRowDto & { total: number };
     MatSnackBarModule,
     MatTooltipModule,
     RouterLink,
-    TicketExtLinkComponent,
     TranslateModule,
   ],
   providers: [{ provide: MAT_DATE_LOCALE, useValue: 'fr-FR' }],
@@ -88,13 +90,6 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     return new Map(totals.map((t) => [t.ticketId, t.total]));
   });
 
-  readonly publicHolidaysRes = resource<Record<string, string>, number>({
-    params: () => 0,
-    loader: () =>
-      firstValueFrom(
-        this.api.getPublicHolidaysMetropole().pipe(catchError(() => of({}))),
-      ),
-  });
 
   readonly loading = computed(
     () => this.metadataRes.isLoading() || this.monthRes.isLoading() || this.usedTicketsRes.isLoading(),
@@ -156,17 +151,21 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     private readonly dialog: MatDialog,
     private readonly snackBar: MatSnackBar,
     readonly unit: UnitService,
+    private readonly extLinkService: ExternalLinkService,
+    readonly publicHolidays: PublicHolidaysService,
   ) {
+    const destroyRef = inject(DestroyRef);
+    void publicHolidays.load();
     const initial = (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
-    this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(destroyRef)).subscribe((event: LangChangeEvent) => {
       this.language.set(event.lang as AppLanguage);
     });
-    this.translate.onLangChange.subscribe(() => {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(destroyRef)).subscribe(() => {
       this.dateAdapter.setLocale(this.dateLocale());
     });
     this.dateAdapter.setLocale(this.dateLocale());
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
       const year = Number(params.get('year'));
       const month = Number(params.get('month'));
       if (!Number.isInteger(year) || !Number.isInteger(month)) return;
@@ -212,6 +211,23 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     this.month.set(now.getMonth() + 1);
   }
 
+  readonly weekBlocks = computed<{ week: number; weekYear: number; span: number; startIndex: number }[]>(() => {
+    const days = this.days();
+    const blocks: { week: number; weekYear: number; span: number; startIndex: number }[] = [];
+    let current: { week: number; weekYear: number; span: number; startIndex: number } | null = null;
+    for (let i = 0; i < days.length; i++) {
+      const w = isoWeekNumber(days[i]);
+      const wy = isoWeekYear(days[i]);
+      if (!current || current.week !== w) {
+        current = { week: w, weekYear: wy, span: 1, startIndex: i };
+        blocks.push(current);
+      } else {
+        current.span++;
+      }
+    }
+    return blocks;
+  });
+
   dayLabel(dayIso: string): string {
     return dayIso.slice(-2);
   }
@@ -221,11 +237,11 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
   }
 
   isHolidayIso(dayIso: string): boolean {
-    return !!this.publicHolidaysRes.value()?.[dayIso];
+    return !!this.publicHolidays.holidays()?.[dayIso];
   }
 
   holidayLabel(dayIso: string): string {
-    return this.publicHolidaysRes.value()?.[dayIso] ?? '';
+    return this.publicHolidays.holidays()?.[dayIso] ?? '';
   }
 
   isSundayIso(dayIso: string): boolean {
@@ -233,7 +249,13 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
   }
 
   isAlternateWeekBlock(dayIndex: number): boolean {
-    return Math.floor(dayIndex / 7) % 2 === 1;
+    const days = this.days();
+    if (dayIndex >= days.length) return false;
+    return isoWeekNumber(days[dayIndex]) % 2 === 1;
+  }
+
+  buildExtUrl(externalKey: string): string {
+    return this.extLinkService.buildUrl(externalKey);
   }
 
   getTicketAllTimeTooltip(ticketId: number): string {
@@ -285,7 +307,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
       allTickets: this.allTicketsRes.value() ?? [],
       options: this.quickPickOptions(),
       dateLocale: this.dateLocale(),
-      publicHolidays: this.publicHolidaysRes.value() ?? {},
+      publicHolidays: this.publicHolidays.holidays() ?? {},
     };
     const dialogRef = this.dialog.open(LogTimeDialogComponent, {
       width: '460px',
@@ -300,6 +322,8 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
         showSnack(this.snackBar, this.translate.instant('time_saved'));
         this.monthRes.reload();
         this.usedTicketsRes.reload();
+      }).catch((error: unknown) => {
+        showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
       });
     });
   }
@@ -341,6 +365,8 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
       ).then(() => {
         this.monthRes.reload();
         this.usedTicketsRes.reload();
+      }).catch((error: unknown) => {
+        showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
       });
     });
   }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.Settings;
+using Tracker.Api.Infrastructure;
 using Tracker.Api.Models;
 
 namespace Tracker.Api.Controllers;
@@ -27,13 +28,19 @@ public sealed class SettingsController : ControllerBase
     public async Task<IActionResult> Upsert(string key, [FromBody] UpsertSettingDto dto)
     {
         if (string.IsNullOrWhiteSpace(key) || key.Length > 64)
-            return BadRequest("Invalid key.");
+            return ApiProblems.BadRequest(this, ApiErrorCodes.SettingKeyInvalid);
 
         if (dto.Value is null)
-            return BadRequest("Value is required.");
+            return ApiProblems.BadRequest(this, ApiErrorCodes.SettingValueRequired);
 
-        await _db.Database.ExecuteSqlAsync(
-            $"INSERT INTO AppSettings (Key, Value) VALUES ({key}, {dto.Value}) ON CONFLICT(Key) DO UPDATE SET Value = excluded.Value");
+        var updated = await _db.AppSettings
+            .Where(s => s.Key == key)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Value, dto.Value));
+
+        if (updated == 0)
+            _db.AppSettings.Add(new AppSetting { Key = key, Value = dto.Value });
+
+        await _db.SaveChangesAsync();
 
         return NoContent();
     }

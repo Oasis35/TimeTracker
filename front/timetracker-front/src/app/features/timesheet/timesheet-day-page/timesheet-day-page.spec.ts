@@ -65,6 +65,7 @@ describe('TimesheetDayPageComponent', () => {
       getSettings: vi.fn(() => of({})),
       setSetting: vi.fn(() => of(void 0)),
       deleteSetting: vi.fn(() => of(void 0)),
+      getPublicHolidaysMetropole: vi.fn(() => of({})),
     };
     TestBed.configureTestingModule({
       imports: [
@@ -192,6 +193,10 @@ describe('TimesheetDayPageComponent', () => {
           { ticketId: 2, type: 'DEV', externalKey: 'ABC-2', label: 'Ticket ABC-2', total: 60 },
         ]),
       upsertTimeEntry: () => of(void 0),
+      getSettings: () => of({}),
+      setSetting: () => of(void 0),
+      deleteSetting: () => of(void 0),
+      getPublicHolidaysMetropole: () => of({}),
     };
 
     TestBed.configureTestingModule({

@@ -12,6 +12,7 @@ public static class ApiErrorCodes
     public const string TicketCompletedLocked = "TT_TICKET_COMPLETED_LOCKED";
     public const string TicketAlreadyExists = "TT_TICKET_ALREADY_EXISTS";
     public const string TicketTypeRequired = "TT_TICKET_TYPE_REQUIRED";
+    public const string TicketTypeNotAllowed = "TT_TICKET_TYPE_NOT_ALLOWED";
     public const string TicketLabelRequired = "TT_TICKET_LABEL_REQUIRED";
     public const string BackupFileMissing = "TT_BACKUP_FILE_MISSING";
     public const string BackupFileInvalid = "TT_BACKUP_FILE_INVALID";
@@ -19,4 +20,6 @@ public static class ApiErrorCodes
     public const string MinutesOutOfRange = "TT_MINUTES_OUT_OF_RANGE";
     public const string Step15 = "TT_STEP_15";
     public const string OverflowDay = "TT_OVERFLOW_DAY";
+    public const string SettingKeyInvalid = "TT_SETTING_KEY_INVALID";
+    public const string SettingValueRequired = "TT_SETTING_VALUE_REQUIRED";
 }

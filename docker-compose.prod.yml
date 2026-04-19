@@ -17,6 +17,12 @@ services:
     volumes:
       - tracker-data:/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/timesheet/metadata"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
 volumes:
   tracker-data:
