@@ -88,6 +88,8 @@
   "minutes_out_of_range": "La quantité de minutes est hors bornes.",
   "minutes_step_15": "La quantité de minutes doit respecter un pas de 15.",
   "overflow_day": "Le total du jour dépasse la limite autorisée.",
+  "setting_key_invalid": "Clé de paramètre invalide.",
+  "setting_value_required": "La valeur du paramètre est requise.",
   "ticket_saved": "Ticket enregistré.",
   "ticket_updated": "Ticket mis à jour.",
   "ticket_deleted": "Ticket supprimé.",

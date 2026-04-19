@@ -279,29 +279,26 @@ public sealed class TicketsControllerTests
     }
 
     [Fact]
-    public async Task Create_Should_Return_Existing_When_Type_And_ExternalKey_Already_Exist()
+    public async Task Create_Should_Reject_When_ExternalKey_Already_Exists()
     {
         var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
         await using var _ = db;
         await using var __ = conn;
 
-        var existing = new Ticket { Type = TicketType.SUPPORT, ExternalKey = "ABC-123", Label = "Old label" };
-        db.Tickets.Add(existing);
+        db.Tickets.Add(new Ticket { Type = TicketType.SUPPORT, ExternalKey = "ABC-123", Label = "Old label" });
         await db.SaveChangesAsync();
 
         var controller = new TicketsController(db);
 
-        // Label différent -> doit retourner l'existant, sans créer un doublon
         var result = await controller.Create(new SaveTicketDto(
             Type: TicketType.SUPPORT,
             ExternalKey: "ABC-123",
             Label: "New label"));
 
-        var ok = Assert.IsType<OkObjectResult>(result.Result);
-        var dto = Assert.IsType<TicketDto>(ok.Value);
-
-        Assert.Equal(existing.Id, dto.Id);
-        Assert.Equal("Old label", dto.Label);
+        var badRequest = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(400, badRequest.StatusCode);
+        var error = Assert.IsType<ApiErrorResponse>(badRequest.Value);
+        Assert.Equal(ApiErrorCodes.TicketAlreadyExists, error.Code);
 
         Assert.Equal(1, db.Tickets.Count());
     }

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, computed, signal } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepicker, MatDatepickerModule } from '@angular/material/datepicker';
@@ -9,8 +10,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
-import { catchError, firstValueFrom, of } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { TrackerApi } from '../../../core/api/tracker-api';
+import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
+import { PublicHolidaysService } from '../../../core/services/public-holidays.service';
 import { TicketDto, TicketTotalDto, TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
@@ -87,13 +90,6 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     return new Map(totals.map((t) => [t.ticketId, t.total]));
   });
 
-  readonly publicHolidaysRes = resource<Record<string, string>, number>({
-    params: () => 0,
-    loader: () =>
-      firstValueFrom(
-        this.api.getPublicHolidaysMetropole().pipe(catchError(() => of({}))),
-      ),
-  });
 
   readonly loading = computed(
     () => this.metadataRes.isLoading() || this.monthRes.isLoading() || this.usedTicketsRes.isLoading(),
@@ -156,17 +152,20 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     private readonly snackBar: MatSnackBar,
     readonly unit: UnitService,
     private readonly extLinkService: ExternalLinkService,
+    readonly publicHolidays: PublicHolidaysService,
   ) {
+    const destroyRef = inject(DestroyRef);
+    void publicHolidays.load();
     const initial = (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
-    this.translate.onLangChange.subscribe((event: LangChangeEvent) => {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(destroyRef)).subscribe((event: LangChangeEvent) => {
       this.language.set(event.lang as AppLanguage);
     });
-    this.translate.onLangChange.subscribe(() => {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(destroyRef)).subscribe(() => {
       this.dateAdapter.setLocale(this.dateLocale());
     });
     this.dateAdapter.setLocale(this.dateLocale());
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
       const year = Number(params.get('year'));
       const month = Number(params.get('month'));
       if (!Number.isInteger(year) || !Number.isInteger(month)) return;
@@ -238,11 +237,11 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
   }
 
   isHolidayIso(dayIso: string): boolean {
-    return !!this.publicHolidaysRes.value()?.[dayIso];
+    return !!this.publicHolidays.holidays()?.[dayIso];
   }
 
   holidayLabel(dayIso: string): string {
-    return this.publicHolidaysRes.value()?.[dayIso] ?? '';
+    return this.publicHolidays.holidays()?.[dayIso] ?? '';
   }
 
   isSundayIso(dayIso: string): boolean {
@@ -308,7 +307,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
       allTickets: this.allTicketsRes.value() ?? [],
       options: this.quickPickOptions(),
       dateLocale: this.dateLocale(),
-      publicHolidays: this.publicHolidaysRes.value() ?? {},
+      publicHolidays: this.publicHolidays.holidays() ?? {},
     };
     const dialogRef = this.dialog.open(LogTimeDialogComponent, {
       width: '460px',
@@ -323,6 +322,8 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
         showSnack(this.snackBar, this.translate.instant('time_saved'));
         this.monthRes.reload();
         this.usedTicketsRes.reload();
+      }).catch((error: unknown) => {
+        showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
       });
     });
   }
@@ -364,6 +365,8 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
       ).then(() => {
         this.monthRes.reload();
         this.usedTicketsRes.reload();
+      }).catch((error: unknown) => {
+        showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
       });
     });
   }

@@ -77,6 +77,8 @@ export const TRANSLATION_KEYS = [
   'minutes_out_of_range',
   'minutes_step_15',
   'overflow_day',
+  'setting_key_invalid',
+  'setting_value_required',
   'ticket_saved',
   'ticket_updated',
   'ticket_deleted',

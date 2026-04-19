@@ -10,15 +10,24 @@
     <mat-card class="sheet-card">
       <div class="header-row">
         <div class="header-left">
-          <button mat-stroked-button type="button" class="icon-only-btn" [matTooltip]="'new_ticket' | translate" (click)="openAddTicketDialog()">
-            <mat-icon>add</mat-icon>
-          </button>
-          <button mat-stroked-button type="button" class="icon-only-btn" [matTooltip]="'log_time_dialog_title' | translate" (click)="openLogTimeDialog()">
-            <mat-icon>more_time</mat-icon>
-          </button>
+          <div class="week-nav">
+            <button mat-icon-button type="button" class="week-nav-btn" [matTooltip]="'week_previous' | translate" (click)="prevWeek()">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <button class="week-nav-label" [disabled]="isCurrentWeek()" (click)="goToCurrentWeek()">
+              <mat-icon>today</mat-icon>
+            </button>
+            <button mat-icon-button type="button" class="week-nav-btn" [matTooltip]="'week_next' | translate" (click)="nextWeek()">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
         </div>
         <div class="header-center">
-          <h2>S{{ isoWeek() }}</h2>
+          <h2>
+            <span>S{{ isoWeek() }}</span>
+            <span class="week-separator"> · </span>
+            <a class="month-link" [routerLink]="['/month']" [queryParams]="monthNavParams()">{{ monthLabel() }}</a>
+          </h2>
           <button
             mat-icon-button
             type="button"
@@ -46,17 +55,12 @@
           ></mat-datepicker>
         </div>
         <div class="header-right">
-          <div class="week-nav">
-            <button mat-icon-button type="button" class="week-nav-btn" [matTooltip]="'week_previous' | translate" (click)="prevWeek()">
-              <mat-icon>chevron_left</mat-icon>
-            </button>
-            <button class="week-nav-label" [disabled]="isCurrentWeek()" (click)="goToCurrentWeek()">
-              {{ 'week_today_short' | translate }}
-            </button>
-            <button mat-icon-button type="button" class="week-nav-btn" [matTooltip]="'week_next' | translate" (click)="nextWeek()">
-              <mat-icon>chevron_right</mat-icon>
-            </button>
-          </div>
+          <button mat-icon-button type="button" [matTooltip]="'new_ticket' | translate" (click)="openAddTicketDialog()">
+            <mat-icon>add</mat-icon>
+          </button>
+          <button mat-icon-button type="button" [matTooltip]="'log_time_dialog_title' | translate" (click)="openLogTimeDialog()">
+            <mat-icon>more_time</mat-icon>
+          </button>
         </div>
       </div>
 
@@ -122,6 +126,15 @@
                 @for (col of ticketCols(); track col.ticketId) {
                   <td class="cell-value cell-total" [class.value-active]="(colTotals().get(col.ticketId) ?? 0) > 0" [class.value-zero]="!(colTotals().get(col.ticketId) ?? 0)">
                     {{ formatZeroAware(colTotals().get(col.ticketId) ?? 0) }}
+                  </td>
+                }
+              </tr>
+              <tr class="row-alltime">
+                <td class="foot-label">{{ 'week_alltime_total' | translate }}</td>
+                <td class="cell-total"></td>
+                @for (col of ticketCols(); track col.ticketId) {
+                  <td class="cell-value cell-alltime" [class.value-active]="(allTimeTotalsMap().get(col.ticketId) ?? 0) > 0" [class.value-zero]="!(allTimeTotalsMap().get(col.ticketId) ?? 0)">
+                    {{ formatZeroAware(allTimeTotalsMap().get(col.ticketId) ?? 0) }}
                   </td>
                 }
               </tr>

@@ -77,7 +77,7 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
     [InlineData(481)]
     public async Task Upsert_Should_Reject_Invalid_Minutes(int minutes)
     {
-        var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "U-6", "U-6");
+        var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, $"U-INV-{minutes}", $"U-INV-{minutes}");
 
         var r = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-26", minutes);
         Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);

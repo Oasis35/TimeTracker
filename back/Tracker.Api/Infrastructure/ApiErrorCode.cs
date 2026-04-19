@@ -20,4 +20,6 @@ public static class ApiErrorCodes
     public const string MinutesOutOfRange = "TT_MINUTES_OUT_OF_RANGE";
     public const string Step15 = "TT_STEP_15";
     public const string OverflowDay = "TT_OVERFLOW_DAY";
+    public const string SettingKeyInvalid = "TT_SETTING_KEY_INVALID";
+    public const string SettingValueRequired = "TT_SETTING_VALUE_REQUIRED";
 }

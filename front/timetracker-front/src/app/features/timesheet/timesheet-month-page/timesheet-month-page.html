@@ -10,24 +10,14 @@
     <mat-card class="month-card">
       <div class="header-row">
         <div class="header-left">
-          <button
-            mat-stroked-button
-            type="button"
-            [attr.aria-label]="'new_ticket' | translate"
-            (click)="openAddTicketDialog()"
-          >
-            <mat-icon>add</mat-icon>
-            {{ 'new_ticket' | translate }}
+          <button mat-stroked-button type="button" (click)="prevMonth()">
+            {{ 'month_previous' | translate }}
           </button>
-          <button
-            mat-stroked-button
-            type="button"
-            [matTooltip]="'log_time_dialog_title' | translate"
-            [attr.aria-label]="'log_time_dialog_title' | translate"
-            (click)="openLogTimeDialog()"
-          >
-            <mat-icon>more_time</mat-icon>
-            {{ 'log_time_dialog_title' | translate }}
+          <button mat-stroked-button type="button" (click)="goToCurrentMonth()" [disabled]="isCurrentMonth()">
+            {{ 'month_current' | translate }}
+          </button>
+          <button mat-stroked-button type="button" (click)="nextMonth()">
+            {{ 'month_next' | translate }}
           </button>
         </div>
         <div class="header-center">
@@ -59,14 +49,24 @@
           ></mat-datepicker>
         </div>
         <div class="header-right">
-          <button mat-stroked-button type="button" (click)="prevMonth()">
-            {{ 'month_previous' | translate }}
+          <button
+            mat-stroked-button
+            type="button"
+            [attr.aria-label]="'new_ticket' | translate"
+            (click)="openAddTicketDialog()"
+          >
+            <mat-icon>add</mat-icon>
+            {{ 'new_ticket' | translate }}
           </button>
-          <button mat-stroked-button type="button" (click)="goToCurrentMonth()" [disabled]="isCurrentMonth()">
-            {{ 'month_current' | translate }}
-          </button>
-          <button mat-stroked-button type="button" (click)="nextMonth()">
-            {{ 'month_next' | translate }}
+          <button
+            mat-stroked-button
+            type="button"
+            [matTooltip]="'log_time_dialog_title' | translate"
+            [attr.aria-label]="'log_time_dialog_title' | translate"
+            (click)="openLogTimeDialog()"
+          >
+            <mat-icon>more_time</mat-icon>
+            {{ 'log_time_dialog_title' | translate }}
           </button>
         </div>
       </div>

@@ -20,6 +20,8 @@ const API_ERROR_TRANSLATION_BY_CODE: Record<string, TranslationKey> = {
   TT_MINUTES_OUT_OF_RANGE: 'minutes_out_of_range',
   TT_STEP_15: 'minutes_step_15',
   TT_OVERFLOW_DAY: 'overflow_day',
+  TT_SETTING_KEY_INVALID: 'setting_key_invalid',
+  TT_SETTING_VALUE_REQUIRED: 'setting_value_required',
 };
 
 export function resolveApiErrorTranslationKey(

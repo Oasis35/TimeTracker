@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, Injectable, OnDestroy, resource, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, Injectable, resource, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule, NativeDateAdapter } from '@angular/material/core';
@@ -10,10 +11,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
-import { catchError, firstValueFrom, of } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TrackerApi } from '../../../core/api/tracker-api';
-import { TicketDto, TicketTotalDto, TimesheetMetadataDto, TimesheetMonthDto } from '../../../core/api/models';
+import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
+import { PublicHolidaysService } from '../../../core/services/public-holidays.service';
+import { TicketDto, TicketTotalDto, TicketType, TimesheetMetadataDto, TimesheetMonthDto } from '../../../core/api/models';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { ExternalLinkService } from '../../../core/services/external-link.service';
@@ -34,7 +37,7 @@ type MonthKey = { y: number; m: number };
 
 export interface WeekTicketCol {
   ticketId: number;
-  type: string;
+  type: TicketType;
   externalKey: string;
   label: string;
 }
@@ -73,9 +76,8 @@ export interface WeekDayRow {
     { provide: DateAdapter, useClass: IsoMondayDateAdapter },
   ],
 })
-export class TimesheetWeekPageComponent implements OnDestroy {
+export class TimesheetWeekPageComponent {
   private readonly now = new Date();
-  private readonly langSub;
 
   private readonly api = inject(TrackerApi);
   private readonly translate = inject(TranslateService);
@@ -84,6 +86,7 @@ export class TimesheetWeekPageComponent implements OnDestroy {
   private readonly snackBar = inject(MatSnackBar);
   readonly unit = inject(UnitService);
   private readonly extLinkService = inject(ExternalLinkService);
+  readonly publicHolidays = inject(PublicHolidaysService);
 
   readonly isoWeek = signal<number>(isoWeekNumber(this.todayIso()));
   readonly weekYear = signal<number>(isoWeekYear(this.todayIso()));
@@ -95,7 +98,7 @@ export class TimesheetWeekPageComponent implements OnDestroy {
   });
 
   readonly pickerDateFilter = computed(() => {
-    const holidays = this.publicHolidaysRes.value() ?? {};
+    const holidays = this.publicHolidays.holidays() ?? {};
     return (date: Date | null): boolean => {
       if (!date) return false;
       const iso = toIsoDate(date);
@@ -138,11 +141,6 @@ export class TimesheetWeekPageComponent implements OnDestroy {
     return new Map(totals.map((t) => [t.ticketId, t.total]));
   });
 
-  readonly publicHolidaysRes = resource<Record<string, string>, number>({
-    params: () => 0,
-    loader: () =>
-      firstValueFrom(this.api.getPublicHolidaysMetropole().pipe(catchError(() => of({})))),
-  });
 
   readonly loading = computed(
     () => this.metadataRes.isLoading() || this.month1Res.isLoading() || this.month2Res.isLoading(),
@@ -185,7 +183,7 @@ export class TimesheetWeekPageComponent implements OnDestroy {
     const days = this.days();
     const cols = this.ticketCols();
     const months = [this.month1Res.value(), this.month2Res.value()].filter(Boolean) as TimesheetMonthDto[];
-    const holidays = this.publicHolidaysRes.value() ?? {};
+    const holidays = this.publicHolidays.holidays() ?? {};
 
     // Build lookup: ticketId → row values
     const rowsByTicket = new Map<number, Record<string, number>>();
@@ -247,13 +245,27 @@ export class TimesheetWeekPageComponent implements OnDestroy {
 
   readonly isCurrentWeek = computed(() => this.days().includes(this.todayIso()));
 
+  readonly monthNavParams = computed(() => {
+    const [y, m] = this.days()[0].split('-').map(Number);
+    return { year: y, month: m };
+  });
+
+  readonly monthLabel = computed(() => {
+    const [y, m] = this.days()[0].split('-').map(Number);
+    const date = new Date(y, m - 1, 1);
+    const s = new Intl.DateTimeFormat(this.dateLocale(), { month: 'short', year: '2-digit' }).format(date);
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  });
+
   constructor() {
+    const destroyRef = inject(DestroyRef);
+    void this.publicHolidays.load();
     const initial = (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
-    this.langSub = this.translate.onLangChange.subscribe((e: LangChangeEvent) => {
+    this.translate.onLangChange.pipe(takeUntilDestroyed(destroyRef)).subscribe((e: LangChangeEvent) => {
       this.language.set(e.lang as AppLanguage);
     });
-    this.route.queryParamMap.subscribe((params) => {
+    this.route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
       const week = Number(params.get('week'));
       const year = Number(params.get('year'));
       if (!Number.isInteger(week) || !Number.isInteger(year)) return;
@@ -261,10 +273,6 @@ export class TimesheetWeekPageComponent implements OnDestroy {
       this.isoWeek.set(week);
       this.weekYear.set(year);
     });
-  }
-
-  ngOnDestroy(): void {
-    this.langSub.unsubscribe();
   }
 
   prevWeek(): void { this.shiftWeek(-1); }
@@ -318,7 +326,10 @@ export class TimesheetWeekPageComponent implements OnDestroy {
         if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
         void firstValueFrom(
           this.api.upsertTimeEntry({ ticketId: col.ticketId, date: row.iso, quantityMinutes: minutes }),
-        ).then(() => this.reloadMonths());
+        ).then(() => this.reloadMonths())
+         .catch((error: unknown) => {
+           showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
+         });
       });
   }
 
@@ -345,7 +356,7 @@ export class TimesheetWeekPageComponent implements OnDestroy {
       allTickets: this.allTicketsRes.value() ?? [],
       options: this.quickPickOptions(),
       dateLocale: this.dateLocale(),
-      publicHolidays: this.publicHolidaysRes.value() ?? {},
+      publicHolidays: this.publicHolidays.holidays() ?? {},
     };
     this.dialog.open(LogTimeDialogComponent, { width: '460px', maxWidth: '95vw', data })
       .afterClosed().subscribe((result: LogTimeDialogResult | undefined) => {
@@ -355,6 +366,8 @@ export class TimesheetWeekPageComponent implements OnDestroy {
         ).then(() => {
           showSnack(this.snackBar, this.translate.instant('time_saved'));
           this.reloadMonths();
+        }).catch((error: unknown) => {
+          showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
         });
       });
   }
@@ -375,7 +388,10 @@ export class TimesheetWeekPageComponent implements OnDestroy {
         if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
         void firstValueFrom(
           this.api.upsertTimeEntry({ ticketId: ticket.id, date: iso, quantityMinutes: minutes }),
-        ).then(() => this.reloadMonths());
+        ).then(() => this.reloadMonths())
+         .catch((error: unknown) => {
+           showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
+         });
       });
   }
 
