@@ -159,5 +159,6 @@
   "entry_dialog_add_title": "Nouvelle saisie",
   "entry_dialog_edit_title": "Modifier la saisie",
   "entry_dialog_date": "Date",
-  "entry_dialog_quantity": "Temps"
+  "entry_dialog_quantity": "Temps",
+  "week_alltime_total": "Total ticket"
 }

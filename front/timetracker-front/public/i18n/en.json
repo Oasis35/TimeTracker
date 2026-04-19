@@ -159,5 +159,6 @@
   "entry_dialog_add_title": "New entry",
   "entry_dialog_edit_title": "Edit entry",
   "entry_dialog_date": "Date",
-  "entry_dialog_quantity": "Time"
+  "entry_dialog_quantity": "Time",
+  "week_alltime_total": "Ticket total"
 }
