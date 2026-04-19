@@ -172,6 +172,10 @@ th {
   width: max-content;
 }
 
+.cg-alltime {
+  width: max-content;
+}
+
 .cg-day {
   width: min-content;
 }
@@ -201,8 +205,8 @@ th.col-day {
 }
 
 th.col-day,
-tbody td:nth-child(n + 5),
-tfoot td:nth-child(n + 5) {
+tbody td:nth-child(n + 6),
+tfoot td:nth-child(n + 6) {
   padding-inline: 0.34rem;
 }
 
@@ -256,6 +260,24 @@ tfoot td:nth-child(n + 5) {
 th.col-total {
   border-left: 1px solid color-mix(in srgb, var(--mat-sys-outline) 66%, transparent);
   background: color-mix(in srgb, var(--mat-sys-primary-container) 20%, var(--mat-sys-surface));
+  font-weight: 700;
+}
+
+td.alltime-cell,
+th.col-alltime {
+  border-left: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 52%, transparent);
+  background: color-mix(in srgb, var(--mat-sys-secondary-container) 18%, var(--mat-sys-surface));
+  font-weight: 600;
+  text-align: center;
+  width: 1%;
+  min-width: max-content;
+}
+
+th.col-alltime,
+th.col-total {
+  white-space: normal;
+  max-width: 4rem;
+  color: color-mix(in srgb, var(--mat-sys-primary) 85%, var(--mat-sys-on-surface));
   font-weight: 700;
 }
 
@@ -417,4 +439,31 @@ td.empty-state {
   padding: 1rem;
   text-align: center;
   color: color-mix(in srgb, var(--mat-sys-on-surface) 70%, transparent);
+}
+
+.week-numbers-row th {
+  padding-block: 0.18rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--mat-sys-on-surface) 52%, transparent);
+  border-bottom: none;
+}
+
+th.col-week-number {
+  text-align: center;
+  border-right: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 40%, transparent);
+  padding-inline: 0.2rem;
+}
+
+.week-number-link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 120ms ease, border-color 120ms ease;
+
+  &:hover {
+    color: var(--mat-sys-primary);
+    border-bottom-color: color-mix(in srgb, var(--mat-sys-primary) 44%, transparent);
+  }
 }

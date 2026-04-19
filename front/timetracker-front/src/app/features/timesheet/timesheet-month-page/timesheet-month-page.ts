@@ -14,7 +14,7 @@ import { TrackerApi } from '../../../core/api/tracker-api';
 import { TicketDto, TicketTotalDto, TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
-import { isWeekendIso } from '../../../core/utils/date-helpers';
+import { isWeekendIso, isoWeekNumber, isoWeekYear } from '../../../core/utils/date-helpers';
 import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
 import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
 import { showSnack } from '../../../core/utils/ui-helpers';
@@ -212,6 +212,23 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     this.month.set(now.getMonth() + 1);
   }
 
+  readonly weekBlocks = computed<{ week: number; weekYear: number; span: number; startIndex: number }[]>(() => {
+    const days = this.days();
+    const blocks: { week: number; weekYear: number; span: number; startIndex: number }[] = [];
+    let current: { week: number; weekYear: number; span: number; startIndex: number } | null = null;
+    for (let i = 0; i < days.length; i++) {
+      const w = isoWeekNumber(days[i]);
+      const wy = isoWeekYear(days[i]);
+      if (!current || current.week !== w) {
+        current = { week: w, weekYear: wy, span: 1, startIndex: i };
+        blocks.push(current);
+      } else {
+        current.span++;
+      }
+    }
+    return blocks;
+  });
+
   dayLabel(dayIso: string): string {
     return dayIso.slice(-2);
   }
@@ -233,7 +250,9 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
   }
 
   isAlternateWeekBlock(dayIndex: number): boolean {
-    return Math.floor(dayIndex / 7) % 2 === 1;
+    const days = this.days();
+    if (dayIndex >= days.length) return false;
+    return isoWeekNumber(days[dayIndex]) % 2 === 1;
   }
 
   buildExtUrl(externalKey: string): string {

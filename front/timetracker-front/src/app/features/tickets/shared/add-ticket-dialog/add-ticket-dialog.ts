@@ -27,7 +27,7 @@ import { TrackerApi } from '../../../../core/api/tracker-api';
   styleUrl: './add-ticket-dialog.scss',
 })
 export class AddTicketDialogComponent {
-  readonly ticketTypeOptions: readonly string[] = ['DEV', 'SUPPORT', 'CONGES'];
+  readonly ticketTypeOptions: readonly string[] = ['DEV', 'SUPPORT'];
   readonly busy = signal<boolean>(false);
   readonly actionError = signal<string>('');
 

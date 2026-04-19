@@ -1,0 +1,134 @@
+<div class="page-shell">
+  @if (loading()) {
+    <div class="loading-wrap">
+      <mat-progress-spinner mode="indeterminate" diameter="36"></mat-progress-spinner>
+      <span>{{ 'loading' | translate }}</span>
+    </div>
+  } @else if (error(); as err) {
+    <div class="error">{{ err }}</div>
+  } @else {
+    <mat-card class="sheet-card">
+      <div class="header-row">
+        <div class="header-left">
+          <button mat-stroked-button type="button" class="icon-only-btn" [matTooltip]="'new_ticket' | translate" (click)="openAddTicketDialog()">
+            <mat-icon>add</mat-icon>
+          </button>
+          <button mat-stroked-button type="button" class="icon-only-btn" [matTooltip]="'log_time_dialog_title' | translate" (click)="openLogTimeDialog()">
+            <mat-icon>more_time</mat-icon>
+          </button>
+        </div>
+        <div class="header-center">
+          <h2>S{{ isoWeek() }}</h2>
+          <button
+            mat-icon-button
+            type="button"
+            class="week-picker-btn"
+            [matTooltip]="'week' | translate"
+            (click)="weekPicker.open()"
+          >
+            <mat-icon>calendar_month</mat-icon>
+          </button>
+          <input
+            class="week-picker-input"
+            type="text"
+            [matDatepicker]="weekPicker"
+            [value]="selectedWeekDate()"
+            [matDatepickerFilter]="pickerDateFilter()"
+            (dateInput)="onDateSelected($event.value, weekPicker)"
+            readonly
+            aria-hidden="true"
+            tabindex="-1"
+          />
+          <mat-datepicker
+            #weekPicker
+            startView="month"
+            [startAt]="selectedWeekDate()"
+          ></mat-datepicker>
+        </div>
+        <div class="header-right">
+          <div class="week-nav">
+            <button mat-icon-button type="button" class="week-nav-btn" [matTooltip]="'week_previous' | translate" (click)="prevWeek()">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <button class="week-nav-label" [disabled]="isCurrentWeek()" (click)="goToCurrentWeek()">
+              {{ 'week_today_short' | translate }}
+            </button>
+            <button mat-icon-button type="button" class="week-nav-btn" [matTooltip]="'week_next' | translate" (click)="nextWeek()">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        @if (ticketCols().length === 0) {
+          <p class="empty-state">{{ 'week_view_empty' | translate }}</p>
+        } @else {
+          <table>
+            <thead>
+              <tr>
+                <th class="col-day-header">{{ 'day_label' | translate }}</th>
+                <th class="col-total">{{ 'week_day_total' | translate }}</th>
+                @for (col of ticketCols(); track col.ticketId) {
+                  <th class="col-ticket" [matTooltip]="col.label" matTooltipPosition="above">
+                    @if (col.externalKey && buildExtUrl(col.externalKey)) {
+                      <a class="ticket-key-link" [href]="buildExtUrl(col.externalKey)" target="_blank" rel="noopener noreferrer" (click)="$event.stopPropagation()">
+                        {{ col.type }} {{ col.externalKey }}
+                      </a>
+                    } @else if (col.externalKey) {
+                      <span class="ticket-key">{{ col.type }} {{ col.externalKey }}</span>
+                    } @else {
+                      <a class="ticket-label-link" [routerLink]="['/ticket', col.ticketId]">{{ col.label || '-' }}</a>
+                    }
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of dayRows(); track row.iso) {
+                @if (!row.isWeekend) {
+                <tr [class.row-holiday]="row.isHoliday" [class.row-today]="row.iso === todayIso()">
+                  <td class="cell-day">
+                    @if (!row.isHoliday) {
+                      <a class="day-link" [routerLink]="['/day']" [queryParams]="{ date: row.iso }">{{ row.dayLabel }}</a>
+                    } @else {
+                      <span class="day-label-text" [matTooltip]="row.holidayLabel">{{ row.dayLabel }}</span>
+                    }
+                  </td>
+                  <td class="cell-total" [class.value-active]="row.total > 0" [class.value-zero]="row.total === 0">
+                    {{ formatZeroAware(row.total) }}
+                  </td>
+                  @for (col of ticketCols(); track col.ticketId) {
+                    <td
+                      class="cell-value"
+                      [class.cell-clickable]="!row.isWeekend && !row.isHoliday"
+                      [class.value-active]="(row.values.get(col.ticketId) ?? 0) > 0"
+                      [class.value-zero]="!(row.values.get(col.ticketId) ?? 0)"
+                      (click)="onCellClick(row, col)"
+                    >
+                      {{ formatZeroAware(row.values.get(col.ticketId) ?? 0) }}
+                    </td>
+                  }
+                </tr>
+                }
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="foot-label">{{ 'week_total' | translate }}</td>
+                <td class="cell-total grand-total" [class.value-active]="weekTotal() > 0">
+                  {{ formatZeroAware(weekTotal()) }}
+                </td>
+                @for (col of ticketCols(); track col.ticketId) {
+                  <td class="cell-value cell-total" [class.value-active]="(colTotals().get(col.ticketId) ?? 0) > 0" [class.value-zero]="!(colTotals().get(col.ticketId) ?? 0)">
+                    {{ formatZeroAware(colTotals().get(col.ticketId) ?? 0) }}
+                  </td>
+                }
+              </tr>
+            </tfoot>
+          </table>
+        }
+      </div>
+    </mat-card>
+  }
+</div>

@@ -46,6 +46,7 @@ describe('TimesheetMonthPageComponent', () => {
         of([{ id: 1, type: 'DEV', externalKey: '64205', label: 'Securite API', isCompleted: false }]),
       ),
       getPublicHolidaysMetropole: vi.fn(() => of({ '2026-02-02': 'Lundi test' })),
+      getTicketTotals: vi.fn(() => of([{ ticketId: 1, type: 'DEV', externalKey: '64205', label: 'Securite API', total: 900 }])),
       upsertTimeEntry: vi.fn(() => of(void 0)),
       getSettings: vi.fn(() => of({})),
       setSetting: vi.fn(() => of(void 0)),
@@ -77,15 +78,18 @@ describe('TimesheetMonthPageComponent', () => {
     expect(el.textContent).toContain('Securite API');
   });
 
-  it('alternates week block every 7 day columns', () => {
-    const { fixture } = setup();
-    const component = fixture.componentInstance;
+  it('alternates week block based on ISO week parity', async () => {
+    const { fixture, component } = setup();
+    fixture.detectChanges();
+    await fixture.whenStable();
 
-    expect(component.isAlternateWeekBlock(0)).toBe(false);
-    expect(component.isAlternateWeekBlock(6)).toBe(false);
-    expect(component.isAlternateWeekBlock(7)).toBe(true);
-    expect(component.isAlternateWeekBlock(13)).toBe(true);
-    expect(component.isAlternateWeekBlock(14)).toBe(false);
+    // baseMonth has days: ['2026-02-01', '2026-02-02']
+    // 2026-02-01 = Sunday, ISO week 5 (odd)  → true
+    // 2026-02-02 = Monday, ISO week 6 (even) → false
+    expect(component.isAlternateWeekBlock(0)).toBe(true);
+    expect(component.isAlternateWeekBlock(1)).toBe(false);
+    // out-of-range index returns false
+    expect(component.isAlternateWeekBlock(99)).toBe(false);
   });
 
   it('computes correct month total across all tickets and days', async () => {

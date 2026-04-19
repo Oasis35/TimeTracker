@@ -1,0 +1,400 @@
+import { CommonModule } from '@angular/common';
+import { Component, computed, inject, Injectable, OnDestroy, resource, signal } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule, NativeDateAdapter } from '@angular/material/core';
+import { MatDatepicker, MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
+import { catchError, firstValueFrom, of } from 'rxjs';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { TrackerApi } from '../../../core/api/tracker-api';
+import { TicketDto, TicketTotalDto, TimesheetMetadataDto, TimesheetMonthDto } from '../../../core/api/models';
+import { AppLanguage } from '../../../core/i18n/app-language';
+import { UnitService } from '../../../core/services/unit.service';
+import { ExternalLinkService } from '../../../core/services/external-link.service';
+import { isWeekendIso, isoWeekDays, isoWeekNumber, isoWeekYear, monthsForDays, toIsoDate } from '../../../core/utils/date-helpers';
+import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
+import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
+import { showSnack } from '../../../core/utils/ui-helpers';
+import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
+import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
+import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
+
+@Injectable()
+class IsoMondayDateAdapter extends NativeDateAdapter {
+  override getFirstDayOfWeek(): number { return 1; }
+}
+
+type MonthKey = { y: number; m: number };
+
+export interface WeekTicketCol {
+  ticketId: number;
+  type: string;
+  externalKey: string;
+  label: string;
+}
+
+export interface WeekDayRow {
+  iso: string;
+  isWeekend: boolean;
+  isHoliday: boolean;
+  holidayLabel: string;
+  dayLabel: string;
+  total: number;
+  values: Map<number, number>; // ticketId → minutes
+}
+
+@Component({
+  selector: 'app-timesheet-week-page',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatButtonModule,
+    MatCardModule,
+    MatDatepickerModule,
+    MatDialogModule,
+    MatIconModule,
+    MatNativeDateModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatTooltipModule,
+    RouterLink,
+    TranslateModule,
+  ],
+  templateUrl: './timesheet-week-page.html',
+  styleUrl: './timesheet-week-page.scss',
+  providers: [
+    { provide: MAT_DATE_LOCALE, useValue: 'fr-FR' },
+    { provide: DateAdapter, useClass: IsoMondayDateAdapter },
+  ],
+})
+export class TimesheetWeekPageComponent implements OnDestroy {
+  private readonly now = new Date();
+  private readonly langSub;
+
+  private readonly api = inject(TrackerApi);
+  private readonly translate = inject(TranslateService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
+  readonly unit = inject(UnitService);
+  private readonly extLinkService = inject(ExternalLinkService);
+
+  readonly isoWeek = signal<number>(isoWeekNumber(this.todayIso()));
+  readonly weekYear = signal<number>(isoWeekYear(this.todayIso()));
+  readonly language = signal<AppLanguage>('fr');
+
+  readonly selectedWeekDate = computed(() => {
+    const days = isoWeekDays(this.weekYear(), this.isoWeek());
+    return new Date(`${days[0]}T00:00:00`);
+  });
+
+  readonly pickerDateFilter = computed(() => {
+    const holidays = this.publicHolidaysRes.value() ?? {};
+    return (date: Date | null): boolean => {
+      if (!date) return false;
+      const iso = toIsoDate(date);
+      return !isWeekendIso(iso) && !holidays[iso];
+    };
+  });
+
+  readonly days = computed<string[]>(() => isoWeekDays(this.weekYear(), this.isoWeek()));
+
+  private readonly monthsNeeded = computed<MonthKey[]>(() => monthsForDays(this.days()));
+
+  private readonly month1Res = resource<TimesheetMonthDto, MonthKey>({
+    params: () => this.monthsNeeded()[0] ?? { y: this.weekYear(), m: 1 },
+    loader: ({ params }) => firstValueFrom(this.api.getMonth(params.y, params.m)),
+  });
+
+  private readonly month2Res = resource<TimesheetMonthDto | null, MonthKey | null>({
+    params: () => this.monthsNeeded()[1] ?? null,
+    loader: ({ params }) =>
+      params ? firstValueFrom(this.api.getMonth(params.y, params.m)) : Promise.resolve(null),
+  });
+
+  readonly metadataRes = resource<TimesheetMetadataDto, number>({
+    params: () => 0,
+    loader: () => firstValueFrom(this.api.getMetadata()),
+  });
+
+  readonly allTicketsRes = resource<TicketDto[], number>({
+    params: () => 0,
+    loader: () => firstValueFrom(this.api.getAllTickets()),
+  });
+
+  readonly allTimeTotalsRes = resource<TicketTotalDto[], number>({
+    params: () => 0,
+    loader: () => firstValueFrom(this.api.getTicketTotals()),
+  });
+
+  readonly allTimeTotalsMap = computed(() => {
+    const totals = this.allTimeTotalsRes.value() ?? [];
+    return new Map(totals.map((t) => [t.ticketId, t.total]));
+  });
+
+  readonly publicHolidaysRes = resource<Record<string, string>, number>({
+    params: () => 0,
+    loader: () =>
+      firstValueFrom(this.api.getPublicHolidaysMetropole().pipe(catchError(() => of({})))),
+  });
+
+  readonly loading = computed(
+    () => this.metadataRes.isLoading() || this.month1Res.isLoading() || this.month2Res.isLoading(),
+  );
+
+  readonly error = computed(() => {
+    this.language();
+    if (this.metadataRes.error() || this.month1Res.error() || this.month2Res.error()) {
+      return this.translate.instant('cannot_load_data');
+    }
+    return null;
+  });
+
+  // Ticket columns — all tickets that have at least one entry this week
+  readonly ticketCols = computed<WeekTicketCol[]>(() => {
+    const days = this.days();
+    const months = [this.month1Res.value(), this.month2Res.value()].filter(Boolean) as TimesheetMonthDto[];
+    const map = new Map<number, WeekTicketCol>();
+    for (const month of months) {
+      for (const row of month.rows) {
+        if (map.has(row.ticketId)) continue;
+        const hasEntry = days.some((d) => (row.values[d] ?? 0) > 0);
+        if (hasEntry) {
+          map.set(row.ticketId, {
+            ticketId: row.ticketId,
+            type: row.type,
+            externalKey: row.externalKey,
+            label: row.label,
+          });
+        }
+      }
+    }
+    return [...map.values()].sort((a, b) =>
+      a.type.localeCompare(b.type) || (a.externalKey ?? '').localeCompare(b.externalKey ?? ''),
+    );
+  });
+
+  // Row per day with values per ticket
+  readonly dayRows = computed<WeekDayRow[]>(() => {
+    const days = this.days();
+    const cols = this.ticketCols();
+    const months = [this.month1Res.value(), this.month2Res.value()].filter(Boolean) as TimesheetMonthDto[];
+    const holidays = this.publicHolidaysRes.value() ?? {};
+
+    // Build lookup: ticketId → row values
+    const rowsByTicket = new Map<number, Record<string, number>>();
+    for (const month of months) {
+      for (const row of month.rows) {
+        const existing = rowsByTicket.get(row.ticketId) ?? {};
+        Object.assign(existing, row.values);
+        rowsByTicket.set(row.ticketId, existing);
+      }
+    }
+
+    return days.map((iso) => {
+      const values = new Map<number, number>();
+      let total = 0;
+      for (const col of cols) {
+        const v = rowsByTicket.get(col.ticketId)?.[iso] ?? 0;
+        values.set(col.ticketId, v);
+        total += v;
+      }
+      const date = new Date(`${iso}T00:00:00`);
+      return {
+        iso,
+        isWeekend: isWeekendIso(iso),
+        isHoliday: !!holidays[iso],
+        holidayLabel: holidays[iso] ?? '',
+        dayLabel: (() => { const s = new Intl.DateTimeFormat(this.dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(date); return s.charAt(0).toUpperCase() + s.slice(1); })(),
+        total,
+        values,
+      };
+    });
+  });
+
+  readonly weekTotal = computed(() => this.dayRows().reduce((s, r) => s + r.total, 0));
+
+  readonly colTotals = computed(() => {
+    const cols = this.ticketCols();
+    const rows = this.dayRows();
+    const map = new Map<number, number>();
+    for (const col of cols) {
+      map.set(col.ticketId, rows.reduce((s, r) => s + (r.values.get(col.ticketId) ?? 0), 0));
+    }
+    return map;
+  });
+
+  readonly quickPickOptions = computed<QuickPickOption[]>(() => {
+    const meta = this.metadataRes.value();
+    if (!meta) return [];
+    return buildQuickPickOptions(meta, this.unit.unitMode());
+  });
+
+  readonly weekLabel = computed(() => {
+    const days = this.days();
+    if (!days.length) return '';
+    const fmt = new Intl.DateTimeFormat(this.dateLocale(), { day: 'numeric', month: 'short' });
+    const start = fmt.format(new Date(`${days[0]}T00:00:00`));
+    const end = fmt.format(new Date(`${days[6]}T00:00:00`));
+    return `S${this.isoWeek()} · ${start} – ${end}`;
+  });
+
+  readonly isCurrentWeek = computed(() => this.days().includes(this.todayIso()));
+
+  constructor() {
+    const initial = (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
+    this.language.set(initial);
+    this.langSub = this.translate.onLangChange.subscribe((e: LangChangeEvent) => {
+      this.language.set(e.lang as AppLanguage);
+    });
+    this.route.queryParamMap.subscribe((params) => {
+      const week = Number(params.get('week'));
+      const year = Number(params.get('year'));
+      if (!Number.isInteger(week) || !Number.isInteger(year)) return;
+      if (week < 1 || week > 53 || year < 1900 || year > 3000) return;
+      this.isoWeek.set(week);
+      this.weekYear.set(year);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.langSub.unsubscribe();
+  }
+
+  prevWeek(): void { this.shiftWeek(-1); }
+  nextWeek(): void { this.shiftWeek(1); }
+  goToCurrentWeek(): void {
+    const iso = this.todayIso();
+    this.isoWeek.set(isoWeekNumber(iso));
+    this.weekYear.set(isoWeekYear(iso));
+  }
+
+  onDateSelected(date: Date | null, picker: MatDatepicker<Date>): void {
+    if (!date) return;
+    const iso = toIsoDate(date);
+    this.isoWeek.set(isoWeekNumber(iso));
+    this.weekYear.set(isoWeekYear(iso));
+    picker.close();
+  }
+
+  dateLocale(): string {
+    return this.language() === 'fr' ? 'fr-FR' : 'en-US';
+  }
+
+  buildExtUrl(key: string): string {
+    return this.extLinkService.buildUrl(key);
+  }
+
+  formatValue(minutes: number): string {
+    const meta = this.metadataRes.value();
+    if (!meta) return '0';
+    return this.unit.unitMode() === 'hour'
+      ? formatNumberTrimmed(minutes / 60)
+      : formatNumberTrimmed(minutes / meta.minutesPerDay);
+  }
+
+  formatZeroAware(minutes: number): string {
+    return minutes === 0 ? '0' : this.formatValue(minutes);
+  }
+
+  onCellClick(row: WeekDayRow, col: WeekTicketCol): void {
+    if (row.isWeekend || row.isHoliday) return;
+    const data: TimeEntryDialogData = {
+      ticketId: col.ticketId,
+      ticketRef: `${col.type} ${col.externalKey ?? ''}`.trim(),
+      ticketLabel: col.label ?? '',
+      dayLabel: row.dayLabel,
+      currentMinutes: row.values.get(col.ticketId) ?? 0,
+      options: this.quickPickOptions(),
+    };
+    this.dialog.open(TimeEntryDialogComponent, { width: '460px', maxWidth: '95vw', data })
+      .afterClosed().subscribe((minutes) => {
+        if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
+        void firstValueFrom(
+          this.api.upsertTimeEntry({ ticketId: col.ticketId, date: row.iso, quantityMinutes: minutes }),
+        ).then(() => this.reloadMonths());
+      });
+  }
+
+  openAddTicketDialog(): void {
+    this.dialog.open(AddTicketDialogComponent, { width: '560px', maxWidth: '95vw' })
+      .afterClosed().subscribe((result) => {
+        if (!result) return;
+        showSnack(this.snackBar, this.translate.instant('ticket_saved'));
+        this.metadataRes.reload();
+        this.reloadMonths();
+        if (result.logTime) this.openTicketEntryDialog(result.ticket);
+      });
+  }
+
+  openLogTimeDialog(): void {
+    const days = this.days();
+    const [y, m] = days[0].split('-').map(Number);
+    const data: LogTimeDialogData = {
+      year: y,
+      month: m,
+      defaultTickets: this.ticketCols().map((c) => ({
+        id: c.ticketId, type: c.type, externalKey: c.externalKey, label: c.label, isCompleted: false,
+      })),
+      allTickets: this.allTicketsRes.value() ?? [],
+      options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      publicHolidays: this.publicHolidaysRes.value() ?? {},
+    };
+    this.dialog.open(LogTimeDialogComponent, { width: '460px', maxWidth: '95vw', data })
+      .afterClosed().subscribe((result: LogTimeDialogResult | undefined) => {
+        if (!result) return;
+        void firstValueFrom(
+          this.api.upsertTimeEntry({ ticketId: result.ticketId, date: result.date, quantityMinutes: result.minutes }),
+        ).then(() => {
+          showSnack(this.snackBar, this.translate.instant('time_saved'));
+          this.reloadMonths();
+        });
+      });
+  }
+
+  private openTicketEntryDialog(ticket: TicketDto): void {
+    const iso = this.todayIso();
+    const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' }).format(new Date(`${iso}T00:00:00`));
+    const data: TimeEntryDialogData = {
+      ticketId: ticket.id,
+      ticketRef: `${ticket.type} ${ticket.externalKey ?? ''}`.trim(),
+      ticketLabel: ticket.label ?? '',
+      dayLabel,
+      currentMinutes: 0,
+      options: this.quickPickOptions(),
+    };
+    this.dialog.open(TimeEntryDialogComponent, { width: '460px', maxWidth: '95vw', data })
+      .afterClosed().subscribe((minutes) => {
+        if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
+        void firstValueFrom(
+          this.api.upsertTimeEntry({ ticketId: ticket.id, date: iso, quantityMinutes: minutes }),
+        ).then(() => this.reloadMonths());
+      });
+  }
+
+  private reloadMonths(): void {
+    this.month1Res.reload();
+    this.month2Res.reload();
+    this.allTimeTotalsRes.reload();
+  }
+
+  private shiftWeek(delta: -1 | 1): void {
+    const days = this.days();
+    const pivot = new Date(`${delta === 1 ? days[6] : days[0]}T00:00:00`);
+    pivot.setDate(pivot.getDate() + delta);
+    const iso = toIsoDate(pivot);
+    this.isoWeek.set(isoWeekNumber(iso));
+    this.weekYear.set(isoWeekYear(iso));
+  }
+
+  todayIso(): string {
+    return toIsoDate(this.now);
+  }
+}

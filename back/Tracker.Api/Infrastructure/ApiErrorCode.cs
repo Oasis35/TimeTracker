@@ -12,6 +12,7 @@ public static class ApiErrorCodes
     public const string TicketCompletedLocked = "TT_TICKET_COMPLETED_LOCKED";
     public const string TicketAlreadyExists = "TT_TICKET_ALREADY_EXISTS";
     public const string TicketTypeRequired = "TT_TICKET_TYPE_REQUIRED";
+    public const string TicketTypeNotAllowed = "TT_TICKET_TYPE_NOT_ALLOWED";
     public const string TicketLabelRequired = "TT_TICKET_LABEL_REQUIRED";
     public const string BackupFileMissing = "TT_BACKUP_FILE_MISSING";
     public const string BackupFileInvalid = "TT_BACKUP_FILE_INVALID";

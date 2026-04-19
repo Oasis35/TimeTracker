@@ -21,6 +21,13 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'week',
+    loadComponent: () =>
+      import('./features/timesheet/timesheet-week-page/timesheet-week-page').then(
+        (m) => m.TimesheetWeekPageComponent,
+      ),
+  },
+  {
     path: 'month',
     loadComponent: () =>
       import('./features/timesheet/timesheet-month-page/timesheet-month-page').then(

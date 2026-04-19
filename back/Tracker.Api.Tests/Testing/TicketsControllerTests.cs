@@ -217,6 +217,23 @@ public sealed class TicketsControllerTests
     }
 
     [Fact]
+    public async Task Create_Should_Return_BadRequest_When_Type_Is_ABSENT()
+    {
+        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
+        await using var _ = db;
+        await using var __ = conn;
+
+        var controller = new TicketsController(db);
+
+        var result = await controller.Create(new SaveTicketDto(Type: TicketType.ABSENT, ExternalKey: "CP", Label: "Congés"));
+
+        var bad = Assert.IsType<ObjectResult>(result.Result);
+        Assert.Equal(400, bad.StatusCode);
+        var error = Assert.IsType<ApiErrorResponse>(bad.Value);
+        Assert.Equal(ApiErrorCodes.TicketTypeNotAllowed, error.Code);
+    }
+
+    [Fact]
     public async Task Create_Should_Return_BadRequest_When_ExternalKey_Provided_But_Label_Missing()
     {
         var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
