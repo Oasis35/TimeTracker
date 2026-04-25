@@ -28,6 +28,55 @@
   justify-self: start;
 }
 
+.month-nav {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline) 38%, transparent);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.month-nav-btn {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 0 !important;
+  border: none;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  padding: 0 !important;
+}
+
+.month-nav-label {
+  padding: 0 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-left: 1px solid color-mix(in srgb, var(--mat-sys-outline) 28%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--mat-sys-outline) 28%, transparent);
+  cursor: pointer;
+  color: inherit;
+  height: 32px;
+  transition: background 120ms ease;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.month-nav-label:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.month-nav-label:not(:disabled):hover {
+  background: color-mix(in srgb, var(--mat-sys-on-surface) 8%, transparent);
+}
+
 .header-center {
   position: relative;
   display: flex;
@@ -152,7 +201,7 @@ th {
 }
 
 .col-label {
-  min-width: 220px;
+  min-width: 160px;
   max-width: 320px;
 }
 
@@ -165,7 +214,7 @@ th {
 }
 
 .cg-label {
-  width: 320px;
+  width: max-content;
 }
 
 .cg-total {
@@ -178,14 +227,6 @@ th {
 
 .cg-day {
   width: min-content;
-}
-
-thead th:nth-child(3),
-tbody td:nth-child(3),
-tfoot td:nth-child(3) {
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .col-total {
@@ -227,6 +268,13 @@ tfoot td:nth-child(n + 6) {
   padding: 0 0.15rem;
 }
 
+.ticket-number-cell {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .ticket-number-link {
   display: inline-block;
   padding: 0;
@@ -243,17 +291,23 @@ tfoot td:nth-child(n + 6) {
   border-bottom-color: color-mix(in srgb, var(--mat-sys-primary) 44%, transparent);
 }
 
-.ticket-label-link {
-  display: inline-block;
+.ticket-ext-icon {
+  display: inline-flex;
+  align-items: center;
+  color: color-mix(in srgb, var(--mat-sys-primary) 45%, var(--mat-sys-on-surface));
   text-decoration: none;
-  color: inherit;
-  border-bottom: 1px solid transparent;
-  transition: color 120ms ease, border-color 120ms ease;
+  transition: color 120ms ease;
+  line-height: 1;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
 }
 
-.ticket-label-link:hover {
-  color: color-mix(in srgb, var(--mat-sys-primary) 78%, var(--mat-sys-on-surface));
-  border-bottom-color: color-mix(in srgb, var(--mat-sys-primary) 44%, transparent);
+.ticket-ext-icon:hover {
+  color: var(--mat-sys-primary);
 }
 
 .total-cell,
@@ -391,7 +445,7 @@ tfoot td {
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--mat-sys-outline-variant) 52%, transparent);
 }
 
-/* Keep "Type" and "Numero" visible when scrolling horizontally. */
+/* Keep first 5 columns visible when scrolling horizontally. */
 thead th:nth-child(1),
 tbody td:nth-child(1),
 tfoot td:nth-child(1) {
@@ -406,7 +460,37 @@ thead th:nth-child(2),
 tbody td:nth-child(2),
 tfoot td:nth-child(2) {
   position: sticky;
-  left: var(--sticky-col-type-width);
+  left: var(--sticky-col-number-left);
+  z-index: 5;
+  background: var(--mat-sys-surface);
+  box-shadow: 1px 0 0 color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
+}
+
+thead th:nth-child(3),
+tbody td:nth-child(3),
+tfoot td:nth-child(3) {
+  position: sticky;
+  left: var(--sticky-col-label-left);
+  z-index: 5;
+  background: var(--mat-sys-surface);
+  box-shadow: 1px 0 0 color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
+}
+
+thead th:nth-child(4),
+tbody td:nth-child(4),
+tfoot td:nth-child(4) {
+  position: sticky;
+  left: var(--sticky-col-total-left);
+  z-index: 5;
+  background: var(--mat-sys-surface);
+  box-shadow: 1px 0 0 color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
+}
+
+thead th:nth-child(5),
+tbody td:nth-child(5),
+tfoot td:nth-child(5) {
+  position: sticky;
+  left: var(--sticky-col-alltime-left);
   z-index: 5;
   background: var(--mat-sys-surface);
   box-shadow:
@@ -415,18 +499,33 @@ tfoot td:nth-child(2) {
 }
 
 thead th:nth-child(1),
-thead th:nth-child(2) {
+thead th:nth-child(2),
+thead th:nth-child(3),
+thead th:nth-child(4),
+thead th:nth-child(5) {
   z-index: 6;
   background: color-mix(in srgb, var(--mat-sys-surface-container-low) 70%, var(--mat-sys-surface));
 }
 
 tbody td:nth-child(1),
-tbody td:nth-child(2) {
+tbody td:nth-child(2),
+tbody td:nth-child(3) {
   background: var(--mat-sys-surface);
 }
 
+tbody td:nth-child(4) {
+  background: color-mix(in srgb, var(--mat-sys-primary-container) 20%, var(--mat-sys-surface));
+}
+
+tbody td:nth-child(5) {
+  background: color-mix(in srgb, var(--mat-sys-secondary-container) 18%, var(--mat-sys-surface));
+}
+
 tfoot td:nth-child(1),
-tfoot td:nth-child(2) {
+tfoot td:nth-child(2),
+tfoot td:nth-child(3),
+tfoot td:nth-child(4),
+tfoot td:nth-child(5) {
   background: color-mix(in srgb, var(--mat-sys-primary-container) 18%, var(--mat-sys-surface));
 }
 

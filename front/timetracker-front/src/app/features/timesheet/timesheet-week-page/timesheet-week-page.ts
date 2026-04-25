@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, computed, inject, Injectable, resource, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, Injectable, resource, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -12,7 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { PublicHolidaysService } from '../../../core/services/public-holidays.service';
@@ -82,6 +82,7 @@ export class TimesheetWeekPageComponent {
   private readonly api = inject(TrackerApi);
   private readonly translate = inject(TranslateService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   readonly unit = inject(UnitService);
@@ -270,8 +271,19 @@ export class TimesheetWeekPageComponent {
       const year = Number(params.get('year'));
       if (!Number.isInteger(week) || !Number.isInteger(year)) return;
       if (week < 1 || week > 53 || year < 1900 || year > 3000) return;
-      this.isoWeek.set(week);
-      this.weekYear.set(year);
+      untracked(() => {
+        this.isoWeek.set(week);
+        this.weekYear.set(year);
+      });
+    });
+    effect(() => {
+      const week = this.isoWeek();
+      const year = this.weekYear();
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { year, week },
+        replaceUrl: true,
+      });
     });
   }
 

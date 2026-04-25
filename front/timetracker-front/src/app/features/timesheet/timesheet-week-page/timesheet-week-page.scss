@@ -186,7 +186,7 @@ thead th {
   background: inherit;
 }
 
-.col-ticket {
+thead th.col-ticket {
   width: 1%;
   min-width: max-content;
   text-align: center;
@@ -197,6 +197,7 @@ thead th {
   min-width: max-content;
   text-align: center;
   border-left: 2px solid color-mix(in srgb, var(--mat-sys-outline) 50%, transparent);
+  border-right: 2px solid color-mix(in srgb, var(--mat-sys-outline) 50%, transparent);
   background: color-mix(in srgb, var(--mat-sys-primary-container) 16%, var(--mat-sys-surface));
   color: color-mix(in srgb, var(--mat-sys-primary) 85%, var(--mat-sys-on-surface));
   font-weight: 700;
@@ -205,6 +206,8 @@ thead th {
 
 .ticket-key-link,
 .ticket-key {
+  display: table;
+  margin-inline: auto;
   font-size: 0.8rem;
   font-weight: 650;
   color: color-mix(in srgb, var(--mat-sys-primary) 62%, var(--mat-sys-on-surface));
@@ -271,6 +274,7 @@ tbody td {
 .cell-total {
   text-align: center;
   border-left: 2px solid color-mix(in srgb, var(--mat-sys-outline) 50%, transparent);
+  border-right: 2px solid color-mix(in srgb, var(--mat-sys-outline) 50%, transparent);
   background: color-mix(in srgb, var(--mat-sys-primary-container) 14%, var(--mat-sys-surface));
   font-weight: 700;
 }

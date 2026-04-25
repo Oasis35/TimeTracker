@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
-import { Component, DestroyRef, Injectable, computed, effect, inject, resource, signal } from '@angular/core';
+import { Component, DestroyRef, Injectable, computed, effect, inject, resource, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -40,7 +40,7 @@ import {
   TimesheetMonthDto,
   TimesheetRowDto,
 } from '../../../core/api/models';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   TimeEntryDialogComponent,
   TimeEntryDialogData,
@@ -307,6 +307,7 @@ export class TimesheetDayPageComponent {
     private readonly translate: TranslateService,
     private readonly snackBar: MatSnackBar,
     private readonly route: ActivatedRoute,
+    private readonly router: Router,
     readonly unit: UnitService,
     readonly publicHolidays: PublicHolidaysService,
   ) {
@@ -321,7 +322,16 @@ export class TimesheetDayPageComponent {
     this.route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
       const date = params.get('date');
       if (!date) return;
-      this.applyRouteDate(date);
+      untracked(() => this.applyRouteDate(date));
+    });
+    effect(() => {
+      const date = this.selectedDay();
+      if (!date) return;
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { date },
+        replaceUrl: true,
+      });
     });
 
     effect(() => {

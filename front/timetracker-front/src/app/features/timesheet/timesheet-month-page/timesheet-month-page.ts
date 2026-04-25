@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, DestroyRef, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, OnDestroy, ViewChild, computed, effect, inject, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -23,7 +23,7 @@ import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/time
 import { showSnack } from '../../../core/utils/ui-helpers';
 import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { resource } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
 import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
@@ -58,11 +58,19 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
   private readonly now = new Date();
   private typeHeaderResizeObserver: ResizeObserver | null = null;
   private typeHeaderElement: HTMLElement | null = null;
+  private numberHeaderElement: HTMLElement | null = null;
 
   readonly year = signal<number>(this.now.getFullYear());
   readonly month = signal<number>(this.now.getMonth() + 1);
   readonly language = signal<AppLanguage>('fr');
   readonly stickyTypeWidth = signal<number>(90);
+  readonly stickyNumberWidth = signal<number>(80);
+
+  readonly stickyLabelLeft = computed(() => this.stickyTypeWidth() + this.stickyNumberWidth());
+  readonly stickyLabelWidth = signal<number>(320);
+  readonly stickyTotalLeft = computed(() => this.stickyLabelLeft() + this.stickyLabelWidth());
+  readonly stickyTotalWidth = signal<number>(60);
+  readonly stickyAlltimeLeft = computed(() => this.stickyTotalLeft() + this.stickyTotalWidth());
 
   readonly metadataRes = resource<TimesheetMetadataDto, number>({
     params: () => 0,
@@ -148,6 +156,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     private readonly translate: TranslateService,
     private readonly dateAdapter: DateAdapter<Date>,
     private readonly route: ActivatedRoute,
+    private readonly router: Router,
     private readonly dialog: MatDialog,
     private readonly snackBar: MatSnackBar,
     readonly unit: UnitService,
@@ -171,8 +180,19 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
       if (!Number.isInteger(year) || !Number.isInteger(month)) return;
       if (month < 1 || month > 12) return;
       if (year < 1900 || year > 3000) return;
-      this.year.set(year);
-      this.month.set(month);
+      untracked(() => {
+        this.year.set(year);
+        this.month.set(month);
+      });
+    });
+    effect(() => {
+      const year = this.year();
+      const month = this.month();
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { year, month },
+        replaceUrl: true,
+      });
     });
   }
 
@@ -188,9 +208,33 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     this.observeTypeHeader(cell.nativeElement);
   }
 
+  @ViewChild('numberHeaderCell')
+  set numberHeaderCell(cell: ElementRef<HTMLElement> | undefined) {
+    if (!cell) return;
+    this.numberHeaderElement = cell.nativeElement;
+    this.syncWidths();
+  }
+
+  @ViewChild('labelHeaderCell')
+  set labelHeaderCell(cell: ElementRef<HTMLElement> | undefined) {
+    if (!cell) return;
+    this._labelHeaderElement = cell.nativeElement;
+    this.syncWidths();
+  }
+
+  @ViewChild('totalHeaderCell')
+  set totalHeaderCell(cell: ElementRef<HTMLElement> | undefined) {
+    if (!cell) return;
+    this._totalHeaderElement = cell.nativeElement;
+    this.syncWidths();
+  }
+
+  private _labelHeaderElement: HTMLElement | null = null;
+  private _totalHeaderElement: HTMLElement | null = null;
+
   ngAfterViewInit(): void {
     // Width can settle after initial render; align sticky offset once rendered.
-    queueMicrotask(() => this.syncTypeWidth());
+    queueMicrotask(() => this.syncWidths());
   }
 
   ngOnDestroy(): void {
@@ -386,20 +430,28 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     this.typeHeaderElement = el;
     this.typeHeaderResizeObserver?.disconnect();
     if (typeof ResizeObserver === 'undefined') {
-      this.syncTypeWidth();
+      this.syncWidths();
       return;
     }
-    this.typeHeaderResizeObserver = new ResizeObserver(() => this.syncTypeWidth());
+    this.typeHeaderResizeObserver = new ResizeObserver(() => this.syncWidths());
     this.typeHeaderResizeObserver.observe(el);
-    this.syncTypeWidth();
+    this.syncWidths();
   }
 
-  private syncTypeWidth(): void {
-    const width = this.typeHeaderElement
-      ? Math.ceil(this.typeHeaderElement.getBoundingClientRect().width)
-      : 0;
-    if (width > 0 && this.stickyTypeWidth() !== width) {
-      this.stickyTypeWidth.set(width);
-    }
+  private syncWidths(): void {
+    const measure = (el: HTMLElement | null) =>
+      el ? Math.ceil(el.getBoundingClientRect().width) : 0;
+
+    const typeW = measure(this.typeHeaderElement);
+    if (typeW > 0 && this.stickyTypeWidth() !== typeW) this.stickyTypeWidth.set(typeW);
+
+    const numW = measure(this.numberHeaderElement);
+    if (numW > 0 && this.stickyNumberWidth() !== numW) this.stickyNumberWidth.set(numW);
+
+    const labelW = measure(this._labelHeaderElement);
+    if (labelW > 0 && this.stickyLabelWidth() !== labelW) this.stickyLabelWidth.set(labelW);
+
+    const totalW = measure(this._totalHeaderElement);
+    if (totalW > 0 && this.stickyTotalWidth() !== totalW) this.stickyTotalWidth.set(totalW);
   }
 }
