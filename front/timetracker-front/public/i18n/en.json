@@ -52,7 +52,7 @@
   "week_next": "Next",
   "week_view_empty": "No time logged this week.",
   "week_total": "Weekly total",
-  "week_day_total": "Day total",
+  "week_day_total": "Total",
   "week_today_short": "Today",
   "month_previous": "Previous",
   "month_current": "Current month",
@@ -160,5 +160,10 @@
   "entry_dialog_edit_title": "Edit entry",
   "entry_dialog_date": "Date",
   "entry_dialog_quantity": "Time",
-  "week_alltime_total": "Ticket total"
+  "week_alltime_total": "Ticket total",
+  "prev_week_drawer_title": "Carry-over from prev. week",
+  "prev_week_drawer_show": "Prev. week carry-over",
+  "prev_week_drawer_hide": "Hide",
+  "prev_month_drawer_show": "Prev. month carry-over",
+  "actions": "Actions"
 }

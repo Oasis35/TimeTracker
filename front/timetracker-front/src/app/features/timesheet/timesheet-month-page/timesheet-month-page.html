@@ -11,13 +11,13 @@
       <div class="header-row">
         <div class="header-left">
           <div class="month-nav">
-            <button mat-icon-button type="button" class="month-nav-btn" [matTooltip]="'month_next' | translate" (click)="nextMonth()">
+            <button mat-icon-button type="button" class="month-nav-btn" [matTooltip]="'month_previous' | translate" (click)="prevMonth()">
               <mat-icon>chevron_left</mat-icon>
             </button>
             <button class="month-nav-label" [disabled]="isCurrentMonth()" (click)="goToCurrentMonth()">
               <mat-icon>today</mat-icon>
             </button>
-            <button mat-icon-button type="button" class="month-nav-btn" [matTooltip]="'month_previous' | translate" (click)="prevMonth()">
+            <button mat-icon-button type="button" class="month-nav-btn" [matTooltip]="'month_next' | translate" (click)="nextMonth()">
               <mat-icon>chevron_right</mat-icon>
             </button>
           </div>
@@ -51,6 +51,19 @@
           ></mat-datepicker>
         </div>
         <div class="header-right">
+          @if (prevMonthMissingRows().length > 0) {
+            <button
+              type="button"
+              class="prev-month-btn"
+              [class.prev-month-btn-active]="drawerOpen()"
+              [matTooltip]="drawerOpen() ? ('prev_week_drawer_hide' | translate) : ('prev_month_drawer_show' | translate)"
+              (click)="toggleDrawer()"
+            >
+              <mat-icon class="prev-month-btn-icon">history</mat-icon>
+              <span class="prev-month-btn-label">{{ prevMonthLabel() }}</span>
+              <span class="prev-month-btn-count">{{ prevMonthMissingRows().length }}</span>
+            </button>
+          }
           <button mat-icon-button type="button" [matTooltip]="'new_ticket' | translate" (click)="openAddTicketDialog()">
             <mat-icon>add</mat-icon>
           </button>
@@ -59,6 +72,39 @@
           </button>
         </div>
       </div>
+
+      <!-- Drawer overlay mois précédent -->
+      @if (prevMonthMissingRows().length > 0 && drawerOpen()) {
+        <div class="drawer-backdrop" (click)="toggleDrawer()"></div>
+        <aside class="prev-month-drawer">
+          <div class="drawer-header">
+            <span class="drawer-title">{{ prevMonthLabel() }} – {{ 'prev_week_drawer_title' | translate }}</span>
+            <button mat-icon-button type="button" class="drawer-close-btn" (click)="toggleDrawer()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div class="drawer-list">
+            @for (row of prevMonthMissingRows(); track row.ticketId) {
+              <div class="drawer-item">
+                <div class="drawer-item-info">
+                  <span class="drawer-item-ref">{{ row.type }}{{ row.externalKey ? ' ' + row.externalKey : '' }}</span>
+                  <span class="drawer-item-label">{{ row.label || '–' }}</span>
+                </div>
+                <button
+                  mat-icon-button
+                  type="button"
+                  class="drawer-add-btn"
+                  [matTooltip]="'log_time_dialog_title' | translate"
+                  (click)="openPrevMonthTicketDialog(row)"
+                >
+                  <mat-icon>more_time</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+        </aside>
+      }
+
       <div
         class="table-wrap"
         [style.--sticky-col-type-width.px]="stickyTypeWidth()"

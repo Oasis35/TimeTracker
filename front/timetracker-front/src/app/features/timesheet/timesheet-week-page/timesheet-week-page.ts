@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule, NativeDateAdapter } from '@angular/material/core';
 import { MatDatepicker, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -62,6 +63,7 @@ export interface WeekDayRow {
     MatDatepickerModule,
     MatDialogModule,
     MatIconModule,
+    MatMenuModule,
     MatNativeDateModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
@@ -93,6 +95,23 @@ export class TimesheetWeekPageComponent {
   readonly weekYear = signal<number>(isoWeekYear(this.todayIso()));
   readonly language = signal<AppLanguage>('fr');
 
+  readonly prevIsoWeek = computed(() => {
+    const w = this.isoWeek();
+    return w > 1 ? w - 1 : 52;
+  });
+
+  readonly drawerOpen = signal<boolean>(false);
+
+  private drawerCacheKey(): string {
+    return `tt-prev-week-drawer-${this.weekYear()}-${this.isoWeek()}`;
+  }
+
+  toggleDrawer(): void {
+    const next = !this.drawerOpen();
+    this.drawerOpen.set(next);
+    localStorage.setItem(this.drawerCacheKey(), next ? '1' : '0');
+  }
+
   readonly selectedWeekDate = computed(() => {
     const days = isoWeekDays(this.weekYear(), this.isoWeek());
     return new Date(`${days[0]}T00:00:00`);
@@ -120,6 +139,51 @@ export class TimesheetWeekPageComponent {
     params: () => this.monthsNeeded()[1] ?? null,
     loader: ({ params }) =>
       params ? firstValueFrom(this.api.getMonth(params.y, params.m)) : Promise.resolve(null),
+  });
+
+  readonly prevWeekDays = computed<string[]>(() => {
+    const monday = this.days()[0];
+    const prev = new Date(`${monday}T00:00:00`);
+    prev.setDate(prev.getDate() - 7);
+    return isoWeekDays(isoWeekYear(toIsoDate(prev)), isoWeekNumber(toIsoDate(prev)));
+  });
+
+  private readonly prevMonthsNeeded = computed<MonthKey[]>(() => monthsForDays(this.prevWeekDays()));
+
+  private readonly prevMonth1Res = resource<TimesheetMonthDto, MonthKey>({
+    params: () => this.prevMonthsNeeded()[0] ?? { y: this.weekYear(), m: 1 },
+    loader: ({ params }) => firstValueFrom(this.api.getMonth(params.y, params.m)),
+  });
+
+  private readonly prevMonth2Res = resource<TimesheetMonthDto | null, MonthKey | null>({
+    params: () => this.prevMonthsNeeded()[1] ?? null,
+    loader: ({ params }) =>
+      params ? firstValueFrom(this.api.getMonth(params.y, params.m)) : Promise.resolve(null),
+  });
+
+  readonly prevWeekMissingCols = computed<WeekTicketCol[]>(() => {
+    const prevDays = this.prevWeekDays();
+    const prevMonths = [this.prevMonth1Res.value(), this.prevMonth2Res.value()].filter(Boolean) as TimesheetMonthDto[];
+    const currentTicketIds = new Set(this.ticketCols().map((c) => c.ticketId));
+    const map = new Map<number, WeekTicketCol>();
+    for (const month of prevMonths) {
+      for (const row of month.rows) {
+        if (map.has(row.ticketId)) continue;
+        if (currentTicketIds.has(row.ticketId)) continue;
+        const hasEntry = prevDays.some((d) => (row.values[d] ?? 0) > 0);
+        if (hasEntry) {
+          map.set(row.ticketId, {
+            ticketId: row.ticketId,
+            type: row.type,
+            externalKey: row.externalKey,
+            label: row.label,
+          });
+        }
+      }
+    }
+    return [...map.values()].sort((a, b) =>
+      a.type.localeCompare(b.type) || (a.externalKey ?? '').localeCompare(b.externalKey ?? ''),
+    );
   });
 
   readonly metadataRes = resource<TimesheetMetadataDto, number>({
@@ -285,6 +349,12 @@ export class TimesheetWeekPageComponent {
         replaceUrl: true,
       });
     });
+
+    effect(() => {
+      // Restaure l'état du drawer depuis le cache à chaque changement de semaine
+      const key = `tt-prev-week-drawer-${this.weekYear()}-${this.isoWeek()}`;
+      untracked(() => this.drawerOpen.set(localStorage.getItem(key) === '1'));
+    });
   }
 
   prevWeek(): void { this.shiftWeek(-1); }
@@ -369,6 +439,40 @@ export class TimesheetWeekPageComponent {
       options: this.quickPickOptions(),
       dateLocale: this.dateLocale(),
       publicHolidays: this.publicHolidays.holidays() ?? {},
+    };
+    this.dialog.open(LogTimeDialogComponent, { width: '460px', maxWidth: '95vw', data })
+      .afterClosed().subscribe((result: LogTimeDialogResult | undefined) => {
+        if (!result) return;
+        void firstValueFrom(
+          this.api.upsertTimeEntry({ ticketId: result.ticketId, date: result.date, quantityMinutes: result.minutes }),
+        ).then(() => {
+          showSnack(this.snackBar, this.translate.instant('time_saved'));
+          this.reloadMonths();
+        }).catch((error: unknown) => {
+          showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
+        });
+      });
+  }
+
+  openPrevWeekTicketDialog(col: WeekTicketCol): void {
+    const days = this.days();
+    const [y, m] = days[0].split('-').map(Number);
+    const ticket: TicketDto = {
+      id: col.ticketId,
+      type: col.type,
+      externalKey: col.externalKey,
+      label: col.label,
+      isCompleted: false,
+    };
+    const data: LogTimeDialogData = {
+      year: y,
+      month: m,
+      defaultTickets: [ticket],
+      allTickets: this.allTicketsRes.value() ?? [],
+      options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      publicHolidays: this.publicHolidays.holidays() ?? {},
+      preselectedTicket: ticket,
     };
     this.dialog.open(LogTimeDialogComponent, { width: '460px', maxWidth: '95vw', data })
       .afterClosed().subscribe((result: LogTimeDialogResult | undefined) => {

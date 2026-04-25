@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, DestroyRef, ElementRef, OnDestroy, ViewChild, computed, effect, inject, signal, untracked } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, ElementRef, OnDestroy, ViewChild, computed, effect, inject, resource, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepicker, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -22,7 +23,6 @@ import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
 import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
 import { showSnack } from '../../../core/utils/ui-helpers';
 import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
-import { resource } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
@@ -43,6 +43,7 @@ type MonthlyRow = TimesheetRowDto & { total: number };
     MatDatepickerModule,
     MatDialogModule,
     MatIconModule,
+    MatMenuModule,
     MatNativeDateModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
@@ -98,6 +99,71 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     return new Map(totals.map((t) => [t.ticketId, t.total]));
   });
 
+  readonly prevMonthRequest = computed<MonthRequest>(() => {
+    const d = new Date(this.year(), this.month() - 2, 1);
+    return { y: d.getFullYear(), m: d.getMonth() + 1 };
+  });
+
+  readonly prevMonthLabel = computed(() => {
+    const { y, m } = this.prevMonthRequest();
+    const date = new Date(y, m - 1, 1);
+    const label = new Intl.DateTimeFormat(this.dateLocale(), { month: 'long', year: '2-digit' }).format(date);
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  });
+
+  private readonly prevMonthRes = resource<TimesheetMonthDto, MonthRequest>({
+    params: () => this.prevMonthRequest(),
+    loader: ({ params }) => firstValueFrom(this.api.getMonth(params.y, params.m)),
+  });
+
+  readonly prevMonthMissingRows = computed<{ ticketId: number; type: string; externalKey: string; label: string }[]>(() => {
+    const prev = this.prevMonthRes.value();
+    if (!prev) return [];
+    const currentIds = new Set(this.rows().map((r) => r.ticketId));
+    return prev.rows
+      .filter((r) => !currentIds.has(r.ticketId) && Object.values(r.values ?? {}).some((v) => v > 0))
+      .map((r) => ({ ticketId: r.ticketId, type: r.type, externalKey: r.externalKey ?? '', label: r.label ?? '' }))
+      .sort((a, b) => a.type.localeCompare(b.type) || a.externalKey.localeCompare(b.externalKey));
+  });
+
+  readonly drawerOpen = signal<boolean>(false);
+
+  private drawerCacheKey(): string {
+    return `tt-prev-month-drawer-${this.year()}-${this.month()}`;
+  }
+
+  toggleDrawer(): void {
+    const next = !this.drawerOpen();
+    this.drawerOpen.set(next);
+    localStorage.setItem(this.drawerCacheKey(), next ? '1' : '0');
+  }
+
+  openPrevMonthTicketDialog(row: { ticketId: number; type: string; externalKey: string; label: string }): void {
+    const ticket: TicketDto = { id: row.ticketId, type: row.type as TicketDto['type'], externalKey: row.externalKey, label: row.label, isCompleted: false };
+    const data: LogTimeDialogData = {
+      year: this.year(),
+      month: this.month(),
+      defaultTickets: [ticket],
+      allTickets: this.allTicketsRes.value() ?? [],
+      options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      publicHolidays: this.publicHolidays.holidays() ?? {},
+      preselectedTicket: ticket,
+    };
+    this.dialog.open(LogTimeDialogComponent, { width: '460px', maxWidth: '95vw', data })
+      .afterClosed().subscribe((result: LogTimeDialogResult | undefined) => {
+        if (!result) return;
+        void firstValueFrom(
+          this.api.upsertTimeEntry({ ticketId: result.ticketId, date: result.date, quantityMinutes: result.minutes }),
+        ).then(() => {
+          showSnack(this.snackBar, this.translate.instant('time_saved'));
+          this.monthRes.reload();
+          this.usedTicketsRes.reload();
+        }).catch((error: unknown) => {
+          showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
+        });
+      });
+  }
 
   readonly loading = computed(
     () => this.metadataRes.isLoading() || this.monthRes.isLoading() || this.usedTicketsRes.isLoading(),
@@ -193,6 +259,11 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
         queryParams: { year, month },
         replaceUrl: true,
       });
+    });
+
+    effect(() => {
+      const key = `tt-prev-month-drawer-${this.year()}-${this.month()}`;
+      untracked(() => this.drawerOpen.set(localStorage.getItem(key) === '1'));
     });
   }
 

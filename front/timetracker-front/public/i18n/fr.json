@@ -52,7 +52,7 @@
   "week_next": "Suivante",
   "week_view_empty": "Aucun temps saisi cette semaine.",
   "week_total": "Total semaine",
-  "week_day_total": "Total jour",
+  "week_day_total": "Total",
   "week_today_short": "Auj.",
   "month_previous": "Précédent",
   "month_current": "Mois en cours",
@@ -160,5 +160,10 @@
   "entry_dialog_edit_title": "Modifier la saisie",
   "entry_dialog_date": "Date",
   "entry_dialog_quantity": "Temps",
-  "week_alltime_total": "Total ticket"
+  "week_alltime_total": "Total ticket",
+  "prev_week_drawer_title": "Report semaine préc.",
+  "prev_week_drawer_show": "Report semaine préc.",
+  "prev_week_drawer_hide": "Masquer",
+  "prev_month_drawer_show": "Report mois préc.",
+  "actions": "Actions"
 }

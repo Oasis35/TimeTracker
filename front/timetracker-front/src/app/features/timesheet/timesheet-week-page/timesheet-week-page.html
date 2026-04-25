@@ -58,11 +58,75 @@
           <button mat-icon-button type="button" [matTooltip]="'new_ticket' | translate" (click)="openAddTicketDialog()">
             <mat-icon>add</mat-icon>
           </button>
-          <button mat-icon-button type="button" [matTooltip]="'log_time_dialog_title' | translate" (click)="openLogTimeDialog()">
-            <mat-icon>more_time</mat-icon>
-          </button>
+          <!-- Split button : action directe + menu déroulant -->
+          <div class="split-btn" [class.split-btn-has-prev]="prevWeekMissingCols().length > 0">
+            <button
+              type="button"
+              class="split-btn-main"
+              [matTooltip]="'log_time_dialog_title' | translate"
+              (click)="openLogTimeDialog()"
+            >
+              <mat-icon>more_time</mat-icon>
+            </button>
+            <button
+              type="button"
+              class="split-btn-arrow"
+              [matMenuTriggerFor]="actionsMenu"
+              [matTooltip]="'actions' | translate"
+            >
+              <mat-icon>arrow_drop_down</mat-icon>
+              @if (prevWeekMissingCols().length > 0) {
+                <span class="split-btn-dot"></span>
+              }
+            </button>
+          </div>
+
+          <mat-menu #actionsMenu="matMenu" xPosition="before">
+            <button mat-menu-item (click)="openLogTimeDialog()">
+              <mat-icon>more_time</mat-icon>
+              <span>{{ 'log_time_dialog_title' | translate }}</span>
+            </button>
+            @if (prevWeekMissingCols().length > 0) {
+              <button mat-menu-item (click)="toggleDrawer()">
+                <mat-icon>history</mat-icon>
+                <span>{{ 'prev_week_drawer_show' | translate }} ({{ prevWeekMissingCols().length }})</span>
+              </button>
+            }
+          </mat-menu>
         </div>
       </div>
+
+      <!-- Drawer overlay semaine précédente -->
+      @if (prevWeekMissingCols().length > 0 && drawerOpen()) {
+        <div class="drawer-backdrop" (click)="toggleDrawer()"></div>
+        <aside class="prev-week-drawer">
+          <div class="drawer-header">
+            <span class="drawer-title">S{{ prevIsoWeek() }} – {{ 'prev_week_drawer_title' | translate }}</span>
+            <button mat-icon-button type="button" class="drawer-close-btn" (click)="toggleDrawer()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div class="drawer-list">
+            @for (col of prevWeekMissingCols(); track col.ticketId) {
+              <div class="drawer-item">
+                <div class="drawer-item-info">
+                  <span class="drawer-item-ref">{{ col.type }}{{ col.externalKey ? ' ' + col.externalKey : '' }}</span>
+                  <span class="drawer-item-label">{{ col.label || '–' }}</span>
+                </div>
+                <button
+                  mat-icon-button
+                  type="button"
+                  class="drawer-add-btn"
+                  [matTooltip]="'log_time_dialog_title' | translate"
+                  (click)="openPrevWeekTicketDialog(col)"
+                >
+                  <mat-icon>more_time</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+        </aside>
+      }
 
       <div class="table-wrap">
         @if (ticketCols().length === 0) {
@@ -72,7 +136,6 @@
             <thead>
               <tr>
                 <th class="col-day-header">{{ 'day_label' | translate }}</th>
-                <th class="col-total">{{ 'week_day_total' | translate }}</th>
                 @for (col of ticketCols(); track col.ticketId) {
                   <th class="col-ticket" [matTooltip]="col.type + (col.externalKey ? ' ' + col.externalKey : '') + (col.label ? ' · ' + col.label : '')" matTooltipPosition="above">
                     @if (col.externalKey && buildExtUrl(col.externalKey)) {
@@ -86,6 +149,7 @@
                     }
                   </th>
                 }
+                <th class="col-total">{{ 'week_day_total' | translate }}</th>
               </tr>
             </thead>
             <tbody>
@@ -99,9 +163,6 @@
                       <span class="day-label-text" [matTooltip]="row.holidayLabel">{{ row.dayLabel }}</span>
                     }
                   </td>
-                  <td class="cell-total" [class.value-active]="row.total > 0" [class.value-zero]="row.total === 0">
-                    {{ formatZeroAware(row.total) }}
-                  </td>
                   @for (col of ticketCols(); track col.ticketId) {
                     <td
                       class="cell-value"
@@ -113,6 +174,9 @@
                       {{ formatZeroAware(row.values.get(col.ticketId) ?? 0) }}
                     </td>
                   }
+                  <td class="cell-total" [class.value-active]="row.total > 0" [class.value-zero]="row.total === 0">
+                    {{ formatZeroAware(row.total) }}
+                  </td>
                 </tr>
                 }
               }
@@ -120,23 +184,23 @@
             <tfoot>
               <tr>
                 <td class="foot-label">{{ 'week_total' | translate }}</td>
-                <td class="cell-total grand-total" [class.value-active]="weekTotal() > 0">
-                  {{ formatZeroAware(weekTotal()) }}
-                </td>
                 @for (col of ticketCols(); track col.ticketId) {
                   <td class="cell-value cell-total" [class.value-active]="(colTotals().get(col.ticketId) ?? 0) > 0" [class.value-zero]="!(colTotals().get(col.ticketId) ?? 0)">
                     {{ formatZeroAware(colTotals().get(col.ticketId) ?? 0) }}
                   </td>
                 }
+                <td class="cell-total grand-total" [class.value-active]="weekTotal() > 0">
+                  {{ formatZeroAware(weekTotal()) }}
+                </td>
               </tr>
               <tr class="row-alltime">
                 <td class="foot-label">{{ 'week_alltime_total' | translate }}</td>
-                <td class="cell-total"></td>
                 @for (col of ticketCols(); track col.ticketId) {
                   <td class="cell-value cell-alltime" [class.value-active]="(allTimeTotalsMap().get(col.ticketId) ?? 0) > 0" [class.value-zero]="!(allTimeTotalsMap().get(col.ticketId) ?? 0)">
                     {{ formatZeroAware(allTimeTotalsMap().get(col.ticketId) ?? 0) }}
                   </td>
                 }
+                <td class="cell-total"></td>
               </tr>
             </tfoot>
           </table>
