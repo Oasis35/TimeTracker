@@ -1,11 +1,10 @@
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.FileProviders;
 using Tracker.Api.Data;
 using Tracker.Api.Models;
 using Tracker.Api.Services;
+using Tracker.Api.Tests.Testing;
 using Xunit;
 
 namespace Tracker.Api.Tests;
@@ -86,7 +85,7 @@ public sealed class DatabaseBackupServiceTests
             })
             .Build();
 
-        return new DatabaseBackupService(configuration, new FakeEnvironment(contentRoot));
+        return new DatabaseBackupService(configuration, new FakeWebHostEnv(contentRoot));
     }
 
     private static async Task CreateDatabaseAsync(string dbPath, string externalKey)
@@ -151,18 +150,4 @@ public sealed class DatabaseBackupServiceTests
         }
     }
 
-    private sealed class FakeEnvironment : IWebHostEnvironment
-    {
-        public FakeEnvironment(string contentRootPath)
-        {
-            ContentRootPath = contentRootPath;
-        }
-
-        public string ApplicationName { get; set; } = "Tracker.Api.Tests";
-        public IFileProvider WebRootFileProvider { get; set; } = null!;
-        public string WebRootPath { get; set; } = string.Empty;
-        public string EnvironmentName { get; set; } = "Testing";
-        public string ContentRootPath { get; set; }
-        public IFileProvider ContentRootFileProvider { get; set; } = null!;
-    }
 }
