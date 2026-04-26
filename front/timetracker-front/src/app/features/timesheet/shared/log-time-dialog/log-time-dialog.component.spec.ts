@@ -6,8 +6,8 @@ import { LogTimeDialogComponent, LogTimeDialogData } from './log-time-dialog.com
 import { TicketDto } from '../../../../core/api/models';
 import { provideNativeDateAdapter } from '@angular/material/core';
 
-const ticket1: TicketDto = { id: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket A', isCompleted: false };
-const ticket2: TicketDto = { id: 2, type: 'DEV', externalKey: 'ABC-2', label: 'Ticket B', isCompleted: false };
+const ticket1: TicketDto = { id: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket A' };
+const ticket2: TicketDto = { id: 2, type: 'DEV', externalKey: 'ABC-2', label: 'Ticket B' };
 
 const defaultData: LogTimeDialogData = {
   year: 2026,

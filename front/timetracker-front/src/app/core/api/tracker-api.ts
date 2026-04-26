@@ -50,10 +50,6 @@ export class TrackerApi {
     return this.http.put<TicketDto>(`/api/tickets/${ticketId}`, dto);
   }
 
-  setTicketCompletion(ticketId: number, isCompleted: boolean): Observable<TicketDto> {
-    return this.http.patch<TicketDto>(`/api/tickets/${ticketId}/completion`, { isCompleted });
-  }
-
   deleteTicket(ticketId: number): Observable<void> {
     return this.http.delete<void>(`/api/tickets/${ticketId}`);
   }

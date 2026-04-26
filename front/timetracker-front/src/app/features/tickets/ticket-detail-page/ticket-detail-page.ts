@@ -51,7 +51,6 @@ type MonthEntryDraft = Record<string, number>;
 export class TicketDetailPageComponent {
   readonly ticketId = signal<number | null>(null);
   readonly language = signal<AppLanguage>('fr');
-  readonly completionBusy = signal<boolean>(false);
   readonly busy = signal<boolean>(false);
   readonly actionError = signal<string>('');
   readonly expandedMonths = signal<Record<string, boolean>>({});
@@ -71,7 +70,6 @@ export class TicketDetailPageComponent {
   readonly loading = computed(() => this.metadataRes.isLoading() || this.detailRes.isLoading());
   readonly ticket = computed(() => this.detailRes.value()?.ticket ?? null);
   readonly entries = computed(() => this.detailRes.value()?.entries ?? []);
-  readonly isArchived = computed(() => this.ticket()?.isCompleted ?? false);
   readonly totalMinutes = computed(() => this.detailRes.value()?.totalMinutes ?? 0);
   readonly entryCount = computed(() => this.entries().length);
   readonly entryGroups = computed<EntryMonthGroup[]>(() => {
@@ -166,26 +164,6 @@ export class TicketDetailPageComponent {
     this.router.navigate(['/ticket', ticket.id]);
   }
 
-  async onCompletionChange(nextValue: boolean): Promise<void> {
-    const ticket = this.ticket();
-    if (!ticket || ticket.isCompleted === nextValue || this.busy()) return;
-
-    this.clearActionState();
-    this.completionBusy.set(true);
-    try {
-      await firstValueFrom(this.api.setTicketCompletion(ticket.id, nextValue));
-      this.showActionMessage('ticket_updated');
-      this.detailRes.reload();
-      this.metadataRes.reload();
-    } catch (error: unknown) {
-      this.actionError.set(
-        this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_update_ticket')),
-      );
-    } finally {
-      this.completionBusy.set(false);
-    }
-  }
-
   addEntry(monthKey: string): void {
     const usedDates = (this.entryGroups().find((g) => g.key === monthKey)?.entries ?? []).map((e) => e.date);
     const suggestedDate = this.nextAvailableDateInMonth(monthKey, Object.fromEntries(usedDates.map((d) => [d, 1])));
@@ -195,7 +173,7 @@ export class TicketDetailPageComponent {
   async openEntryDialog(existing: TicketTimeEntryDto | null, monthKey: string, defaultDate?: string): Promise<void> {
     const ticketId = this.ticketId();
     const ticket = this.ticket();
-    if (!ticketId || !ticket || ticket.isCompleted) return;
+    if (!ticketId || !ticket) return;
 
     const usedDates = (this.entryGroups().find((g) => g.key === monthKey)?.entries ?? [])
       .map((e) => e.date)

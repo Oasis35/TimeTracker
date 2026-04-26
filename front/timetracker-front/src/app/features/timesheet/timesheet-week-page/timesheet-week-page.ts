@@ -435,7 +435,7 @@ export class TimesheetWeekPageComponent {
       year: y,
       month: m,
       defaultTickets: this.ticketCols().map((c) => ({
-        id: c.ticketId, type: c.type, externalKey: c.externalKey, label: c.label, isCompleted: false,
+        id: c.ticketId, type: c.type, externalKey: c.externalKey, label: c.label,
       })),
       allTickets: this.allTicketsRes.value() ?? [],
       options: this.quickPickOptions(),
@@ -464,7 +464,6 @@ export class TimesheetWeekPageComponent {
       type: col.type,
       externalKey: col.externalKey,
       label: col.label,
-      isCompleted: false,
     };
     const data: LogTimeDialogData = {
       year: y,

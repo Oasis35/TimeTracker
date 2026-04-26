@@ -49,7 +49,7 @@ import {
 import { TicketLookupComponent } from '../../tickets/shared/ticket-lookup/ticket-lookup.component';
 
 type MonthRequest = { y: number; m: number };
-type DisplayRow = TimesheetRowDto & { ticketTotal: number; isCompleted: boolean };
+type DisplayRow = TimesheetRowDto & { ticketTotal: number };
 
 @Injectable()
 class IsoMondayDateAdapter extends NativeDateAdapter {
@@ -184,7 +184,6 @@ export class TimesheetDayPageComponent {
         return {
           ...existing,
           ticketTotal: totalsByTicketId.get(ticket.id) ?? 0,
-          isCompleted: ticket.isCompleted,
         };
       }
 
@@ -195,7 +194,6 @@ export class TimesheetDayPageComponent {
         label: ticket.label ?? '',
         values: {},
         ticketTotal: totalsByTicketId.get(ticket.id) ?? 0,
-        isCompleted: ticket.isCompleted,
       };
     });
 
@@ -203,7 +201,7 @@ export class TimesheetDayPageComponent {
     if (pinnedIds.size > 0) {
       const allTickets = this.metadataRes.value()?.tickets ?? [];
       for (const ticket of allTickets) {
-        if (pinnedIds.has(ticket.id) && !usedTicketIds.has(ticket.id) && !ticket.isCompleted) {
+        if (pinnedIds.has(ticket.id) && !usedTicketIds.has(ticket.id)) {
           rows.push({
             ticketId: ticket.id,
             type: ticket.type,
@@ -211,7 +209,6 @@ export class TimesheetDayPageComponent {
             label: ticket.label ?? '',
             values: {},
             ticketTotal: totalsByTicketId.get(ticket.id) ?? 0,
-            isCompleted: false,
           });
         }
       }
@@ -222,7 +219,7 @@ export class TimesheetDayPageComponent {
     return rows.filter(
       (row) =>
         (row.values?.[selectedDay] ?? 0) > 0 ||
-        (!row.isCompleted && pinnedIds.has(row.ticketId)),
+        pinnedIds.has(row.ticketId),
     );
   });
 
@@ -290,14 +287,13 @@ export class TimesheetDayPageComponent {
           type: fromUsed?.type ?? row.type,
           externalKey: fromUsed?.externalKey ?? row.externalKey,
           label: fromUsed?.label ?? row.label,
-          isCompleted: fromUsed?.isCompleted ?? false,
         };
       })
-      .filter((ticket) => !ticket.isCompleted && !!(ticket.externalKey ?? '').trim());
+      .filter((ticket) => !!(ticket.externalKey ?? '').trim());
   });
   readonly daySearchAllTickets = computed<TicketDto[]>(() =>
     (this.metadataRes.value()?.tickets ?? []).filter(
-      (ticket) => !ticket.isCompleted && !!(ticket.externalKey ?? '').trim(),
+      (ticket) => !!(ticket.externalKey ?? '').trim(),
     ),
   );
 
@@ -521,10 +517,6 @@ export class TimesheetDayPageComponent {
   }
 
   openTicketEntryDialog(ticket: TicketDto, opts?: { withDatePicker?: boolean }): void {
-    if (ticket.isCompleted) {
-      return;
-    }
-
     const date = this.selectedDay();
     if (!date && !opts?.withDatePicker) {
       this.actionError.set(this.translate.instant('day_required_before_log'));

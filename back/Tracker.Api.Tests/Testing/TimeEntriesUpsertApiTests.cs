@@ -102,21 +102,6 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
     }
 
     [Fact]
-    public async Task Upsert_Should_Return_ErrorCode_When_Ticket_Is_Completed()
-    {
-        var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "U-LOCK-1", "U-LOCK-1");
-        (await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-27", 120)).EnsureSuccessStatusCode();
-
-        var completion = await _client.PatchAsJsonAsync($"/api/tickets/{ticketId}/completion", new { isCompleted = true });
-        completion.EnsureSuccessStatusCode();
-
-        var upsert = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-28", 60);
-        Assert.Equal(HttpStatusCode.Conflict, upsert.StatusCode);
-        var problem = await ReadProblemAsync(upsert);
-        Assert.Equal(ApiErrorCodes.TicketCompletedLocked, GetCode(problem));
-    }
-
-    [Fact]
     public async Task Upsert_Should_Accept_Exactly_MinutesPerDay()
     {
         var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "U-MAX", "U-MAX");

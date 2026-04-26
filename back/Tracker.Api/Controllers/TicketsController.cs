@@ -23,7 +23,7 @@ public sealed class TicketsController : ControllerBase
             .Where(t => t.Type != TicketType.ABSENT)
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
-            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
+            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
             .ToListAsync();
 
         return Ok(tickets);
@@ -52,7 +52,7 @@ public sealed class TicketsController : ControllerBase
                 (_, t) => t)
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
-            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
+            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
             .ToListAsync();
 
         return Ok(tickets);
@@ -95,7 +95,7 @@ public sealed class TicketsController : ControllerBase
         await _db.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetAll), new { id = entity.Id },
-            new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label, entity.IsCompleted));
+            new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label));
     }
 
     [HttpPut("{ticketId:int}")]
@@ -107,8 +107,6 @@ public sealed class TicketsController : ControllerBase
         var entity = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
         if (entity is null)
             return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
-        if (entity.IsCompleted)
-            return ApiProblems.Conflict(this, ApiErrorCodes.TicketCompletedLocked);
 
         if (!Enum.IsDefined(dto.Type))
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketTypeRequired);
@@ -137,32 +135,7 @@ public sealed class TicketsController : ControllerBase
         entity.Label = label;
         await _db.SaveChangesAsync();
 
-        return Ok(new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label, entity.IsCompleted));
-    }
-
-    [HttpPatch("{ticketId:int}/completion")]
-    public async Task<ActionResult<TicketDto>> SetCompletion(int ticketId, [FromBody] SetTicketCompletionDto dto)
-    {
-        if (ticketId <= 0)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketIdInvalid);
-
-        var entity = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
-        if (entity is null)
-            return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
-
-        if (dto.IsCompleted)
-        {
-            var hasTimeEntries = await _db.TimeEntries
-                .AsNoTracking()
-                .AnyAsync(e => e.TicketId == ticketId);
-            if (!hasTimeEntries)
-                return ApiProblems.Conflict(this, ApiErrorCodes.TicketNoTimeEntries);
-        }
-
-        entity.IsCompleted = dto.IsCompleted;
-        await _db.SaveChangesAsync();
-
-        return Ok(new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label, entity.IsCompleted));
+        return Ok(new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label));
     }
 
     [HttpDelete("{ticketId:int}")]
@@ -174,8 +147,6 @@ public sealed class TicketsController : ControllerBase
         var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
         if (ticket is null)
             return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
-        if (ticket.IsCompleted)
-            return ApiProblems.Conflict(this, ApiErrorCodes.TicketCompletedLocked);
 
         var hasTimeEntries = await _db.TimeEntries
             .AsNoTracking()
@@ -247,7 +218,7 @@ public sealed class TicketsController : ControllerBase
         var ticket = await _db.Tickets
             .AsNoTracking()
             .Where(t => t.Id == ticketId)
-            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
+            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
             .FirstOrDefaultAsync();
         if (ticket is null)
             return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);

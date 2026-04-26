@@ -128,7 +128,7 @@ export class TimesheetMonthPageComponent {
   }
 
   openPrevMonthTicketDialog(row: { ticketId: number; type: string; externalKey: string; label: string }): void {
-    const ticket: TicketDto = { id: row.ticketId, type: row.type as TicketDto['type'], externalKey: row.externalKey, label: row.label, isCompleted: false };
+    const ticket: TicketDto = { id: row.ticketId, type: row.type as TicketDto['type'], externalKey: row.externalKey, label: row.label };
     const data: LogTimeDialogData = {
       year: this.year(),
       month: this.month(),

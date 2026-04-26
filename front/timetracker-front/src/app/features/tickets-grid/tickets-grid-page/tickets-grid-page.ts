@@ -40,9 +40,7 @@ type GridRow = {
   externalKey: string;
   label: string;
   totalMinutes: number;
-  isCompleted: boolean;
 };
-type CompletionFilter = 'open' | 'completed' | 'all';
 type EditDraft = { type: string; externalKey: string; label: string };
 type EditField = keyof EditDraft;
 
@@ -129,15 +127,12 @@ export class TicketsGridPageComponent {
     'extLink',
     'loggedTime',
     'label',
-    'completed',
     'actions',
   ];
   readonly pageSizeOptions: readonly number[] = [10, 25, 50];
   readonly language = signal<AppLanguage>('fr');
   readonly actionError = signal<string>('');
   readonly deletingTicketId = signal<number | null>(null);
-  readonly completionTicketId = signal<number | null>(null);
-  readonly completionFilter = signal<CompletionFilter>('open');
   readonly editingTicketId = signal<number | null>(null);
   readonly savingTicketId = signal<number | null>(null);
   readonly editDraft = signal<EditDraft>({ type: '', externalKey: '', label: '' });
@@ -172,7 +167,6 @@ export class TicketsGridPageComponent {
       externalKey: ticket.externalKey ?? '',
       label: ticket.label ?? '',
       totalMinutes: totalsByTicketId.get(ticket.id) ?? 0,
-      isCompleted: ticket.isCompleted,
     }));
   });
   readonly typeOptions = computed<string[]>(() => {
@@ -212,21 +206,9 @@ export class TicketsGridPageComponent {
       this.language.set(event.lang as AppLanguage);
     });
     this.tableDataSource.filterPredicate = (row, filter) => {
-      let parsed: { q: string; completion: CompletionFilter } = { q: '', completion: 'open' };
-      try {
-        parsed = JSON.parse(filter) as { q: string; completion: CompletionFilter };
-      } catch {
-        parsed = { q: this.normalize(filter), completion: 'open' };
-      }
-
-      if (parsed.completion === 'open' && row.isCompleted) return false;
-      if (parsed.completion === 'completed' && !row.isCompleted) return false;
-
-      if (!parsed.q) return true;
-      const haystack = this.normalize(
-        `${row.externalKey} ${row.type} ${row.label} ${row.totalMinutes}`,
-      );
-      return haystack.includes(parsed.q);
+      if (!filter) return true;
+      const haystack = this.normalize(`${row.externalKey} ${row.type} ${row.label} ${row.totalMinutes}`);
+      return haystack.includes(this.normalize(filter));
     };
 
     effect(() => {
@@ -240,11 +222,6 @@ export class TicketsGridPageComponent {
     const target = event.target as HTMLInputElement | null;
     const value = target?.value ?? '';
     this.textFilter.set(value);
-    this.applyTableFilter();
-  }
-
-  onCompletionFilterChange(value: CompletionFilter): void {
-    this.completionFilter.set(value);
     this.applyTableFilter();
   }
 
@@ -265,8 +242,6 @@ export class TicketsGridPageComponent {
   }
 
   openTicketEntryDialog(ticket: TicketDto): void {
-    if (ticket.isCompleted) return;
-
     const meta = this.metadataRes.value();
     const options = meta ? buildQuickPickOptions(meta, this.unit.unitMode()) : [];
     const dateLocale = this.language() === 'fr' ? 'fr-FR' : 'en-US';
@@ -326,23 +301,6 @@ export class TicketsGridPageComponent {
       );
     } finally {
       this.deletingTicketId.set(null);
-    }
-  }
-
-  async toggleCompletion(row: GridRow): Promise<void> {
-    this.actionError.set('');
-    this.completionTicketId.set(row.id);
-
-    try {
-      await firstValueFrom(this.api.setTicketCompletion(row.id, !row.isCompleted));
-      this.showActionMessage('ticket_updated');
-      this.allTicketsRes.reload();
-    } catch (error: unknown) {
-      this.actionError.set(
-        this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_update_ticket')),
-      );
-    } finally {
-      this.completionTicketId.set(null);
     }
   }
 
@@ -428,11 +386,7 @@ export class TicketsGridPageComponent {
   }
 
   private applyTableFilter(): void {
-    const payload = {
-      q: this.normalize(this.textFilter()),
-      completion: this.completionFilter(),
-    };
-    this.tableDataSource.filter = JSON.stringify(payload);
+    this.tableDataSource.filter = this.normalize(this.textFilter());
     this.tableDataSource.paginator?.firstPage();
   }
 

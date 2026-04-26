@@ -8,7 +8,7 @@ public sealed class DatabaseBackupService
 
     private static readonly Dictionary<string, HashSet<string>> RequiredColumns = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Tickets"] = new(StringComparer.OrdinalIgnoreCase) { "Id", "Type", "ExternalKey", "Label", "IsCompleted" },
+        ["Tickets"] = new(StringComparer.OrdinalIgnoreCase) { "Id", "Type", "ExternalKey", "Label" },
         ["TimeEntries"] = new(StringComparer.OrdinalIgnoreCase) { "Id", "TicketId", "Date", "QuantityMinutes", "IsSeed" },
         ["AppSettings"] = new(StringComparer.OrdinalIgnoreCase) { "Key", "Value" },
     };

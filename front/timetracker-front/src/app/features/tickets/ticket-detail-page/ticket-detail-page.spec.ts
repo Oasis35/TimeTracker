@@ -6,7 +6,7 @@ import { TrackerApi } from '../../../core/api/tracker-api';
 import { TicketDetailPageComponent } from './ticket-detail-page';
 
 describe('TicketDetailPageComponent', () => {
-  function setup(isCompleted = false) {
+  function setup() {
     const apiMock = {
       getMetadata: () =>
         of({
@@ -15,11 +15,11 @@ describe('TicketDetailPageComponent', () => {
           allowedMinutesHourMode: [0, 60, 120, 180, 240, 300, 360, 420, 480],
           defaultUnit: 'day' as const,
           defaultType: 'DEV',
-          tickets: [{ id: 1, type: 'DEV', externalKey: '65010', label: 'Refonte', isCompleted }],
+          tickets: [{ id: 1, type: 'DEV', externalKey: '65010', label: 'Refonte' }],
         }),
       getTicketDetail: () =>
         of({
-          ticket: { id: 1, type: 'DEV', externalKey: '65010', label: 'Refonte', isCompleted },
+          ticket: { id: 1, type: 'DEV', externalKey: '65010', label: 'Refonte' },
           entries: [{ date: '2026-03-10', quantityMinutes: 240 }],
           totalMinutes: 240,
           currentMonthMinutes: 0,
@@ -27,8 +27,6 @@ describe('TicketDetailPageComponent', () => {
         }),
       getPublicHolidaysMetropole: () => of({}),
       upsertTimeEntry: () => of(void 0),
-      setTicketCompletion: () =>
-        of({ id: 1, type: 'DEV', externalKey: '65010', label: 'Refonte', isCompleted: !isCompleted }),
       getSettings: () => of({}),
       setSetting: () => of(void 0),
       deleteSetting: () => of(void 0),
@@ -48,7 +46,7 @@ describe('TicketDetailPageComponent', () => {
   }
 
   it('renders ticket detail view', async () => {
-    const fixture = setup(false);
+    const fixture = setup();
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -57,19 +55,8 @@ describe('TicketDetailPageComponent', () => {
     expect(compiled.textContent).toContain('65010');
   });
 
-  it('does not render edit controls when ticket is completed', async () => {
-    const fixture = setup(true);
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.entry-edit-btn')).toBeNull();
-    expect(compiled.querySelector('.month-add-btn')).toBeNull();
-  });
-
-  it('renders entry rows with edit button when ticket is open', async () => {
-    const fixture = setup(false);
+  it('renders entry rows with edit and add buttons', async () => {
+    const fixture = setup();
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();

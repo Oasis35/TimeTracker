@@ -122,7 +122,7 @@ State is backend-driven: `AppSettingsService` loads all user preferences via `pr
 
 SQLite with EF Core. Three entities:
 
-- **Ticket** — Type (enum) + ExternalKey + Label + IsCompleted. Unique on `(Type, ExternalKey)`.
+- **Ticket** — Type (enum) + ExternalKey + Label. Unique on `(Type, ExternalKey)`.
 - **TimeEntry** — TicketId + Date (DateOnly) + QuantityMinutes. Unique on `(TicketId, Date)`.
 - **AppSetting** — Key-value store for user preferences.
 
@@ -137,8 +137,6 @@ SQLite with EF Core. Three entities:
 
 - Time entries must be in 15-minute increments, max `MinutesPerDay` (default 480) per day.
 - Daily total across all tickets cannot exceed `MinutesPerDay`.
-- Completed tickets are read-only (no time entry changes, no delete).
-- Cannot mark a ticket complete with zero time entries.
 - Cannot delete a ticket that has time entries.
 - Cannot create or update a ticket with type `ABSENT` (reserved for seed data).
 

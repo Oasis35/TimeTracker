@@ -16,8 +16,6 @@ describe('resolveApiErrorTranslationKey', () => {
     ['TT_BACKUP_FILE_INVALID', 'backup_file_invalid'],
     ['TT_TICKET_NOT_FOUND', 'ticket_not_found'],
     ['TT_TICKET_HAS_TIME_ENTRIES', 'ticket_has_time_entries'],
-    ['TT_TICKET_NO_TIME_ENTRIES', 'ticket_no_time_entries'],
-    ['TT_TICKET_COMPLETED_LOCKED', 'ticket_completed_locked'],
     ['TT_TICKET_ALREADY_EXISTS', 'ticket_already_exists'],
     ['TT_TICKET_TYPE_NOT_ALLOWED', 'ticket_type_not_allowed'],
     ['TT_FILTER_YEAR_MONTH_REQUIRED', 'filter_year_month_required'],

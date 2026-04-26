@@ -15,7 +15,7 @@ describe('TimesheetDayPageComponent', () => {
     allowedMinutesHourMode: [0, 60, 120, 180, 240, 300, 360, 420, 480],
     defaultUnit: 'day' as const,
     defaultType: 'DEV',
-    tickets: [{ id: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1', isCompleted: false }],
+    tickets: [{ id: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1' }],
   };
 
   const month: TimesheetMonthDto = {
@@ -159,66 +159,6 @@ describe('TimesheetDayPageComponent', () => {
     expect(getUsedByMonthCalls()).toContainEqual({ year: 2026, month: 3 });
   });
 
-  it('hides archived ticket when selected day has zero logged time on it', async () => {
-    const archivedTicket = { id: 2, type: 'DEV', externalKey: 'ABC-2', label: 'Ticket ABC-2', isCompleted: true };
-    const openTicket = { id: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1', isCompleted: false };
-    const apiMock = {
-      getMetadata: () => of(metadata),
-      getMonth: () =>
-        of({
-          year: 2026,
-          month: 2,
-          days: ['2026-02-01', '2026-02-02'],
-          rows: [
-            {
-              ticketId: 1,
-              type: 'DEV',
-              externalKey: 'ABC-1',
-              label: 'Ticket ABC-1',
-              values: { '2026-02-01': 120, '2026-02-02': 0 },
-            },
-            {
-              ticketId: 2,
-              type: 'DEV',
-              externalKey: 'ABC-2',
-              label: 'Ticket ABC-2',
-              values: { '2026-02-01': 60, '2026-02-02': 0 },
-            },
-          ],
-          totalsByDay: { '2026-02-01': 180, '2026-02-02': 0 },
-          minutesPerDay: 480,
-        }),
-      getUsedByMonth: () => of([openTicket, archivedTicket]),
-      getTicketTotals: () =>
-        of([
-          { ticketId: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Ticket ABC-1', total: 120 },
-          { ticketId: 2, type: 'DEV', externalKey: 'ABC-2', label: 'Ticket ABC-2', total: 60 },
-        ]),
-      upsertTimeEntry: () => of(void 0),
-      getSettings: () => of({}),
-      setSetting: () => of(void 0),
-      deleteSetting: () => of(void 0),
-      getPublicHolidaysMetropole: () => of({}),
-    };
-
-    TestBed.configureTestingModule({
-      imports: [TimesheetDayPageComponent, TranslateModule.forRoot()],
-      providers: [{ provide: TrackerApi, useValue: apiMock }, provideRouter([])],
-    });
-
-    const fixture = TestBed.createComponent(TimesheetDayPageComponent);
-    const component = fixture.componentInstance;
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    component.setSelectedDay('2026-02-02');
-    fixture.detectChanges();
-    await fixture.whenStable();
-
-    const rows = component.displayRows();
-    expect(rows.length).toBe(0);
-  });
-
   it('exposes month tickets as default lookup candidates', async () => {
     const { fixture, component } = setup({
       monthData: {
@@ -245,8 +185,8 @@ describe('TimesheetDayPageComponent', () => {
         minutesPerDay: 480,
       },
       usedTickets: [
-        { id: 3, type: 'DEV', externalKey: '100', label: 'Ticket 100', isCompleted: true },
-        { id: 4, type: 'DEV', externalKey: '20', label: 'Ticket 20', isCompleted: false },
+        { id: 3, type: 'DEV', externalKey: '100', label: 'Ticket 100' },
+        { id: 4, type: 'DEV', externalKey: '20', label: 'Ticket 20' },
       ],
     });
     fixture.detectChanges();
@@ -254,19 +194,18 @@ describe('TimesheetDayPageComponent', () => {
 
     const keys = component.daySearchDefaultTickets().map((t) => t.externalKey);
 
-    expect(keys).toEqual(['20']);
+    expect(keys).toEqual(['100', '20']);
   });
 
-  it('exposes open metadata tickets as searchable lookup candidates', async () => {
+  it('exposes metadata tickets as searchable lookup candidates', async () => {
     const { fixture, component } = setup({
       metadata: {
         ...metadata,
         tickets: [
-          { id: 1, type: 'DEV', externalKey: '6501', label: 'Exact', isCompleted: false },
-          { id: 2, type: 'DEV', externalKey: '65010', label: 'Prefix', isCompleted: false },
-          { id: 3, type: 'DEV', externalKey: 'A6501B', label: 'Contains', isCompleted: false },
-          { id: 4, type: 'DEV', externalKey: '06501', label: 'Contains 2', isCompleted: false },
-          { id: 5, type: 'DEV', externalKey: '65011', label: 'Archived', isCompleted: true },
+          { id: 1, type: 'DEV', externalKey: '6501', label: 'Exact' },
+          { id: 2, type: 'DEV', externalKey: '65010', label: 'Prefix' },
+          { id: 3, type: 'DEV', externalKey: 'A6501B', label: 'Contains' },
+          { id: 4, type: 'DEV', externalKey: '06501', label: 'Contains 2' },
         ],
       },
     });
@@ -289,7 +228,6 @@ describe('TimesheetDayPageComponent', () => {
       type: 'DEV',
       externalKey: 'ABC-1',
       label: 'Ticket ABC-1',
-      isCompleted: false,
     });
 
     expect(component.actionError()).toBe('day_required_before_log');
@@ -303,7 +241,6 @@ describe('TimesheetDayPageComponent', () => {
       type: 'DEV',
       externalKey: 'NEW-9',
       label: 'New ticket',
-      isCompleted: false,
     };
     const { fixture, component, dialogOpen } = setup({
       dialogCloseResults: [{ ticket: createdTicket, logTime: true }, false],
@@ -327,7 +264,6 @@ describe('TimesheetDayPageComponent', () => {
       type: 'DEV',
       externalKey: 'NEW-9',
       label: 'New ticket',
-      isCompleted: false,
     };
     const { fixture, component, dialogOpen } = setup({
       dialogCloseResults: [{ ticket: createdTicket, logTime: false }],
@@ -358,7 +294,6 @@ describe('TimesheetDayPageComponent', () => {
       type: 'DEV',
       externalKey: 'ABC-1',
       label: 'Ticket ABC-1',
-      isCompleted: false,
     });
     await fixture.whenStable();
 

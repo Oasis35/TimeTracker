@@ -231,7 +231,7 @@ describe('TimesheetWeekPageComponent', () => {
   });
 
   it('does not open time entry dialog when add ticket logTime is false', async () => {
-    const createdTicket = { id: 9, type: 'DEV', externalKey: 'NEW-9', label: 'New', isCompleted: false };
+    const createdTicket = { id: 9, type: 'DEV', externalKey: 'NEW-9', label: 'New' };
     const { fixture, component, dialogOpen } = setup({
       dialogResults: [{ ticket: createdTicket, logTime: false }],
     });
@@ -245,7 +245,7 @@ describe('TimesheetWeekPageComponent', () => {
   });
 
   it('opens time entry dialog when add ticket logTime is true', async () => {
-    const createdTicket = { id: 9, type: 'DEV', externalKey: 'NEW-9', label: 'New', isCompleted: false };
+    const createdTicket = { id: 9, type: 'DEV', externalKey: 'NEW-9', label: 'New' };
     const { fixture, component, dialogOpen } = setup({
       dialogResults: [{ ticket: createdTicket, logTime: true }, undefined],
     });
