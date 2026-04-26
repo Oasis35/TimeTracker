@@ -205,10 +205,15 @@ thead th.col-ticket {
   font-weight: 700;
 }
 
+.col-ticket-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+}
+
 .ticket-key-link,
 .ticket-key {
-  display: table;
-  margin-inline: auto;
   font-size: 0.8rem;
   font-weight: 650;
   color: color-mix(in srgb, var(--mat-sys-primary) 62%, var(--mat-sys-on-surface));

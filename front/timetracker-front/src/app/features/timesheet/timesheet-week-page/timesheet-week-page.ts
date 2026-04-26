@@ -25,8 +25,9 @@ import { isWeekendIso, isoWeekDays, isoWeekNumber, isoWeekYear, monthsForDays, t
 import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
 import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
 import { showSnack } from '../../../core/utils/ui-helpers';
-import { TimeSlotPickerDialogComponent, TimeSlotPickerDialogData } from '../shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
+import { TimeSlotPickerDialogComponent, TimeSlotPickerDialogData, TimeSlotPickerDialogResult } from '../shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
+import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
 import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
 
 @Injectable()
@@ -69,6 +70,7 @@ export interface WeekDayRow {
     MatSnackBarModule,
     MatTooltipModule,
     RouterLink,
+    TicketExtLinkComponent,
     TranslateModule,
   ],
   templateUrl: './timesheet-week-page.html',
@@ -489,21 +491,21 @@ export class TimesheetWeekPageComponent {
   }
 
   private openTicketEntryDialog(ticket: TicketDto): void {
-    const iso = this.todayIso();
-    const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' }).format(new Date(`${iso}T00:00:00`));
     const data: TimeSlotPickerDialogData = {
       ticketId: ticket.id,
       ticketRef: `${ticket.type} ${ticket.externalKey ?? ''}`.trim(),
       ticketLabel: ticket.label ?? '',
-      dayLabel,
+      dayLabel: '',
       currentMinutes: 0,
       options: this.quickPickOptions(),
+      initialDate: this.todayIso(),
+      dateLocale: this.dateLocale(),
     };
     this.dialog.open(TimeSlotPickerDialogComponent, { width: '460px', maxWidth: '95vw', data })
-      .afterClosed().subscribe((minutes) => {
-        if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
+      .afterClosed().subscribe((result: TimeSlotPickerDialogResult | undefined) => {
+        if (result === undefined || result === null || typeof result === 'number') return;
         void firstValueFrom(
-          this.api.upsertTimeEntry({ ticketId: ticket.id, date: iso, quantityMinutes: minutes }),
+          this.api.upsertTimeEntry({ ticketId: ticket.id, date: result.date, quantityMinutes: result.minutes }),
         ).then(() => this.reloadMonths())
          .catch((error: unknown) => {
            showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));

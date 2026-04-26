@@ -3,7 +3,34 @@
 <mat-dialog-content class="entry-dialog-content">
   <div class="ticket-ref">{{ data.ticketRef }}</div>
   <div class="ticket-label">{{ data.ticketLabel || '-' }}</div>
-  <div class="entry-day">{{ data.dayLabel }}</div>
+
+  @if (showDatePicker) {
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'log_time_date_label' | translate }}</mat-label>
+      <input
+        matInput
+        [matDatepicker]="picker"
+        [ngModel]="selectedDate()"
+        (ngModelChange)="selectedDate.set($event)"
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="picker" />
+      <mat-datepicker #picker />
+    </mat-form-field>
+  } @else if (showReadonlyDate) {
+    <mat-form-field appearance="outline">
+      <mat-label>{{ 'log_time_date_label' | translate }}</mat-label>
+      <input
+        matInput
+        [matDatepicker]="pickerReadonly"
+        [ngModel]="readonlyDateValue"
+        disabled
+      />
+      <mat-datepicker-toggle matIconSuffix [for]="pickerReadonly" disabled />
+      <mat-datepicker #pickerReadonly />
+    </mat-form-field>
+  } @else {
+    <div class="entry-day">{{ data.dayLabel }}</div>
+  }
 
   <mat-form-field appearance="outline">
     <mat-label>{{ 'logged_time' | translate }}</mat-label>
@@ -20,6 +47,10 @@
 
 <mat-dialog-actions align="end">
   <button mat-button type="button" (click)="close()">{{ 'cancel' | translate }}</button>
-  <button mat-flat-button type="button" (click)="save()">{{ 'save_ticket' | translate }}</button>
+  <button
+    mat-flat-button
+    type="button"
+    (click)="save()"
+    [disabled]="showDatePicker && !selectedDate()"
+  >{{ 'save_ticket' | translate }}</button>
 </mat-dialog-actions>
-

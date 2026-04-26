@@ -44,6 +44,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   TimeSlotPickerDialogComponent,
   TimeSlotPickerDialogData,
+  TimeSlotPickerDialogResult,
 } from '../shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
 import { TicketLookupComponent } from '../../tickets/shared/ticket-lookup/ticket-lookup.component';
 
@@ -472,13 +473,13 @@ export class TimesheetDayPageComponent {
       this.usedTicketsRes.reload();
       this.ticketTotalsRes.reload();
       if (result.logTime) {
-        this.openTicketEntryDialog(result.ticket);
+        this.openTicketEntryDialog(result.ticket, { withDatePicker: true });
       }
     });
   }
 
-  async pointMinutes(ticketId: number, quantityMinutes: number): Promise<void> {
-    const date = this.selectedDay();
+  async pointMinutes(ticketId: number, quantityMinutes: number, dateOverride?: string): Promise<void> {
+    const date = dateOverride ?? this.selectedDay();
 
     this.clearActionState();
 
@@ -519,18 +520,18 @@ export class TimesheetDayPageComponent {
     return row.values?.[dayIso] ?? 0;
   }
 
-  openTicketEntryDialog(ticket: TicketDto): void {
+  openTicketEntryDialog(ticket: TicketDto, opts?: { withDatePicker?: boolean }): void {
     if (ticket.isCompleted) {
       return;
     }
 
     const date = this.selectedDay();
-    if (!date) {
+    if (!date && !opts?.withDatePicker) {
       this.actionError.set(this.translate.instant('day_required_before_log'));
       return;
     }
 
-    const currentMinutes = this.getTicketMinutesForDay(ticket.id, date);
+    const currentMinutes = date ? this.getTicketMinutesForDay(ticket.id, date) : 0;
     const data: TimeSlotPickerDialogData = {
       ticketId: ticket.id,
       ticketRef: `${ticket.type} ${ticket.externalKey ?? ''}`.trim(),
@@ -538,6 +539,7 @@ export class TimesheetDayPageComponent {
       dayLabel: this.selectedDayLabel(),
       currentMinutes,
       options: this.quickPickOptions(),
+      ...(opts?.withDatePicker ? { initialDate: date ?? toIsoDate(new Date()), dateLocale: this.dateLocale() } : {}),
     };
 
     const dialogRef = this.dialog.open(TimeSlotPickerDialogComponent, {
@@ -546,9 +548,14 @@ export class TimesheetDayPageComponent {
       data,
     });
 
-    dialogRef.afterClosed().subscribe((minutes) => {
-      if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
-      void this.pointMinutes(ticket.id, minutes);
+    dialogRef.afterClosed().subscribe((result: TimeSlotPickerDialogResult | undefined) => {
+      if (result === undefined || result === null) return;
+      if (typeof result === 'number') {
+        if (Number.isNaN(result)) return;
+        void this.pointMinutes(ticket.id, result);
+      } else {
+        void this.pointMinutes(ticket.id, result.minutes, result.date);
+      }
     });
   }
 

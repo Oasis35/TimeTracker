@@ -24,8 +24,15 @@ import { CreateTicketDto, TicketDto, TicketTotalDto, TicketType, TimesheetMetada
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
+import { buildQuickPickOptions } from '../../../core/utils/timesheet-helpers';
+import { toIsoDate } from '../../../core/utils/date-helpers';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog';
+import {
+  TimeSlotPickerDialogComponent,
+  TimeSlotPickerDialogData,
+  TimeSlotPickerDialogResult,
+} from '../../timesheet/shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
 
 type GridRow = {
   id: number;
@@ -247,12 +254,56 @@ export class TicketsGridPageComponent {
       maxWidth: '95vw',
     });
 
-    dialogRef.afterClosed().subscribe((created) => {
-      if (created) {
-        this.allTicketsRes.reload();
-        this.ticketTotalsRes.reload();
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result) return;
+      this.allTicketsRes.reload();
+      this.ticketTotalsRes.reload();
+      if (result.logTime) {
+        this.openTicketEntryDialog(result.ticket);
       }
     });
+  }
+
+  openTicketEntryDialog(ticket: TicketDto): void {
+    if (ticket.isCompleted) return;
+
+    const meta = this.metadataRes.value();
+    const options = meta ? buildQuickPickOptions(meta, this.unit.unitMode()) : [];
+    const dateLocale = this.language() === 'fr' ? 'fr-FR' : 'en-US';
+
+    const data: TimeSlotPickerDialogData = {
+      ticketId: ticket.id,
+      ticketRef: `${ticket.type} ${ticket.externalKey ?? ''}`.trim(),
+      ticketLabel: ticket.label ?? '',
+      dayLabel: '',
+      currentMinutes: 0,
+      options,
+      initialDate: toIsoDate(new Date()),
+      dateLocale,
+    };
+
+    const dialogRef = this.dialog.open(TimeSlotPickerDialogComponent, {
+      width: '460px',
+      maxWidth: '95vw',
+      data,
+    });
+
+    dialogRef.afterClosed().subscribe((result: TimeSlotPickerDialogResult | undefined) => {
+      if (result === undefined || result === null || typeof result === 'number') return;
+      void this.pointMinutes(ticket.id, result.minutes, result.date);
+    });
+  }
+
+  async pointMinutes(ticketId: number, quantityMinutes: number, date: string): Promise<void> {
+    try {
+      await firstValueFrom(this.api.upsertTimeEntry({ ticketId, date, quantityMinutes }));
+      this.showActionMessage('time_saved');
+      this.ticketTotalsRes.reload();
+    } catch (error: unknown) {
+      this.actionError.set(
+        this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')),
+      );
+    }
   }
 
   async deleteTicket(row: GridRow): Promise<void> {

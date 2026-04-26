@@ -138,15 +138,14 @@
                 <th class="col-day-header">{{ 'day_label' | translate }}</th>
                 @for (col of ticketCols(); track col.ticketId) {
                   <th class="col-ticket" [matTooltip]="col.type + (col.externalKey ? ' ' + col.externalKey : '') + (col.label ? ' · ' + col.label : '')" matTooltipPosition="above">
-                    @if (col.externalKey && buildExtUrl(col.externalKey)) {
-                      <a class="ticket-key-link" [href]="buildExtUrl(col.externalKey)" target="_blank" rel="noopener noreferrer" (click)="$event.stopPropagation()">
-                        {{ col.externalKey }}
-                      </a>
-                    } @else if (col.externalKey) {
-                      <span class="ticket-key">{{ col.externalKey }}</span>
-                    } @else {
-                      <a class="ticket-label-link" [routerLink]="['/ticket', col.ticketId]">{{ col.label || '-' }}</a>
-                    }
+                    <div class="col-ticket-header">
+                      @if (col.externalKey) {
+                        <a class="ticket-key-link" [routerLink]="['/ticket', col.ticketId]">{{ col.externalKey }}</a>
+                        <app-ticket-ext-link [externalKey]="col.externalKey" [ticketType]="col.type" />
+                      } @else {
+                        <a class="ticket-label-link" [routerLink]="['/ticket', col.ticketId]">{{ col.label || '-' }}</a>
+                      }
+                    </div>
                   </th>
                 }
                 <th class="col-total">{{ 'week_day_total' | translate }}</th>

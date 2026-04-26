@@ -25,7 +25,7 @@ import { showSnack } from '../../../core/utils/ui-helpers';
 import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
-import { TimeSlotPickerDialogComponent, TimeSlotPickerDialogData } from '../shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
+import { TimeSlotPickerDialogComponent, TimeSlotPickerDialogData, TimeSlotPickerDialogResult } from '../shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
 import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
 import { ExternalLinkService } from '../../../core/services/external-link.service';
 
@@ -396,26 +396,25 @@ export class TimesheetMonthPageComponent {
 
   onCellClick(row: MonthlyRow, day: string): void {
     if (isWeekendIso(day) || this.isHolidayIso(day)) return;
-    const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' })
-      .format(new Date(`${day}T00:00:00`));
-    this.openTicketDayDialog(row.ticketId, `${row.type} ${row.externalKey ?? ''}`.trim(), row.label ?? '', day, dayLabel, this.getCellMinutes(row, day));
+    this.openTicketDayDialog(row.ticketId, `${row.type} ${row.externalKey ?? ''}`.trim(), row.label ?? '', day, this.getCellMinutes(row, day));
   }
 
   private openTicketEntryDialog(ticket: TicketDto): void {
     const today = new Date();
     const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' }).format(today);
-    this.openTicketDayDialog(ticket.id, `${ticket.type} ${ticket.externalKey ?? ''}`.trim(), ticket.label ?? '', todayIso, dayLabel, 0);
+    this.openTicketDayDialog(ticket.id, `${ticket.type} ${ticket.externalKey ?? ''}`.trim(), ticket.label ?? '', todayIso, 0, { withDatePicker: true });
   }
 
-  private openTicketDayDialog(ticketId: number, ticketRef: string, ticketLabel: string, dateIso: string, dayLabel: string, currentMinutes: number): void {
+  private openTicketDayDialog(ticketId: number, ticketRef: string, ticketLabel: string, dateIso: string, currentMinutes: number, opts?: { withDatePicker?: boolean }): void {
     const data: TimeSlotPickerDialogData = {
       ticketId,
       ticketRef,
       ticketLabel,
-      dayLabel,
+      dayLabel: '',
       currentMinutes,
       options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      ...(opts?.withDatePicker ? { initialDate: dateIso } : { readonlyDate: dateIso }),
     };
 
     const dialogRef = this.dialog.open(TimeSlotPickerDialogComponent, {
@@ -424,10 +423,13 @@ export class TimesheetMonthPageComponent {
       data,
     });
 
-    dialogRef.afterClosed().subscribe((minutes) => {
-      if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
+    dialogRef.afterClosed().subscribe((result: TimeSlotPickerDialogResult | undefined) => {
+      if (result === undefined || result === null) return;
+      const resolvedDate = typeof result === 'number' ? dateIso : result.date;
+      const resolvedMinutes = typeof result === 'number' ? result : result.minutes;
+      if (typeof result === 'number' && Number.isNaN(result)) return;
       void firstValueFrom(
-        this.api.upsertTimeEntry({ ticketId, date: dateIso, quantityMinutes: minutes }),
+        this.api.upsertTimeEntry({ ticketId, date: resolvedDate, quantityMinutes: resolvedMinutes }),
       ).then(() => {
         this.monthRes.reload();
         this.usedTicketsRes.reload();

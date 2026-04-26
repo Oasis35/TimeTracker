@@ -134,7 +134,7 @@
 
                 <div class="ticket-meta">
                   @if (r.externalKey) {
-                    <app-ticket-ext-link [externalKey]="r.externalKey" />
+                    <app-ticket-ext-link [externalKey]="r.externalKey" [ticketType]="r.type" />
                   }
                   <div class="week-total">
                     {{ 'total_ticket_row' | translate:{ value: formatEntryValue(r.ticketTotal) } }}
