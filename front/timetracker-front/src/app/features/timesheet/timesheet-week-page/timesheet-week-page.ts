@@ -25,7 +25,7 @@ import { isWeekendIso, isoWeekDays, isoWeekNumber, isoWeekYear, monthsForDays, t
 import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
 import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
 import { showSnack } from '../../../core/utils/ui-helpers';
-import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
+import { TimeSlotPickerDialogComponent, TimeSlotPickerDialogData } from '../shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
 
@@ -395,7 +395,7 @@ export class TimesheetWeekPageComponent {
 
   onCellClick(row: WeekDayRow, col: WeekTicketCol): void {
     if (row.isWeekend || row.isHoliday) return;
-    const data: TimeEntryDialogData = {
+    const data: TimeSlotPickerDialogData = {
       ticketId: col.ticketId,
       ticketRef: `${col.type} ${col.externalKey ?? ''}`.trim(),
       ticketLabel: col.label ?? '',
@@ -403,7 +403,7 @@ export class TimesheetWeekPageComponent {
       currentMinutes: row.values.get(col.ticketId) ?? 0,
       options: this.quickPickOptions(),
     };
-    this.dialog.open(TimeEntryDialogComponent, { width: '460px', maxWidth: '95vw', data })
+    this.dialog.open(TimeSlotPickerDialogComponent, { width: '460px', maxWidth: '95vw', data })
       .afterClosed().subscribe((minutes) => {
         if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
         void firstValueFrom(
@@ -491,7 +491,7 @@ export class TimesheetWeekPageComponent {
   private openTicketEntryDialog(ticket: TicketDto): void {
     const iso = this.todayIso();
     const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' }).format(new Date(`${iso}T00:00:00`));
-    const data: TimeEntryDialogData = {
+    const data: TimeSlotPickerDialogData = {
       ticketId: ticket.id,
       ticketRef: `${ticket.type} ${ticket.externalKey ?? ''}`.trim(),
       ticketLabel: ticket.label ?? '',
@@ -499,7 +499,7 @@ export class TimesheetWeekPageComponent {
       currentMinutes: 0,
       options: this.quickPickOptions(),
     };
-    this.dialog.open(TimeEntryDialogComponent, { width: '460px', maxWidth: '95vw', data })
+    this.dialog.open(TimeSlotPickerDialogComponent, { width: '460px', maxWidth: '95vw', data })
       .afterClosed().subscribe((minutes) => {
         if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
         void firstValueFrom(

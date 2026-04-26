@@ -252,28 +252,30 @@ public sealed class TicketsController : ControllerBase
         if (ticket is null)
             return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
 
-        var entries = await _db.TimeEntries
-            .AsNoTracking()
-            .Where(e => e.TicketId == ticketId)
-            .OrderByDescending(e => e.Date)
-            .Select(e => new TicketTimeEntryDto(
-                e.Date,
-                e.QuantityMinutes))
-            .ToListAsync();
-
         var today = DateOnly.FromDateTime(DateTime.Today);
-        var currentMonthMinutes = entries
-            .Where(e => e.Date.Year == today.Year && e.Date.Month == today.Month)
-            .Sum(e => e.QuantityMinutes);
         var prevMonth = today.AddMonths(-1);
-        var previousMonthMinutes = entries
-            .Where(e => e.Date.Year == prevMonth.Year && e.Date.Month == prevMonth.Month)
-            .Sum(e => e.QuantityMinutes);
+
+        var baseQuery = _db.TimeEntries.AsNoTracking().Where(e => e.TicketId == ticketId);
+
+        var totalMinutes = await baseQuery.SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
+        var currentMonthMinutes = await baseQuery
+            .Where(e => e.Date >= new DateOnly(today.Year, today.Month, 1) &&
+                        e.Date < new DateOnly(today.Year, today.Month, 1).AddMonths(1))
+            .SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
+        var previousMonthMinutes = await baseQuery
+            .Where(e => e.Date >= new DateOnly(prevMonth.Year, prevMonth.Month, 1) &&
+                        e.Date < new DateOnly(prevMonth.Year, prevMonth.Month, 1).AddMonths(1))
+            .SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
+
+        var entries = await baseQuery
+            .OrderByDescending(e => e.Date)
+            .Select(e => new TicketTimeEntryDto(e.Date, e.QuantityMinutes))
+            .ToListAsync();
 
         return Ok(new TicketDetailDto(
             Ticket: ticket,
             Entries: entries,
-            TotalMinutes: entries.Sum(e => e.QuantityMinutes),
+            TotalMinutes: totalMinutes,
             CurrentMonthMinutes: currentMonthMinutes,
             PreviousMonthMinutes: previousMonthMinutes));
     }

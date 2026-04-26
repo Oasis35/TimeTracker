@@ -42,9 +42,9 @@ import {
 } from '../../../core/api/models';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
-  TimeEntryDialogComponent,
-  TimeEntryDialogData,
-} from '../shared/time-entry-dialog/time-entry-dialog.component';
+  TimeSlotPickerDialogComponent,
+  TimeSlotPickerDialogData,
+} from '../shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
 import { TicketLookupComponent } from '../../tickets/shared/ticket-lookup/ticket-lookup.component';
 
 type MonthRequest = { y: number; m: number };
@@ -531,7 +531,7 @@ export class TimesheetDayPageComponent {
     }
 
     const currentMinutes = this.getTicketMinutesForDay(ticket.id, date);
-    const data: TimeEntryDialogData = {
+    const data: TimeSlotPickerDialogData = {
       ticketId: ticket.id,
       ticketRef: `${ticket.type} ${ticket.externalKey ?? ''}`.trim(),
       ticketLabel: ticket.label ?? '',
@@ -540,7 +540,7 @@ export class TimesheetDayPageComponent {
       options: this.quickPickOptions(),
     };
 
-    const dialogRef = this.dialog.open(TimeEntryDialogComponent, {
+    const dialogRef = this.dialog.open(TimeSlotPickerDialogComponent, {
       width: '460px',
       maxWidth: '95vw',
       data,

@@ -8,7 +8,7 @@ import { TranslateModule } from '@ngx-translate/core';
 
 type TimeOption = { minutes: number; label: string };
 
-export type TimeEntryDialogData = {
+export type TimeSlotPickerDialogData = {
   ticketId: number;
   ticketRef: string;
   ticketLabel: string;
@@ -18,7 +18,7 @@ export type TimeEntryDialogData = {
 };
 
 @Component({
-  selector: 'app-time-entry-dialog',
+  selector: 'app-time-slot-picker-dialog',
   standalone: true,
   imports: [
     CommonModule,
@@ -28,12 +28,12 @@ export type TimeEntryDialogData = {
     MatButtonModule,
     TranslateModule,
   ],
-  templateUrl: './time-entry-dialog.component.html',
-  styleUrl: './time-entry-dialog.component.scss'
+  templateUrl: './time-slot-picker-dialog.component.html',
+  styleUrl: './time-slot-picker-dialog.component.scss'
 })
-export class TimeEntryDialogComponent {
-  readonly data = inject<TimeEntryDialogData>(MAT_DIALOG_DATA);
-  private readonly dialogRef = inject(MatDialogRef<TimeEntryDialogComponent, number>);
+export class TimeSlotPickerDialogComponent {
+  readonly data = inject<TimeSlotPickerDialogData>(MAT_DIALOG_DATA);
+  private readonly dialogRef = inject(MatDialogRef<TimeSlotPickerDialogComponent, number>);
 
   readonly selectedMinutes = signal<number>(this.data.currentMinutes);
 

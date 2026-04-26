@@ -25,7 +25,7 @@ import { showSnack } from '../../../core/utils/ui-helpers';
 import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
-import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
+import { TimeSlotPickerDialogComponent, TimeSlotPickerDialogData } from '../shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
 import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
 import { ExternalLinkService } from '../../../core/services/external-link.service';
 
@@ -409,7 +409,7 @@ export class TimesheetMonthPageComponent {
   }
 
   private openTicketDayDialog(ticketId: number, ticketRef: string, ticketLabel: string, dateIso: string, dayLabel: string, currentMinutes: number): void {
-    const data: TimeEntryDialogData = {
+    const data: TimeSlotPickerDialogData = {
       ticketId,
       ticketRef,
       ticketLabel,
@@ -418,7 +418,7 @@ export class TimesheetMonthPageComponent {
       options: this.quickPickOptions(),
     };
 
-    const dialogRef = this.dialog.open(TimeEntryDialogComponent, {
+    const dialogRef = this.dialog.open(TimeSlotPickerDialogComponent, {
       width: '460px',
       maxWidth: '95vw',
       data,
