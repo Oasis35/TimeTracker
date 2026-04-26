@@ -10,6 +10,7 @@ Personal full-stack time tracking app with:
 - Backend: [back/README.md](back/README.md)
 - Frontend: [front/timetracker-front/README.md](front/timetracker-front/README.md)
 - Docker (backend only): [README.docker.md](README.docker.md)
+- Docker (production single image): [README.docker.prod.fr.md](README.docker.prod.fr.md)
 - Francais:
   - Main guide: [README.fr.md](README.fr.md)
   - Backend: [back/README.fr.md](back/README.fr.md)
