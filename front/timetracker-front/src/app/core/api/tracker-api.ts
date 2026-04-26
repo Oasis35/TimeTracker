@@ -80,7 +80,7 @@ export class TrackerApi {
   }
 
   getPublicHolidaysMetropole(): Observable<Record<string, string>> {
-    return this.http.get<Record<string, string>>('https://calendrier.api.gouv.fr/jours-feries/metropole.json');
+    return this.http.get<Record<string, string>>('/api/public-holidays');
   }
 
   getSettings(): Observable<Record<string, string>> {

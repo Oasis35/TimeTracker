@@ -1,5 +1,6 @@
-import { APP_INITIALIZER, ApplicationConfig, importProvidersFrom } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom, inject, provideAppInitializer } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { provideHttpClient } from '@angular/common/http';
 import { provideTranslateService, TranslateModule } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
@@ -9,6 +10,7 @@ import { AppSettingsService } from './core/services/app-settings.service';
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
+    provideAnimationsAsync(),
     provideHttpClient(),
     provideTranslateService({
       lang: 'fr',
@@ -19,11 +21,6 @@ export const appConfig: ApplicationConfig = {
       }),
     }),
     importProvidersFrom(TranslateModule),
-    {
-      provide: APP_INITIALIZER,
-      useFactory: (settings: AppSettingsService) => () => settings.load(),
-      deps: [AppSettingsService],
-      multi: true,
-    },
+    provideAppInitializer(() => inject(AppSettingsService).load()),
   ],
 };

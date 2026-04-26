@@ -32,6 +32,7 @@ describe('TimesheetDayPageComponent', () => {
       },
     ],
     totalsByDay: { '2026-02-01': 120, '2026-02-02': 0 },
+    minutesPerDay: 480,
   };
 
   function setup(options?: {
@@ -185,6 +186,7 @@ describe('TimesheetDayPageComponent', () => {
             },
           ],
           totalsByDay: { '2026-02-01': 180, '2026-02-02': 0 },
+          minutesPerDay: 480,
         }),
       getUsedByMonth: () => of([openTicket, archivedTicket]),
       getTicketTotals: () =>
@@ -240,6 +242,7 @@ describe('TimesheetDayPageComponent', () => {
           },
         ],
         totalsByDay: { '2026-02-01': 180 },
+        minutesPerDay: 480,
       },
       usedTickets: [
         { id: 3, type: 'DEV', externalKey: '100', label: 'Ticket 100', isCompleted: true },

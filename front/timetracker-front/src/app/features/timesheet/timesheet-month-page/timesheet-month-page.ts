@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, DestroyRef, ElementRef, OnDestroy, ViewChild, computed, effect, inject, resource, signal, untracked } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, resource, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -55,23 +55,12 @@ type MonthlyRow = TimesheetRowDto & { total: number };
   templateUrl: './timesheet-month-page.html',
   styleUrl: './timesheet-month-page.scss',
 })
-export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
+export class TimesheetMonthPageComponent {
   private readonly now = new Date();
-  private typeHeaderResizeObserver: ResizeObserver | null = null;
-  private typeHeaderElement: HTMLElement | null = null;
-  private numberHeaderElement: HTMLElement | null = null;
 
   readonly year = signal<number>(this.now.getFullYear());
   readonly month = signal<number>(this.now.getMonth() + 1);
   readonly language = signal<AppLanguage>('fr');
-  readonly stickyTypeWidth = signal<number>(90);
-  readonly stickyNumberWidth = signal<number>(80);
-
-  readonly stickyLabelLeft = computed(() => this.stickyTypeWidth() + this.stickyNumberWidth());
-  readonly stickyLabelWidth = signal<number>(320);
-  readonly stickyTotalLeft = computed(() => this.stickyLabelLeft() + this.stickyLabelWidth());
-  readonly stickyTotalWidth = signal<number>(60);
-  readonly stickyAlltimeLeft = computed(() => this.stickyTotalLeft() + this.stickyTotalWidth());
 
   readonly metadataRes = resource<TimesheetMetadataDto, number>({
     params: () => 0,
@@ -159,6 +148,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
           showSnack(this.snackBar, this.translate.instant('time_saved'));
           this.monthRes.reload();
           this.usedTicketsRes.reload();
+          this.allTimeTotalsRes.reload();
         }).catch((error: unknown) => {
           showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
         });
@@ -271,45 +261,6 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     this.year.set(date.getFullYear());
     this.month.set(date.getMonth() + 1);
     picker.close();
-  }
-
-  @ViewChild('typeHeaderCell')
-  set typeHeaderCell(cell: ElementRef<HTMLElement> | undefined) {
-    if (!cell) return;
-    this.observeTypeHeader(cell.nativeElement);
-  }
-
-  @ViewChild('numberHeaderCell')
-  set numberHeaderCell(cell: ElementRef<HTMLElement> | undefined) {
-    if (!cell) return;
-    this.numberHeaderElement = cell.nativeElement;
-    this.syncWidths();
-  }
-
-  @ViewChild('labelHeaderCell')
-  set labelHeaderCell(cell: ElementRef<HTMLElement> | undefined) {
-    if (!cell) return;
-    this._labelHeaderElement = cell.nativeElement;
-    this.syncWidths();
-  }
-
-  @ViewChild('totalHeaderCell')
-  set totalHeaderCell(cell: ElementRef<HTMLElement> | undefined) {
-    if (!cell) return;
-    this._totalHeaderElement = cell.nativeElement;
-    this.syncWidths();
-  }
-
-  private _labelHeaderElement: HTMLElement | null = null;
-  private _totalHeaderElement: HTMLElement | null = null;
-
-  ngAfterViewInit(): void {
-    // Width can settle after initial render; align sticky offset once rendered.
-    queueMicrotask(() => this.syncWidths());
-  }
-
-  ngOnDestroy(): void {
-    this.typeHeaderResizeObserver?.disconnect();
   }
 
   prevMonth(): void {
@@ -480,6 +431,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
       ).then(() => {
         this.monthRes.reload();
         this.usedTicketsRes.reload();
+        this.allTimeTotalsRes.reload();
       }).catch((error: unknown) => {
         showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
       });
@@ -497,32 +449,4 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     return this.language() === 'fr' ? 'fr-FR' : 'en-US';
   }
 
-  private observeTypeHeader(el: HTMLElement): void {
-    this.typeHeaderElement = el;
-    this.typeHeaderResizeObserver?.disconnect();
-    if (typeof ResizeObserver === 'undefined') {
-      this.syncWidths();
-      return;
-    }
-    this.typeHeaderResizeObserver = new ResizeObserver(() => this.syncWidths());
-    this.typeHeaderResizeObserver.observe(el);
-    this.syncWidths();
-  }
-
-  private syncWidths(): void {
-    const measure = (el: HTMLElement | null) =>
-      el ? Math.ceil(el.getBoundingClientRect().width) : 0;
-
-    const typeW = measure(this.typeHeaderElement);
-    if (typeW > 0 && this.stickyTypeWidth() !== typeW) this.stickyTypeWidth.set(typeW);
-
-    const numW = measure(this.numberHeaderElement);
-    if (numW > 0 && this.stickyNumberWidth() !== numW) this.stickyNumberWidth.set(numW);
-
-    const labelW = measure(this._labelHeaderElement);
-    if (labelW > 0 && this.stickyLabelWidth() !== labelW) this.stickyLabelWidth.set(labelW);
-
-    const totalW = measure(this._totalHeaderElement);
-    if (totalW > 0 && this.stickyTotalWidth() !== totalW) this.stickyTotalWidth.set(totalW);
-  }
 }

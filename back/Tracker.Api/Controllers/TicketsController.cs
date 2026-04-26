@@ -81,7 +81,7 @@ public sealed class TicketsController : ControllerBase
                 .FirstOrDefaultAsync(t => t.ExternalKey == externalKey);
 
             if (existing != null)
-                return ApiProblems.BadRequest(this, ApiErrorCodes.TicketAlreadyExists);
+                return ApiProblems.Conflict(this, ApiErrorCodes.TicketAlreadyExists);
         }
 
         var entity = new Ticket
@@ -106,12 +106,15 @@ public sealed class TicketsController : ControllerBase
 
         var entity = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
         if (entity is null)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNotFound);
+            return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
         if (entity.IsCompleted)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketCompletedLocked);
+            return ApiProblems.Conflict(this, ApiErrorCodes.TicketCompletedLocked);
 
         if (!Enum.IsDefined(dto.Type))
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketTypeRequired);
+
+        if (dto.Type == TicketType.ABSENT)
+            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketTypeNotAllowed);
 
         var type = dto.Type;
         var externalKey = string.IsNullOrWhiteSpace(dto.ExternalKey) ? null : dto.ExternalKey.Trim();
@@ -126,7 +129,7 @@ public sealed class TicketsController : ControllerBase
                 .AsNoTracking()
                 .FirstOrDefaultAsync(t => t.Id != ticketId && t.ExternalKey == externalKey);
             if (duplicate is not null)
-                return ApiProblems.BadRequest(this, ApiErrorCodes.TicketAlreadyExists);
+                return ApiProblems.Conflict(this, ApiErrorCodes.TicketAlreadyExists);
         }
 
         entity.Type = type;
@@ -145,7 +148,7 @@ public sealed class TicketsController : ControllerBase
 
         var entity = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
         if (entity is null)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNotFound);
+            return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
 
         if (dto.IsCompleted)
         {
@@ -153,7 +156,7 @@ public sealed class TicketsController : ControllerBase
                 .AsNoTracking()
                 .AnyAsync(e => e.TicketId == ticketId);
             if (!hasTimeEntries)
-                return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNoTimeEntries);
+                return ApiProblems.Conflict(this, ApiErrorCodes.TicketNoTimeEntries);
         }
 
         entity.IsCompleted = dto.IsCompleted;
@@ -170,15 +173,15 @@ public sealed class TicketsController : ControllerBase
 
         var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
         if (ticket is null)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNotFound);
+            return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
         if (ticket.IsCompleted)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketCompletedLocked);
+            return ApiProblems.Conflict(this, ApiErrorCodes.TicketCompletedLocked);
 
         var hasTimeEntries = await _db.TimeEntries
             .AsNoTracking()
             .AnyAsync(e => e.TicketId == ticketId);
         if (hasTimeEntries)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketHasTimeEntries);
+            return ApiProblems.Conflict(this, ApiErrorCodes.TicketHasTimeEntries);
 
         _db.Tickets.Remove(ticket);
         await _db.SaveChangesAsync();
@@ -247,7 +250,7 @@ public sealed class TicketsController : ControllerBase
             .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
             .FirstOrDefaultAsync();
         if (ticket is null)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNotFound);
+            return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
 
         var entries = await _db.TimeEntries
             .AsNoTracking()

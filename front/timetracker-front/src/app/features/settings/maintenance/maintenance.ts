@@ -3,9 +3,11 @@ import { HttpResponse } from '@angular/common/http';
 import { Component, ElementRef, ViewChild, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
+import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { TrackerApi } from '../../../core/api/tracker-api';
 
@@ -16,6 +18,7 @@ import { TrackerApi } from '../../../core/api/tracker-api';
     CommonModule,
     MatCardModule,
     MatButtonModule,
+    MatDialogModule,
     MatSnackBarModule,
     TranslateModule,
   ],
@@ -36,6 +39,7 @@ export class MaintenancePageComponent {
     private readonly api: TrackerApi,
     private readonly translate: TranslateService,
     private readonly snackBar: MatSnackBar,
+    private readonly dialog: MatDialog,
   ) {}
 
   // —————————————————————————————————————————
@@ -87,9 +91,10 @@ export class MaintenancePageComponent {
       return;
     }
 
-    if (!window.confirm(this.translate.instant('backup_restore_confirm'))) {
-      return;
-    }
+    const confirmed = await firstValueFrom(
+      this.dialog.open(ConfirmDialogComponent, { data: { messageKey: 'backup_restore_confirm' } }).afterClosed(),
+    );
+    if (!confirmed) return;
 
     this.restoreBusy.set(true);
     this.maintenanceError.set('');

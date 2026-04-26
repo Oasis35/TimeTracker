@@ -93,7 +93,7 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
     {
         var r = await ApiTestHelpers.UpsertAsync(_client, ticketId: 999999, date: "2026-02-27", minutes: 120);
 
-        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, r.StatusCode);
         var p = await ReadProblemAsync(r);
         Assert.Equal(ApiErrorCodes.TicketNotFound, GetCode(p));
     }
@@ -108,7 +108,7 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
         completion.EnsureSuccessStatusCode();
 
         var upsert = await ApiTestHelpers.UpsertAsync(_client, ticketId, "2026-02-28", 60);
-        Assert.Equal(HttpStatusCode.BadRequest, upsert.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, upsert.StatusCode);
         var problem = await ReadProblemAsync(upsert);
         Assert.Equal(ApiErrorCodes.TicketCompletedLocked, GetCode(problem));
     }

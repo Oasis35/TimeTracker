@@ -42,9 +42,9 @@ public sealed class TimeEntriesController : ControllerBase
             .FirstOrDefaultAsync();
 
         if (ticket is null)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNotFound);
+            return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
         if (ticket.IsCompleted)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketCompletedLocked);
+            return ApiProblems.Conflict(this, ApiErrorCodes.TicketCompletedLocked);
 
         var existing = await _db.TimeEntries
             .SingleOrDefaultAsync(e => e.TicketId == dto.TicketId && e.Date == dto.Date);

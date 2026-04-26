@@ -1,6 +1,7 @@
 import { HttpHeaders, HttpResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
@@ -29,6 +30,7 @@ describe('MaintenancePageComponent', () => {
     await TestBed.configureTestingModule({
       imports: [
         MaintenancePageComponent,
+        MatDialogModule,
         MatSnackBarModule,
         TranslateModule.forRoot(),
       ],
@@ -43,6 +45,8 @@ describe('MaintenancePageComponent', () => {
       backup_restore_success: 'Backup restored',
       backup_restore_confirm: 'Confirm restore?',
       backup_file_missing: 'Please choose a backup file.',
+      cancel: 'Cancel',
+      confirm: 'Confirm',
     });
     translate.use('en');
   });
@@ -89,11 +93,14 @@ describe('MaintenancePageComponent', () => {
   it('restores the selected file after confirmation', async () => {
     const file = new File(['backup'], 'restore.db');
     apiMock.restoreBackup.mockReturnValue(of({ safetyBackupFileName: 'pre-restore.db' }));
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     const fixture = create();
-    fixture.componentInstance.onBackupFileSelected({ target: { files: [file] } } as any);
 
+    vi.spyOn((fixture.componentInstance as any).dialog, 'open').mockReturnValue({
+      afterClosed: () => of(true),
+    } as any);
+
+    fixture.componentInstance.onBackupFileSelected({ target: { files: [file] } } as any);
     await fixture.componentInstance.restoreBackup();
 
     expect(apiMock.restoreBackup).toHaveBeenCalledWith(file);

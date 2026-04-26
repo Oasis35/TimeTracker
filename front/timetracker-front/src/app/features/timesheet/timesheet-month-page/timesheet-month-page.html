@@ -105,14 +105,7 @@
         </aside>
       }
 
-      <div
-        class="table-wrap"
-        [style.--sticky-col-type-width.px]="stickyTypeWidth()"
-        [style.--sticky-col-number-left.px]="stickyTypeWidth()"
-        [style.--sticky-col-label-left.px]="stickyLabelLeft()"
-        [style.--sticky-col-total-left.px]="stickyTotalLeft()"
-        [style.--sticky-col-alltime-left.px]="stickyAlltimeLeft()"
-      >
+      <div class="table-wrap">
         <table>
           <colgroup>
             <col class="cg-type" />
@@ -126,10 +119,10 @@
           </colgroup>
           <thead>
             <tr class="week-numbers-row">
-              <th #typeHeaderCell class="col-type" rowspan="2">{{ 'type' | translate }}</th>
-              <th #numberHeaderCell class="col-number" rowspan="2">{{ 'external_key' | translate }}</th>
-              <th #labelHeaderCell class="col-label" rowspan="2">{{ 'label' | translate }}</th>
-              <th #totalHeaderCell class="col-total" rowspan="2">{{ 'month_total' | translate }}</th>
+              <th class="col-type" rowspan="2">{{ 'type' | translate }}</th>
+              <th class="col-number" rowspan="2">{{ 'external_key' | translate }}</th>
+              <th class="col-label" rowspan="2">{{ 'label' | translate }}</th>
+              <th class="col-total" rowspan="2">{{ 'month_total' | translate }}</th>
               <th class="col-alltime" rowspan="2">{{ 'alltime_total' | translate }}</th>
               @for (block of weekBlocks(); track block.week) {
                 <th class="col-week-number" [attr.colspan]="block.span">

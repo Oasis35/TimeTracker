@@ -25,6 +25,7 @@ import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
+import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog';
 
 type GridRow = {
   id: number;
@@ -257,8 +258,10 @@ export class TicketsGridPageComponent {
   async deleteTicket(row: GridRow): Promise<void> {
     this.actionError.set('');
 
-    const confirmation = window.confirm(this.translate.instant('delete_ticket_confirm'));
-    if (!confirmation) return;
+    const confirmed = await firstValueFrom(
+      this.dialog.open(ConfirmDialogComponent, { data: { messageKey: 'delete_ticket_confirm' } }).afterClosed(),
+    );
+    if (!confirmed) return;
 
     this.deletingTicketId.set(row.id);
     try {
@@ -321,10 +324,10 @@ export class TicketsGridPageComponent {
     if (this.editingTicketId() !== ticketId) return;
 
     if (row.totalMinutes > 0) {
-      const confirmation = window.confirm(
-        this.translate.instant('edit_confirm_has_time'),
+      const confirmed = await firstValueFrom(
+        this.dialog.open(ConfirmDialogComponent, { data: { messageKey: 'edit_confirm_has_time' } }).afterClosed(),
       );
-      if (!confirmation) return;
+      if (!confirmed) return;
     }
 
     this.actionError.set('');
@@ -333,8 +336,8 @@ export class TicketsGridPageComponent {
     const draft = this.editDraft();
     const payload: CreateTicketDto = {
       type: draft.type as TicketType,
-      externalKey: draft.externalKey.trim() ? draft.externalKey : null,
-      label: draft.label.trim() ? draft.label : null,
+      externalKey: draft.externalKey.trim() || null,
+      label: draft.label.trim() || null,
     };
 
     try {

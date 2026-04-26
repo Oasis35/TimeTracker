@@ -61,6 +61,7 @@ export const TRANSLATION_KEYS = [
   'external_key',
   'label',
   'cancel',
+  'confirm',
   'add',
   'cannot_load_data',
   'unknown_error_contact_admin',
@@ -134,6 +135,7 @@ export const TRANSLATION_KEYS = [
   'ticket_detail_days_count',
   'ticket_detail_empty',
   'ticket_add_entry',
+  'setting_key_not_allowed',
 ] as const;
 
 export type TranslationKey = (typeof TRANSLATION_KEYS)[number];

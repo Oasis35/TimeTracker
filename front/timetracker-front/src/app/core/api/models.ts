@@ -60,7 +60,7 @@ export interface TimesheetMonthDto {
   days: string[];
   rows: TimesheetRowDto[];
   totalsByDay: Record<string, number>;
-  minutesPerDay?: number;
+  minutesPerDay: number;
 }
 
 export interface UpsertTimeEntryDto {

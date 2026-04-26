@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Tracker.Api.Infrastructure;
 using Tracker.Api.Services;
 
@@ -6,6 +7,7 @@ namespace Tracker.Api.Controllers;
 
 [ApiController]
 [Route("api/backup")]
+[EnableRateLimiting("backup")]
 public sealed class BackupController : ControllerBase
 {
     private readonly DatabaseBackupService _backupService;
@@ -23,7 +25,7 @@ public sealed class BackupController : ControllerBase
     }
 
     [HttpPost("restore")]
-    [RequestFormLimits(MultipartBodyLengthLimit = 50_000_000)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 262_144_000)]
     public async Task<ActionResult<object>> Restore([FromForm] IFormFile? file, CancellationToken cancellationToken)
     {
         if (file is null || file.Length <= 0)

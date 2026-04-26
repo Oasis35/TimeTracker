@@ -21,6 +21,7 @@ const API_ERROR_TRANSLATION_BY_CODE: Record<string, TranslationKey> = {
   TT_STEP_15: 'minutes_step_15',
   TT_OVERFLOW_DAY: 'overflow_day',
   TT_SETTING_KEY_INVALID: 'setting_key_invalid',
+  TT_SETTING_KEY_NOT_ALLOWED: 'setting_key_not_allowed',
   TT_SETTING_VALUE_REQUIRED: 'setting_value_required',
 };
 

@@ -23,10 +23,15 @@ RUN dotnet publish "./Tracker.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publis
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* \
+    && adduser --disabled-password --gecos "" appuser \
+    && mkdir -p /data && chown appuser:appuser /data
 
 EXPOSE 8080
 
 COPY --from=back-build /app/publish .
+RUN chown -R appuser:appuser /app
+
+USER appuser
 
 ENTRYPOINT ["dotnet", "Tracker.Api.dll"]

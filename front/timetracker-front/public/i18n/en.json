@@ -89,6 +89,7 @@
   "minutes_step_15": "Minutes value must use a 15-minute step.",
   "overflow_day": "Day total exceeds the allowed limit.",
   "setting_key_invalid": "Invalid setting key.",
+  "setting_key_not_allowed": "This setting key is not allowed.",
   "setting_value_required": "Setting value is required.",
   "ticket_saved": "Ticket saved.",
   "ticket_updated": "Ticket updated.",
