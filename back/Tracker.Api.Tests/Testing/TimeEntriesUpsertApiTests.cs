@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Tracker.Api.Tests;
 
-public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
+public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>, IAsyncLifetime
 {
     private readonly TrackerApiFactory _factory;
     private readonly HttpClient _client;
@@ -19,6 +19,9 @@ public sealed class TimeEntriesUpsertApiTests : IClassFixture<TrackerApiFactory>
         _factory = factory;
         _client = factory.CreateClient();
     }
+
+    public Task InitializeAsync() => _factory.ResetDbAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task Upsert_Should_Create_Then_Update_Then_Delete()

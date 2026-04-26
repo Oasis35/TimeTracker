@@ -5,14 +5,19 @@ using Xunit;
 
 namespace Tracker.Api.Tests;
 
-public sealed class SettingsControllerTests : IClassFixture<TrackerApiFactory>
+public sealed class SettingsControllerTests : IClassFixture<TrackerApiFactory>, IAsyncLifetime
 {
+    private readonly TrackerApiFactory _factory;
     private readonly HttpClient _client;
 
     public SettingsControllerTests(TrackerApiFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
+
+    public Task InitializeAsync() => _factory.ResetDbAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task GetAll_Should_Return_Empty_Dictionary_When_No_Settings()

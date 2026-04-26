@@ -11,6 +11,12 @@ using Tracker.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.AddJsonConsole(o =>
+{
+    o.TimestampFormat = "yyyy-MM-ddTHH:mm:ssZ";
+    o.UseUtcTimestamp = true;
+});
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 

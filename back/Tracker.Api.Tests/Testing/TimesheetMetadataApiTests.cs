@@ -6,14 +6,19 @@ using Xunit;
 
 namespace Tracker.Api.Tests;
 
-public sealed class TimesheetMetadataApiTests : IClassFixture<TrackerApiFactory>
+public sealed class TimesheetMetadataApiTests : IClassFixture<TrackerApiFactory>, IAsyncLifetime
 {
+    private readonly TrackerApiFactory _factory;
     private readonly HttpClient _client;
 
     public TimesheetMetadataApiTests(TrackerApiFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
+
+    public Task InitializeAsync() => _factory.ResetDbAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task Metadata_Should_Return_MinutesPerDay_AllowedMinutes_And_Tickets()
