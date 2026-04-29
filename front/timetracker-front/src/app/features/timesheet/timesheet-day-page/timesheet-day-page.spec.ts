@@ -255,7 +255,7 @@ describe('TimesheetDayPageComponent', () => {
     await fixture.whenStable();
 
     expect(dialogOpen).toHaveBeenCalledTimes(2);
-    expect(openTicketEntrySpy).toHaveBeenCalledWith(createdTicket);
+    expect(openTicketEntrySpy).toHaveBeenCalledWith(createdTicket, { withDatePicker: true });
   });
 
   it('does not open time entry dialog when logTime is false after ticket creation', async () => {
