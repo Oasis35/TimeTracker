@@ -23,7 +23,7 @@ public sealed class TicketsController : ControllerBase
             .Where(t => t.Type != TicketType.ABSENT)
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
-            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
+            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
             .ToListAsync();
 
         return Ok(tickets);
@@ -52,7 +52,7 @@ public sealed class TicketsController : ControllerBase
                 (_, t) => t)
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
-            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
+            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
             .ToListAsync();
 
         return Ok(tickets);
@@ -81,7 +81,7 @@ public sealed class TicketsController : ControllerBase
                 .FirstOrDefaultAsync(t => t.ExternalKey == externalKey);
 
             if (existing != null)
-                return ApiProblems.BadRequest(this, ApiErrorCodes.TicketAlreadyExists);
+                return ApiProblems.Conflict(this, ApiErrorCodes.TicketAlreadyExists);
         }
 
         var entity = new Ticket
@@ -95,7 +95,7 @@ public sealed class TicketsController : ControllerBase
         await _db.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetAll), new { id = entity.Id },
-            new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label, entity.IsCompleted));
+            new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label));
     }
 
     [HttpPut("{ticketId:int}")]
@@ -106,12 +106,13 @@ public sealed class TicketsController : ControllerBase
 
         var entity = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
         if (entity is null)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNotFound);
-        if (entity.IsCompleted)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketCompletedLocked);
+            return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
 
         if (!Enum.IsDefined(dto.Type))
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketTypeRequired);
+
+        if (dto.Type == TicketType.ABSENT)
+            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketTypeNotAllowed);
 
         var type = dto.Type;
         var externalKey = string.IsNullOrWhiteSpace(dto.ExternalKey) ? null : dto.ExternalKey.Trim();
@@ -126,7 +127,7 @@ public sealed class TicketsController : ControllerBase
                 .AsNoTracking()
                 .FirstOrDefaultAsync(t => t.Id != ticketId && t.ExternalKey == externalKey);
             if (duplicate is not null)
-                return ApiProblems.BadRequest(this, ApiErrorCodes.TicketAlreadyExists);
+                return ApiProblems.Conflict(this, ApiErrorCodes.TicketAlreadyExists);
         }
 
         entity.Type = type;
@@ -134,32 +135,7 @@ public sealed class TicketsController : ControllerBase
         entity.Label = label;
         await _db.SaveChangesAsync();
 
-        return Ok(new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label, entity.IsCompleted));
-    }
-
-    [HttpPatch("{ticketId:int}/completion")]
-    public async Task<ActionResult<TicketDto>> SetCompletion(int ticketId, [FromBody] SetTicketCompletionDto dto)
-    {
-        if (ticketId <= 0)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketIdInvalid);
-
-        var entity = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
-        if (entity is null)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNotFound);
-
-        if (dto.IsCompleted)
-        {
-            var hasTimeEntries = await _db.TimeEntries
-                .AsNoTracking()
-                .AnyAsync(e => e.TicketId == ticketId);
-            if (!hasTimeEntries)
-                return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNoTimeEntries);
-        }
-
-        entity.IsCompleted = dto.IsCompleted;
-        await _db.SaveChangesAsync();
-
-        return Ok(new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label, entity.IsCompleted));
+        return Ok(new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label));
     }
 
     [HttpDelete("{ticketId:int}")]
@@ -170,15 +146,13 @@ public sealed class TicketsController : ControllerBase
 
         var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
         if (ticket is null)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNotFound);
-        if (ticket.IsCompleted)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketCompletedLocked);
+            return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
 
         var hasTimeEntries = await _db.TimeEntries
             .AsNoTracking()
             .AnyAsync(e => e.TicketId == ticketId);
         if (hasTimeEntries)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketHasTimeEntries);
+            return ApiProblems.Conflict(this, ApiErrorCodes.TicketHasTimeEntries);
 
         _db.Tickets.Remove(ticket);
         await _db.SaveChangesAsync();
@@ -244,33 +218,35 @@ public sealed class TicketsController : ControllerBase
         var ticket = await _db.Tickets
             .AsNoTracking()
             .Where(t => t.Id == ticketId)
-            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
+            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
             .FirstOrDefaultAsync();
         if (ticket is null)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNotFound);
-
-        var entries = await _db.TimeEntries
-            .AsNoTracking()
-            .Where(e => e.TicketId == ticketId)
-            .OrderByDescending(e => e.Date)
-            .Select(e => new TicketTimeEntryDto(
-                e.Date,
-                e.QuantityMinutes))
-            .ToListAsync();
+            return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
 
         var today = DateOnly.FromDateTime(DateTime.Today);
-        var currentMonthMinutes = entries
-            .Where(e => e.Date.Year == today.Year && e.Date.Month == today.Month)
-            .Sum(e => e.QuantityMinutes);
         var prevMonth = today.AddMonths(-1);
-        var previousMonthMinutes = entries
-            .Where(e => e.Date.Year == prevMonth.Year && e.Date.Month == prevMonth.Month)
-            .Sum(e => e.QuantityMinutes);
+
+        var baseQuery = _db.TimeEntries.AsNoTracking().Where(e => e.TicketId == ticketId);
+
+        var totalMinutes = await baseQuery.SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
+        var currentMonthMinutes = await baseQuery
+            .Where(e => e.Date >= new DateOnly(today.Year, today.Month, 1) &&
+                        e.Date < new DateOnly(today.Year, today.Month, 1).AddMonths(1))
+            .SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
+        var previousMonthMinutes = await baseQuery
+            .Where(e => e.Date >= new DateOnly(prevMonth.Year, prevMonth.Month, 1) &&
+                        e.Date < new DateOnly(prevMonth.Year, prevMonth.Month, 1).AddMonths(1))
+            .SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
+
+        var entries = await baseQuery
+            .OrderByDescending(e => e.Date)
+            .Select(e => new TicketTimeEntryDto(e.Date, e.QuantityMinutes))
+            .ToListAsync();
 
         return Ok(new TicketDetailDto(
             Ticket: ticket,
             Entries: entries,
-            TotalMinutes: entries.Sum(e => e.QuantityMinutes),
+            TotalMinutes: totalMinutes,
             CurrentMonthMinutes: currentMonthMinutes,
             PreviousMonthMinutes: previousMonthMinutes));
     }

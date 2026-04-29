@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, DestroyRef, ElementRef, OnDestroy, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, resource, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDatepicker, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -22,10 +23,9 @@ import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
 import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
 import { showSnack } from '../../../core/utils/ui-helpers';
 import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
-import { resource } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
-import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
+import { TimeSlotPickerDialogComponent, TimeSlotPickerDialogData, TimeSlotPickerDialogResult } from '../shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
 import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
 import { ExternalLinkService } from '../../../core/services/external-link.service';
 
@@ -43,6 +43,7 @@ type MonthlyRow = TimesheetRowDto & { total: number };
     MatDatepickerModule,
     MatDialogModule,
     MatIconModule,
+    MatMenuModule,
     MatNativeDateModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
@@ -54,15 +55,12 @@ type MonthlyRow = TimesheetRowDto & { total: number };
   templateUrl: './timesheet-month-page.html',
   styleUrl: './timesheet-month-page.scss',
 })
-export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
+export class TimesheetMonthPageComponent {
   private readonly now = new Date();
-  private typeHeaderResizeObserver: ResizeObserver | null = null;
-  private typeHeaderElement: HTMLElement | null = null;
 
   readonly year = signal<number>(this.now.getFullYear());
   readonly month = signal<number>(this.now.getMonth() + 1);
   readonly language = signal<AppLanguage>('fr');
-  readonly stickyTypeWidth = signal<number>(90);
 
   readonly metadataRes = resource<TimesheetMetadataDto, number>({
     params: () => 0,
@@ -90,6 +88,72 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     return new Map(totals.map((t) => [t.ticketId, t.total]));
   });
 
+  readonly prevMonthRequest = computed<MonthRequest>(() => {
+    const d = new Date(this.year(), this.month() - 2, 1);
+    return { y: d.getFullYear(), m: d.getMonth() + 1 };
+  });
+
+  readonly prevMonthLabel = computed(() => {
+    const { y, m } = this.prevMonthRequest();
+    const date = new Date(y, m - 1, 1);
+    const label = new Intl.DateTimeFormat(this.dateLocale(), { month: 'long', year: '2-digit' }).format(date);
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  });
+
+  private readonly prevMonthRes = resource<TimesheetMonthDto, MonthRequest>({
+    params: () => this.prevMonthRequest(),
+    loader: ({ params }) => firstValueFrom(this.api.getMonth(params.y, params.m)),
+  });
+
+  readonly prevMonthMissingRows = computed<{ ticketId: number; type: string; externalKey: string; label: string }[]>(() => {
+    const prev = this.prevMonthRes.value();
+    if (!prev) return [];
+    const currentIds = new Set(this.rows().map((r) => r.ticketId));
+    return prev.rows
+      .filter((r) => !currentIds.has(r.ticketId) && Object.values(r.values ?? {}).some((v) => v > 0))
+      .map((r) => ({ ticketId: r.ticketId, type: r.type, externalKey: r.externalKey ?? '', label: r.label ?? '' }))
+      .sort((a, b) => a.type.localeCompare(b.type) || a.externalKey.localeCompare(b.externalKey));
+  });
+
+  readonly drawerOpen = signal<boolean>(false);
+
+  private drawerCacheKey(): string {
+    return `tt-prev-month-drawer-${this.year()}-${this.month()}`;
+  }
+
+  toggleDrawer(): void {
+    const next = !this.drawerOpen();
+    this.drawerOpen.set(next);
+    localStorage.setItem(this.drawerCacheKey(), next ? '1' : '0');
+  }
+
+  openPrevMonthTicketDialog(row: { ticketId: number; type: string; externalKey: string; label: string }): void {
+    const ticket: TicketDto = { id: row.ticketId, type: row.type as TicketDto['type'], externalKey: row.externalKey, label: row.label };
+    const data: LogTimeDialogData = {
+      year: this.year(),
+      month: this.month(),
+      defaultTickets: [ticket],
+      allTickets: this.allTicketsRes.value() ?? [],
+      options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      publicHolidays: this.publicHolidays.holidays() ?? {},
+      preselectedTicket: ticket,
+    };
+    this.dialog.open(LogTimeDialogComponent, { width: '460px', maxWidth: '95vw', data })
+      .afterClosed().subscribe((result: LogTimeDialogResult | undefined) => {
+        if (!result) return;
+        void firstValueFrom(
+          this.api.upsertTimeEntry({ ticketId: result.ticketId, date: result.date, quantityMinutes: result.minutes }),
+        ).then(() => {
+          showSnack(this.snackBar, this.translate.instant('time_saved'));
+          this.monthRes.reload();
+          this.usedTicketsRes.reload();
+          this.allTimeTotalsRes.reload();
+        }).catch((error: unknown) => {
+          showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
+        });
+      });
+  }
 
   readonly loading = computed(
     () => this.metadataRes.isLoading() || this.monthRes.isLoading() || this.usedTicketsRes.isLoading(),
@@ -148,6 +212,7 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     private readonly translate: TranslateService,
     private readonly dateAdapter: DateAdapter<Date>,
     private readonly route: ActivatedRoute,
+    private readonly router: Router,
     private readonly dialog: MatDialog,
     private readonly snackBar: MatSnackBar,
     readonly unit: UnitService,
@@ -171,8 +236,24 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
       if (!Number.isInteger(year) || !Number.isInteger(month)) return;
       if (month < 1 || month > 12) return;
       if (year < 1900 || year > 3000) return;
-      this.year.set(year);
-      this.month.set(month);
+      untracked(() => {
+        this.year.set(year);
+        this.month.set(month);
+      });
+    });
+    effect(() => {
+      const year = this.year();
+      const month = this.month();
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { year, month },
+        replaceUrl: true,
+      });
+    });
+
+    effect(() => {
+      const key = `tt-prev-month-drawer-${this.year()}-${this.month()}`;
+      untracked(() => this.drawerOpen.set(localStorage.getItem(key) === '1'));
     });
   }
 
@@ -180,21 +261,6 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     this.year.set(date.getFullYear());
     this.month.set(date.getMonth() + 1);
     picker.close();
-  }
-
-  @ViewChild('typeHeaderCell')
-  set typeHeaderCell(cell: ElementRef<HTMLElement> | undefined) {
-    if (!cell) return;
-    this.observeTypeHeader(cell.nativeElement);
-  }
-
-  ngAfterViewInit(): void {
-    // Width can settle after initial render; align sticky offset once rendered.
-    queueMicrotask(() => this.syncTypeWidth());
-  }
-
-  ngOnDestroy(): void {
-    this.typeHeaderResizeObserver?.disconnect();
   }
 
   prevMonth(): void {
@@ -330,41 +396,44 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
 
   onCellClick(row: MonthlyRow, day: string): void {
     if (isWeekendIso(day) || this.isHolidayIso(day)) return;
-    const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' })
-      .format(new Date(`${day}T00:00:00`));
-    this.openTicketDayDialog(row.ticketId, `${row.type} ${row.externalKey ?? ''}`.trim(), row.label ?? '', day, dayLabel, this.getCellMinutes(row, day));
+    this.openTicketDayDialog(row.ticketId, `${row.type} ${row.externalKey ?? ''}`.trim(), row.label ?? '', day, this.getCellMinutes(row, day));
   }
 
   private openTicketEntryDialog(ticket: TicketDto): void {
     const today = new Date();
     const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' }).format(today);
-    this.openTicketDayDialog(ticket.id, `${ticket.type} ${ticket.externalKey ?? ''}`.trim(), ticket.label ?? '', todayIso, dayLabel, 0);
+    this.openTicketDayDialog(ticket.id, `${ticket.type} ${ticket.externalKey ?? ''}`.trim(), ticket.label ?? '', todayIso, 0, { withDatePicker: true });
   }
 
-  private openTicketDayDialog(ticketId: number, ticketRef: string, ticketLabel: string, dateIso: string, dayLabel: string, currentMinutes: number): void {
-    const data: TimeEntryDialogData = {
+  private openTicketDayDialog(ticketId: number, ticketRef: string, ticketLabel: string, dateIso: string, currentMinutes: number, opts?: { withDatePicker?: boolean }): void {
+    const data: TimeSlotPickerDialogData = {
       ticketId,
       ticketRef,
       ticketLabel,
-      dayLabel,
+      dayLabel: '',
       currentMinutes,
       options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      ...(opts?.withDatePicker ? { initialDate: dateIso } : { readonlyDate: dateIso }),
     };
 
-    const dialogRef = this.dialog.open(TimeEntryDialogComponent, {
+    const dialogRef = this.dialog.open(TimeSlotPickerDialogComponent, {
       width: '460px',
       maxWidth: '95vw',
       data,
     });
 
-    dialogRef.afterClosed().subscribe((minutes) => {
-      if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
+    dialogRef.afterClosed().subscribe((result: TimeSlotPickerDialogResult | undefined) => {
+      if (result === undefined || result === null) return;
+      const resolvedDate = typeof result === 'number' ? dateIso : result.date;
+      const resolvedMinutes = typeof result === 'number' ? result : result.minutes;
+      if (typeof result === 'number' && Number.isNaN(result)) return;
       void firstValueFrom(
-        this.api.upsertTimeEntry({ ticketId, date: dateIso, quantityMinutes: minutes }),
+        this.api.upsertTimeEntry({ ticketId, date: resolvedDate, quantityMinutes: resolvedMinutes }),
       ).then(() => {
         this.monthRes.reload();
         this.usedTicketsRes.reload();
+        this.allTimeTotalsRes.reload();
       }).catch((error: unknown) => {
         showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
       });
@@ -382,24 +451,4 @@ export class TimesheetMonthPageComponent implements AfterViewInit, OnDestroy {
     return this.language() === 'fr' ? 'fr-FR' : 'en-US';
   }
 
-  private observeTypeHeader(el: HTMLElement): void {
-    this.typeHeaderElement = el;
-    this.typeHeaderResizeObserver?.disconnect();
-    if (typeof ResizeObserver === 'undefined') {
-      this.syncTypeWidth();
-      return;
-    }
-    this.typeHeaderResizeObserver = new ResizeObserver(() => this.syncTypeWidth());
-    this.typeHeaderResizeObserver.observe(el);
-    this.syncTypeWidth();
-  }
-
-  private syncTypeWidth(): void {
-    const width = this.typeHeaderElement
-      ? Math.ceil(this.typeHeaderElement.getBoundingClientRect().width)
-      : 0;
-    if (width > 0 && this.stickyTypeWidth() !== width) {
-      this.stickyTypeWidth.set(width);
-    }
-  }
 }

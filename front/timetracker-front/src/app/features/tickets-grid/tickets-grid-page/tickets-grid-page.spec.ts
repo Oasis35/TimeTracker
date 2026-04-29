@@ -17,14 +17,13 @@ describe('TicketsGridPageComponent', () => {
     tickets: [],
   };
 
-  function setup(options?: { totals?: number; completed?: boolean }) {
+  function setup(options?: { totals?: number }) {
     const ticketId = 1;
     const totals = options?.totals ?? 0;
-    const isCompleted = options?.completed ?? false;
     const apiMock = {
       getAllTickets: vi.fn().mockReturnValue(
         of([
-          { id: ticketId, type: 'DEV', externalKey: '64205', label: 'Securite API', isCompleted },
+          { id: ticketId, type: 'DEV', externalKey: '64205', label: 'Securite API' },
         ]),
       ),
       getTicketTotals: vi.fn().mockReturnValue(
@@ -33,12 +32,9 @@ describe('TicketsGridPageComponent', () => {
         ]),
       ),
       getMetadata: vi.fn().mockReturnValue(of(metadata)),
-      setTicketCompletion: vi.fn().mockReturnValue(
-        of({ id: ticketId, type: 'DEV', externalKey: '64205', label: 'Securite API', isCompleted: true }),
-      ),
       deleteTicket: vi.fn().mockReturnValue(of(void 0)),
       updateTicket: vi.fn().mockReturnValue(
-        of({ id: ticketId, type: 'DEV', externalKey: '64205', label: 'Securite API', isCompleted }),
+        of({ id: ticketId, type: 'DEV', externalKey: '64205', label: 'Securite API' }),
       ),
       getSettings: vi.fn().mockReturnValue(of({})),
       setSetting: vi.fn().mockReturnValue(of(void 0)),
@@ -64,35 +60,26 @@ describe('TicketsGridPageComponent', () => {
     return { fixture };
   }
 
-  it('disables completion action when ticket has no logged time and is not completed', async () => {
-    const { fixture } = setup({ totals: 0, completed: false });
+  it('renders the ticket grid', async () => {
+    const { fixture } = setup({ totals: 0 });
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const button = fixture.nativeElement.querySelector(
-      'td.mat-column-completed button',
-    ) as HTMLButtonElement | null;
-    expect(button).not.toBeNull();
-    expect(button?.disabled).toBe(true);
+    const table = fixture.nativeElement.querySelector('table') as HTMLTableElement | null;
+    expect(table).not.toBeNull();
   });
 
-  it('keeps completion action enabled when ticket is already completed', async () => {
-    const { fixture } = setup({ totals: 0, completed: true });
+  it('disables delete button when ticket has logged time', async () => {
+    const { fixture } = setup({ totals: 120 });
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
 
-    // "completed" rows are hidden by default filter, so switch to "all".
-    fixture.componentInstance.onCompletionFilterChange('all');
-    fixture.detectChanges();
-    await fixture.whenStable();
-    fixture.detectChanges();
-
-    const button = fixture.nativeElement.querySelector(
-      'td.mat-column-completed button',
+    const deleteBtn = fixture.nativeElement.querySelector(
+      '.action-delete',
     ) as HTMLButtonElement | null;
-    expect(button).not.toBeNull();
-    expect(button?.disabled).toBe(false);
+    expect(deleteBtn).not.toBeNull();
+    expect(deleteBtn?.disabled).toBe(true);
   });
 });

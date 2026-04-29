@@ -2,10 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { TranslateModule } from '@ngx-translate/core';
 import { vi } from 'vitest';
-import { TimeEntryDialogComponent, TimeEntryDialogData } from './time-entry-dialog.component';
+import { TimeSlotPickerDialogComponent, TimeSlotPickerDialogData } from './time-slot-picker-dialog.component';
 
-describe('TimeEntryDialogComponent', () => {
-  const defaultData: TimeEntryDialogData = {
+describe('TimeSlotPickerDialogComponent', () => {
+  const defaultData: TimeSlotPickerDialogData = {
     ticketId: 1,
     ticketRef: 'DEV ABC-1',
     ticketLabel: 'Test ticket',
@@ -19,16 +19,16 @@ describe('TimeEntryDialogComponent', () => {
     ],
   };
 
-  function setup(data: TimeEntryDialogData = defaultData) {
+  function setup(data: TimeSlotPickerDialogData = defaultData) {
     const closeSpy = vi.fn();
     TestBed.configureTestingModule({
-      imports: [TimeEntryDialogComponent, TranslateModule.forRoot()],
+      imports: [TimeSlotPickerDialogComponent, TranslateModule.forRoot()],
       providers: [
         { provide: MatDialogRef, useValue: { close: closeSpy } },
         { provide: MAT_DIALOG_DATA, useValue: data },
       ],
     });
-    const fixture = TestBed.createComponent(TimeEntryDialogComponent);
+    const fixture = TestBed.createComponent(TimeSlotPickerDialogComponent);
     return { fixture, component: fixture.componentInstance, closeSpy };
   }
 

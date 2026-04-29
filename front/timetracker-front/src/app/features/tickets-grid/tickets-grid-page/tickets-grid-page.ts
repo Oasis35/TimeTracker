@@ -24,7 +24,15 @@ import { CreateTicketDto, TicketDto, TicketTotalDto, TicketType, TimesheetMetada
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
+import { buildQuickPickOptions } from '../../../core/utils/timesheet-helpers';
+import { toIsoDate } from '../../../core/utils/date-helpers';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
+import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog';
+import {
+  TimeSlotPickerDialogComponent,
+  TimeSlotPickerDialogData,
+  TimeSlotPickerDialogResult,
+} from '../../timesheet/shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
 
 type GridRow = {
   id: number;
@@ -32,9 +40,7 @@ type GridRow = {
   externalKey: string;
   label: string;
   totalMinutes: number;
-  isCompleted: boolean;
 };
-type CompletionFilter = 'open' | 'completed' | 'all';
 type EditDraft = { type: string; externalKey: string; label: string };
 type EditField = keyof EditDraft;
 
@@ -121,15 +127,12 @@ export class TicketsGridPageComponent {
     'extLink',
     'loggedTime',
     'label',
-    'completed',
     'actions',
   ];
   readonly pageSizeOptions: readonly number[] = [10, 25, 50];
   readonly language = signal<AppLanguage>('fr');
   readonly actionError = signal<string>('');
   readonly deletingTicketId = signal<number | null>(null);
-  readonly completionTicketId = signal<number | null>(null);
-  readonly completionFilter = signal<CompletionFilter>('open');
   readonly editingTicketId = signal<number | null>(null);
   readonly savingTicketId = signal<number | null>(null);
   readonly editDraft = signal<EditDraft>({ type: '', externalKey: '', label: '' });
@@ -164,7 +167,6 @@ export class TicketsGridPageComponent {
       externalKey: ticket.externalKey ?? '',
       label: ticket.label ?? '',
       totalMinutes: totalsByTicketId.get(ticket.id) ?? 0,
-      isCompleted: ticket.isCompleted,
     }));
   });
   readonly typeOptions = computed<string[]>(() => {
@@ -204,21 +206,9 @@ export class TicketsGridPageComponent {
       this.language.set(event.lang as AppLanguage);
     });
     this.tableDataSource.filterPredicate = (row, filter) => {
-      let parsed: { q: string; completion: CompletionFilter } = { q: '', completion: 'open' };
-      try {
-        parsed = JSON.parse(filter) as { q: string; completion: CompletionFilter };
-      } catch {
-        parsed = { q: this.normalize(filter), completion: 'open' };
-      }
-
-      if (parsed.completion === 'open' && row.isCompleted) return false;
-      if (parsed.completion === 'completed' && !row.isCompleted) return false;
-
-      if (!parsed.q) return true;
-      const haystack = this.normalize(
-        `${row.externalKey} ${row.type} ${row.label} ${row.totalMinutes}`,
-      );
-      return haystack.includes(parsed.q);
+      if (!filter) return true;
+      const haystack = this.normalize(`${row.externalKey} ${row.type} ${row.label} ${row.totalMinutes}`);
+      return haystack.includes(this.normalize(filter));
     };
 
     effect(() => {
@@ -235,30 +225,69 @@ export class TicketsGridPageComponent {
     this.applyTableFilter();
   }
 
-  onCompletionFilterChange(value: CompletionFilter): void {
-    this.completionFilter.set(value);
-    this.applyTableFilter();
-  }
-
   openAddTicketDialog(): void {
     const dialogRef = this.dialog.open(AddTicketDialogComponent, {
       width: '560px',
       maxWidth: '95vw',
     });
 
-    dialogRef.afterClosed().subscribe((created) => {
-      if (created) {
-        this.allTicketsRes.reload();
-        this.ticketTotalsRes.reload();
+    dialogRef.afterClosed().subscribe((result) => {
+      if (!result) return;
+      this.allTicketsRes.reload();
+      this.ticketTotalsRes.reload();
+      if (result.logTime) {
+        this.openTicketEntryDialog(result.ticket);
       }
     });
+  }
+
+  openTicketEntryDialog(ticket: TicketDto): void {
+    const meta = this.metadataRes.value();
+    const options = meta ? buildQuickPickOptions(meta, this.unit.unitMode()) : [];
+    const dateLocale = this.language() === 'fr' ? 'fr-FR' : 'en-US';
+
+    const data: TimeSlotPickerDialogData = {
+      ticketId: ticket.id,
+      ticketRef: `${ticket.type} ${ticket.externalKey ?? ''}`.trim(),
+      ticketLabel: ticket.label ?? '',
+      dayLabel: '',
+      currentMinutes: 0,
+      options,
+      initialDate: toIsoDate(new Date()),
+      dateLocale,
+    };
+
+    const dialogRef = this.dialog.open(TimeSlotPickerDialogComponent, {
+      width: '460px',
+      maxWidth: '95vw',
+      data,
+    });
+
+    dialogRef.afterClosed().subscribe((result: TimeSlotPickerDialogResult | undefined) => {
+      if (result === undefined || result === null || typeof result === 'number') return;
+      void this.pointMinutes(ticket.id, result.minutes, result.date);
+    });
+  }
+
+  async pointMinutes(ticketId: number, quantityMinutes: number, date: string): Promise<void> {
+    try {
+      await firstValueFrom(this.api.upsertTimeEntry({ ticketId, date, quantityMinutes }));
+      this.showActionMessage('time_saved');
+      this.ticketTotalsRes.reload();
+    } catch (error: unknown) {
+      this.actionError.set(
+        this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')),
+      );
+    }
   }
 
   async deleteTicket(row: GridRow): Promise<void> {
     this.actionError.set('');
 
-    const confirmation = window.confirm(this.translate.instant('delete_ticket_confirm'));
-    if (!confirmation) return;
+    const confirmed = await firstValueFrom(
+      this.dialog.open(ConfirmDialogComponent, { data: { messageKey: 'delete_ticket_confirm' } }).afterClosed(),
+    );
+    if (!confirmed) return;
 
     this.deletingTicketId.set(row.id);
     try {
@@ -272,23 +301,6 @@ export class TicketsGridPageComponent {
       );
     } finally {
       this.deletingTicketId.set(null);
-    }
-  }
-
-  async toggleCompletion(row: GridRow): Promise<void> {
-    this.actionError.set('');
-    this.completionTicketId.set(row.id);
-
-    try {
-      await firstValueFrom(this.api.setTicketCompletion(row.id, !row.isCompleted));
-      this.showActionMessage('ticket_updated');
-      this.allTicketsRes.reload();
-    } catch (error: unknown) {
-      this.actionError.set(
-        this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_update_ticket')),
-      );
-    } finally {
-      this.completionTicketId.set(null);
     }
   }
 
@@ -321,10 +333,10 @@ export class TicketsGridPageComponent {
     if (this.editingTicketId() !== ticketId) return;
 
     if (row.totalMinutes > 0) {
-      const confirmation = window.confirm(
-        this.translate.instant('edit_confirm_has_time'),
+      const confirmed = await firstValueFrom(
+        this.dialog.open(ConfirmDialogComponent, { data: { messageKey: 'edit_confirm_has_time' } }).afterClosed(),
       );
-      if (!confirmation) return;
+      if (!confirmed) return;
     }
 
     this.actionError.set('');
@@ -333,8 +345,8 @@ export class TicketsGridPageComponent {
     const draft = this.editDraft();
     const payload: CreateTicketDto = {
       type: draft.type as TicketType,
-      externalKey: draft.externalKey.trim() ? draft.externalKey : null,
-      label: draft.label.trim() ? draft.label : null,
+      externalKey: draft.externalKey.trim() || null,
+      label: draft.label.trim() || null,
     };
 
     try {
@@ -374,11 +386,7 @@ export class TicketsGridPageComponent {
   }
 
   private applyTableFilter(): void {
-    const payload = {
-      q: this.normalize(this.textFilter()),
-      completion: this.completionFilter(),
-    };
-    this.tableDataSource.filter = JSON.stringify(payload);
+    this.tableDataSource.filter = this.normalize(this.textFilter());
     this.tableDataSource.paginator?.firstPage();
   }
 

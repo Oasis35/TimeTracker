@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Tracker.Api.Controllers;
 using Tracker.Api.Dtos.Tickets;
 using Tracker.Api.Infrastructure;
@@ -91,7 +91,7 @@ public sealed class TicketsControllerTests
     }
 
     [Fact]
-    public async Task GetDetail_Should_Return_BadRequest_When_Ticket_Not_Found()
+    public async Task GetDetail_Should_Return_NotFound_When_Ticket_Not_Found()
     {
         var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
         await using var _ = db;
@@ -101,7 +101,7 @@ public sealed class TicketsControllerTests
 
         var result = await controller.GetDetail(9999);
         var bad = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(400, bad.StatusCode);
+        Assert.Equal(404, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
         Assert.Equal(ApiErrorCodes.TicketNotFound, error.Code);
     }
@@ -118,7 +118,6 @@ public sealed class TicketsControllerTests
             Type = TicketType.DEV,
             ExternalKey = "65010",
             Label = "Refonte auth API",
-            IsCompleted = false
         };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
@@ -163,7 +162,6 @@ public sealed class TicketsControllerTests
             Type = TicketType.DEV,
             ExternalKey = "65011",
             Label = "Optimisation dashboard",
-            IsCompleted = false
         };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
@@ -296,7 +294,7 @@ public sealed class TicketsControllerTests
             Label: "New label"));
 
         var badRequest = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(400, badRequest.StatusCode);
+        Assert.Equal(409, badRequest.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(badRequest.Value);
         Assert.Equal(ApiErrorCodes.TicketAlreadyExists, error.Code);
 
@@ -349,7 +347,7 @@ public sealed class TicketsControllerTests
     }
 
     [Fact]
-    public async Task Update_Should_Return_BadRequest_When_Ticket_Not_Found()
+    public async Task Update_Should_Return_NotFound_When_Ticket_Not_Found()
     {
         var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
         await using var _ = db;
@@ -359,7 +357,7 @@ public sealed class TicketsControllerTests
 
         var result = await controller.Update(999, new SaveTicketDto(TicketType.DEV, "X-1", "Label"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(400, bad.StatusCode);
+        Assert.Equal(404, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
         Assert.Equal(ApiErrorCodes.TicketNotFound, error.Code);
     }
@@ -405,7 +403,7 @@ public sealed class TicketsControllerTests
     }
 
     [Fact]
-    public async Task Update_Should_Return_BadRequest_When_Type_And_ExternalKey_Duplicate_Another_Ticket()
+    public async Task Update_Should_Return_Conflict_When_Type_And_ExternalKey_Duplicate_Another_Ticket()
     {
         var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
         await using var _ = db;
@@ -420,7 +418,7 @@ public sealed class TicketsControllerTests
 
         var result = await controller.Update(t2.Id, new SaveTicketDto(TicketType.DEV, "X-1", "New label"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(400, bad.StatusCode);
+        Assert.Equal(409, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
         Assert.Equal(ApiErrorCodes.TicketAlreadyExists, error.Code);
     }
@@ -438,146 +436,39 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.ABSENT, "  RTT-1  ", "  Nouveau  "));
+        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.DEV, "  X-2  ", "  Nouveau  "));
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<TicketDto>(ok.Value);
 
         Assert.Equal(ticket.Id, dto.Id);
-        Assert.Equal(TicketType.ABSENT, dto.Type);
-        Assert.Equal("RTT-1", dto.ExternalKey);
+        Assert.Equal(TicketType.DEV, dto.Type);
+        Assert.Equal("X-2", dto.ExternalKey);
         Assert.Equal("Nouveau", dto.Label);
 
         var reloaded = db.Tickets.Single(t => t.Id == ticket.Id);
-        Assert.Equal(TicketType.ABSENT, reloaded.Type);
-        Assert.Equal("RTT-1", reloaded.ExternalKey);
+        Assert.Equal(TicketType.DEV, reloaded.Type);
+        Assert.Equal("X-2", reloaded.ExternalKey);
         Assert.Equal("Nouveau", reloaded.Label);
     }
 
     [Fact]
-    public async Task Update_Should_Return_BadRequest_When_Ticket_Is_Completed()
+    public async Task Update_Should_Return_BadRequest_When_Type_Is_ABSENT()
     {
         var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
         await using var _ = db;
         await using var __ = conn;
 
-        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "Label", IsCompleted = true };
+        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "Label" };
         db.Tickets.Add(ticket);
         await db.SaveChangesAsync();
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.DEV, "X-1", "Updated"));
+        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.ABSENT, "RTT-1", "Congé"));
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
-        Assert.Equal(ApiErrorCodes.TicketCompletedLocked, error.Code);
-    }
-
-    // -------------------------
-    // PATCH /api/tickets/{id}/completion
-    // -------------------------
-
-    [Fact]
-    public async Task SetCompletion_Should_Return_BadRequest_When_TicketId_Is_Invalid()
-    {
-        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
-        await using var _ = db;
-        await using var __ = conn;
-
-        var controller = new TicketsController(db);
-
-        var result = await controller.SetCompletion(0, new SetTicketCompletionDto(true));
-        var bad = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(400, bad.StatusCode);
-        var error = Assert.IsType<ApiErrorResponse>(bad.Value);
-        Assert.Equal(ApiErrorCodes.TicketIdInvalid, error.Code);
-    }
-
-    [Fact]
-    public async Task SetCompletion_Should_Return_BadRequest_When_Ticket_Not_Found()
-    {
-        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
-        await using var _ = db;
-        await using var __ = conn;
-
-        var controller = new TicketsController(db);
-
-        var result = await controller.SetCompletion(999, new SetTicketCompletionDto(true));
-        var bad = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(400, bad.StatusCode);
-        var error = Assert.IsType<ApiErrorResponse>(bad.Value);
-        Assert.Equal(ApiErrorCodes.TicketNotFound, error.Code);
-    }
-
-    [Fact]
-    public async Task SetCompletion_Should_Update_Flag_To_True()
-    {
-        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
-        await using var _ = db;
-        await using var __ = conn;
-
-        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "X1", IsCompleted = false };
-        db.Tickets.Add(ticket);
-        await db.SaveChangesAsync();
-        db.TimeEntries.Add(new TimeEntry
-        {
-            TicketId = ticket.Id,
-            Date = new DateOnly(2026, 2, 1),
-            QuantityMinutes = 60
-        });
-        await db.SaveChangesAsync();
-
-        var controller = new TicketsController(db);
-
-        var result = await controller.SetCompletion(ticket.Id, new SetTicketCompletionDto(true));
-        var ok = Assert.IsType<OkObjectResult>(result.Result);
-        var dto = Assert.IsType<TicketDto>(ok.Value);
-
-        Assert.True(dto.IsCompleted);
-        Assert.True(db.Tickets.Single(t => t.Id == ticket.Id).IsCompleted);
-    }
-
-    [Fact]
-    public async Task SetCompletion_Should_Update_Flag_To_False()
-    {
-        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
-        await using var _ = db;
-        await using var __ = conn;
-
-        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "X1", IsCompleted = true };
-        db.Tickets.Add(ticket);
-        await db.SaveChangesAsync();
-
-        var controller = new TicketsController(db);
-
-        var result = await controller.SetCompletion(ticket.Id, new SetTicketCompletionDto(false));
-        var ok = Assert.IsType<OkObjectResult>(result.Result);
-        var dto = Assert.IsType<TicketDto>(ok.Value);
-
-        Assert.False(dto.IsCompleted);
-        Assert.False(db.Tickets.Single(t => t.Id == ticket.Id).IsCompleted);
-    }
-
-    [Fact]
-    public async Task SetCompletion_Should_Return_BadRequest_When_Setting_Completed_And_No_TimeEntries()
-    {
-        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
-        await using var _ = db;
-        await using var __ = conn;
-
-        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "X1", IsCompleted = false };
-        db.Tickets.Add(ticket);
-        await db.SaveChangesAsync();
-
-        var controller = new TicketsController(db);
-
-        var result = await controller.SetCompletion(ticket.Id, new SetTicketCompletionDto(true));
-        var bad = Assert.IsType<ObjectResult>(result.Result);
-        Assert.Equal(400, bad.StatusCode);
-        var error = Assert.IsType<ApiErrorResponse>(bad.Value);
-        Assert.Equal(ApiErrorCodes.TicketNoTimeEntries, error.Code);
-
-        Assert.False(db.Tickets.Single(t => t.Id == ticket.Id).IsCompleted);
+        Assert.Equal(ApiErrorCodes.TicketTypeNotAllowed, error.Code);
     }
 
     // -------------------------
@@ -601,7 +492,7 @@ public sealed class TicketsControllerTests
     }
 
     [Fact]
-    public async Task Delete_Should_Return_BadRequest_When_Ticket_Not_Found()
+    public async Task Delete_Should_Return_NotFound_When_Ticket_Not_Found()
     {
         var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
         await using var _ = db;
@@ -611,13 +502,13 @@ public sealed class TicketsControllerTests
 
         var result = await controller.Delete(999);
         var bad = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(400, bad.StatusCode);
+        Assert.Equal(404, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
         Assert.Equal(ApiErrorCodes.TicketNotFound, error.Code);
     }
 
     [Fact]
-    public async Task Delete_Should_Return_BadRequest_When_Ticket_Has_TimeEntries()
+    public async Task Delete_Should_Return_Conflict_When_Ticket_Has_TimeEntries()
     {
         var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
         await using var _ = db;
@@ -639,7 +530,7 @@ public sealed class TicketsControllerTests
 
         var result = await controller.Delete(ticket.Id);
         var bad = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(400, bad.StatusCode);
+        Assert.Equal(409, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
         Assert.Equal(ApiErrorCodes.TicketHasTimeEntries, error.Code);
 
@@ -662,26 +553,6 @@ public sealed class TicketsControllerTests
         var result = await controller.Delete(ticket.Id);
         Assert.IsType<NoContentResult>(result);
         Assert.Empty(db.Tickets);
-    }
-
-    [Fact]
-    public async Task Delete_Should_Return_BadRequest_When_Ticket_Is_Completed()
-    {
-        var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
-        await using var _ = db;
-        await using var __ = conn;
-
-        var ticket = new Ticket { Type = TicketType.DEV, ExternalKey = "X-1", Label = "X1", IsCompleted = true };
-        db.Tickets.Add(ticket);
-        await db.SaveChangesAsync();
-
-        var controller = new TicketsController(db);
-
-        var result = await controller.Delete(ticket.Id);
-        var bad = Assert.IsType<ObjectResult>(result);
-        Assert.Equal(400, bad.StatusCode);
-        var error = Assert.IsType<ApiErrorResponse>(bad.Value);
-        Assert.Equal(ApiErrorCodes.TicketCompletedLocked, error.Code);
     }
 
     // -------------------------
@@ -890,4 +761,3 @@ public sealed class TicketsControllerTests
         Assert.Equal(0, list[0].Total);
     }
 }
-

@@ -21,6 +21,19 @@
   margin-bottom: -0.25rem;
 }
 
+.preselected-ticket {
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 60%, transparent);
+  background: color-mix(in srgb, var(--mat-sys-surface-container) 60%, var(--mat-sys-surface));
+  color: var(--mat-sys-on-surface);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
 .selected-ticket {
   font-size: 0.85rem;
   padding: 0.4rem 0.75rem;

@@ -10,15 +10,17 @@
     <mat-card class="month-card">
       <div class="header-row">
         <div class="header-left">
-          <button mat-stroked-button type="button" (click)="prevMonth()">
-            {{ 'month_previous' | translate }}
-          </button>
-          <button mat-stroked-button type="button" (click)="goToCurrentMonth()" [disabled]="isCurrentMonth()">
-            {{ 'month_current' | translate }}
-          </button>
-          <button mat-stroked-button type="button" (click)="nextMonth()">
-            {{ 'month_next' | translate }}
-          </button>
+          <div class="month-nav">
+            <button mat-icon-button type="button" class="month-nav-btn" [matTooltip]="'month_previous' | translate" (click)="prevMonth()">
+              <mat-icon>chevron_left</mat-icon>
+            </button>
+            <button class="month-nav-label" [disabled]="isCurrentMonth()" (click)="goToCurrentMonth()">
+              <mat-icon>today</mat-icon>
+            </button>
+            <button mat-icon-button type="button" class="month-nav-btn" [matTooltip]="'month_next' | translate" (click)="nextMonth()">
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </div>
         </div>
         <div class="header-center">
           <h2>{{ 'month_view_title' | translate:{ month: monthYearLabel() } }}</h2>
@@ -49,28 +51,61 @@
           ></mat-datepicker>
         </div>
         <div class="header-right">
-          <button
-            mat-stroked-button
-            type="button"
-            [attr.aria-label]="'new_ticket' | translate"
-            (click)="openAddTicketDialog()"
-          >
+          @if (prevMonthMissingRows().length > 0) {
+            <button
+              type="button"
+              class="prev-month-btn"
+              [class.prev-month-btn-active]="drawerOpen()"
+              [matTooltip]="drawerOpen() ? ('prev_week_drawer_hide' | translate) : ('prev_month_drawer_show' | translate)"
+              (click)="toggleDrawer()"
+            >
+              <mat-icon class="prev-month-btn-icon">history</mat-icon>
+              <span class="prev-month-btn-label">{{ prevMonthLabel() }}</span>
+              <span class="prev-month-btn-count">{{ prevMonthMissingRows().length }}</span>
+            </button>
+          }
+          <button mat-icon-button type="button" [matTooltip]="'new_ticket' | translate" (click)="openAddTicketDialog()">
             <mat-icon>add</mat-icon>
-            {{ 'new_ticket' | translate }}
           </button>
-          <button
-            mat-stroked-button
-            type="button"
-            [matTooltip]="'log_time_dialog_title' | translate"
-            [attr.aria-label]="'log_time_dialog_title' | translate"
-            (click)="openLogTimeDialog()"
-          >
+          <button mat-icon-button type="button" [matTooltip]="'log_time_dialog_title' | translate" (click)="openLogTimeDialog()">
             <mat-icon>more_time</mat-icon>
-            {{ 'log_time_dialog_title' | translate }}
           </button>
         </div>
       </div>
-      <div class="table-wrap" [style.--sticky-col-type-width.px]="stickyTypeWidth()">
+
+      <!-- Drawer overlay mois précédent -->
+      @if (prevMonthMissingRows().length > 0 && drawerOpen()) {
+        <div class="drawer-backdrop" (click)="toggleDrawer()"></div>
+        <aside class="prev-month-drawer">
+          <div class="drawer-header">
+            <span class="drawer-title">{{ prevMonthLabel() }} – {{ 'prev_week_drawer_title' | translate }}</span>
+            <button mat-icon-button type="button" class="drawer-close-btn" (click)="toggleDrawer()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div class="drawer-list">
+            @for (row of prevMonthMissingRows(); track row.ticketId) {
+              <div class="drawer-item">
+                <div class="drawer-item-info">
+                  <span class="drawer-item-ref">{{ row.type }}{{ row.externalKey ? ' ' + row.externalKey : '' }}</span>
+                  <span class="drawer-item-label">{{ row.label || '–' }}</span>
+                </div>
+                <button
+                  mat-icon-button
+                  type="button"
+                  class="drawer-add-btn"
+                  [matTooltip]="'log_time_dialog_title' | translate"
+                  (click)="openPrevMonthTicketDialog(row)"
+                >
+                  <mat-icon>more_time</mat-icon>
+                </button>
+              </div>
+            }
+          </div>
+        </aside>
+      }
+
+      <div class="table-wrap">
         <table>
           <colgroup>
             <col class="cg-type" />
@@ -84,7 +119,7 @@
           </colgroup>
           <thead>
             <tr class="week-numbers-row">
-              <th #typeHeaderCell class="col-type" rowspan="2">{{ 'type' | translate }}</th>
+              <th class="col-type" rowspan="2">{{ 'type' | translate }}</th>
               <th class="col-number" rowspan="2">{{ 'external_key' | translate }}</th>
               <th class="col-label" rowspan="2">{{ 'label' | translate }}</th>
               <th class="col-total" rowspan="2">{{ 'month_total' | translate }}</th>
@@ -132,28 +167,33 @@
                 <tr>
                   <td>{{ row.type }}</td>
                   <td>
-                    @if (row.externalKey && buildExtUrl(row.externalKey)) {
-                      <a
-                        class="ticket-number-link"
-                        [href]="buildExtUrl(row.externalKey)"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        (click)="$event.stopPropagation()"
-                      >
-                        {{ row.externalKey }}
-                      </a>
+                    @if (row.externalKey) {
+                      <span class="ticket-number-cell">
+                        <a
+                          class="ticket-number-link"
+                          [routerLink]="['/ticket', row.ticketId]"
+                          (click)="$event.stopPropagation()"
+                        >
+                          {{ row.externalKey }}
+                        </a>
+                        @if (buildExtUrl(row.externalKey)) {
+                          <a
+                            class="ticket-ext-icon"
+                            [href]="buildExtUrl(row.externalKey)"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            (click)="$event.stopPropagation()"
+                            title="{{ row.externalKey }}"
+                          >
+                            <mat-icon>open_in_new</mat-icon>
+                          </a>
+                        }
+                      </span>
                     } @else {
-                      {{ row.externalKey || '-' }}
+                      -
                     }
                   </td>
-                  <td>
-                    <a
-                      class="ticket-label-link"
-                      [routerLink]="['/ticket', row.ticketId]"
-                    >
-                      {{ row.label || '-' }}
-                    </a>
-                  </td>
+                  <td>{{ row.label || '-' }}</td>
                   <td
                     class="num total-cell"
                     [class.value-active]="row.total > 0"

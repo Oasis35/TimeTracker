@@ -42,9 +42,6 @@ namespace Tracker.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Label")
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");

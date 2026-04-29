@@ -4,6 +4,7 @@ using Tracker.Api.Data;
 using Tracker.Api.Dtos.Settings;
 using Tracker.Api.Infrastructure;
 using Tracker.Api.Models;
+using static Tracker.Api.Models.AppSettingKeys;
 
 namespace Tracker.Api.Controllers;
 
@@ -30,6 +31,9 @@ public sealed class SettingsController : ControllerBase
         if (string.IsNullOrWhiteSpace(key) || key.Length > 64)
             return ApiProblems.BadRequest(this, ApiErrorCodes.SettingKeyInvalid);
 
+        if (!AllowedKeys.Contains(key))
+            return ApiProblems.BadRequest(this, ApiErrorCodes.SettingKeyNotAllowed);
+
         if (dto.Value is null)
             return ApiProblems.BadRequest(this, ApiErrorCodes.SettingValueRequired);
 
@@ -48,6 +52,9 @@ public sealed class SettingsController : ControllerBase
     [HttpDelete("{key}")]
     public async Task<IActionResult> Delete(string key)
     {
+        if (!AllowedKeys.Contains(key))
+            return ApiProblems.BadRequest(this, ApiErrorCodes.SettingKeyNotAllowed);
+
         var existing = await _db.AppSettings.FindAsync(key);
         if (existing is not null)
         {

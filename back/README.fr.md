@@ -65,7 +65,6 @@ Entites principales :
   - `Type`
   - `ExternalKey`
   - `Label`
-  - `IsCompleted`
 - `TimeEntry`
   - `Id`
   - `TicketId`
@@ -146,8 +145,6 @@ Toutes les routes sont prefixees par `/api`.
   - cree un ticket, ou retourne l'existant si `(type, externalKey)` existe deja
 - `PUT /api/tickets/{ticketId}`
   - met a jour un ticket
-- `PATCH /api/tickets/{ticketId}/completion`
-  - marque un ticket termine / ouvert
 - `DELETE /api/tickets/{ticketId}`
   - supprime un ticket si les regles metier le permettent
 - `GET /api/tickets/totals`
@@ -157,8 +154,6 @@ Toutes les routes sont prefixees par `/api`.
 
 Regles importantes :
 
-- un ticket termine est en lecture seule pour update et delete
-- un ticket ne peut pas etre termine sans au moins une saisie
 - la suppression echoue si des saisies existent deja
 
 ### Saisies de temps
@@ -170,7 +165,6 @@ Regles de validation actuelles :
 
 - `ticketId` doit etre positif
 - le ticket doit exister
-- le ticket ne doit pas etre termine
 - `quantityMinutes` doit etre entre `0` et `MinutesPerDay`
 - `quantityMinutes` doit respecter un pas de 15 minutes
 - le total du jour ne doit pas depasser `MinutesPerDay`
@@ -179,7 +173,6 @@ Codes d'erreur typiques :
 
 - `TT_TICKET_ID_INVALID`
 - `TT_TICKET_NOT_FOUND`
-- `TT_TICKET_COMPLETED_LOCKED`
 - `TT_MINUTES_OUT_OF_RANGE`
 - `TT_STEP_15`
 - `TT_OVERFLOW_DAY`

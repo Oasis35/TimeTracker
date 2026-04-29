@@ -41,7 +41,7 @@ describe('TimesheetMonthPageComponent', () => {
       getMetadata: vi.fn(() => of(baseMetadata)),
       getMonth: vi.fn(() => of(baseMonth)),
       getUsedByMonth: vi.fn(() =>
-        of([{ id: 1, type: 'DEV', externalKey: '64205', label: 'Securite API', isCompleted: false }]),
+        of([{ id: 1, type: 'DEV', externalKey: '64205', label: 'Securite API' }]),
       ),
       getPublicHolidaysMetropole: vi.fn(() => of({ '2026-02-02': 'Lundi test' })),
       getTicketTotals: vi.fn(() => of([{ ticketId: 1, type: 'DEV', externalKey: '64205', label: 'Securite API', total: 900 }])),
@@ -105,7 +105,7 @@ describe('TimesheetMonthPageComponent', () => {
   });
 
   it('does not open time entry dialog when logTime is false', async () => {
-    const createdTicket = { id: 9, type: 'DEV', externalKey: 'NEW-9', label: 'New', isCompleted: false };
+    const createdTicket = { id: 9, type: 'DEV', externalKey: 'NEW-9', label: 'New' };
     const { fixture, component, dialogOpen } = setup({
       dialogResults: [{ ticket: createdTicket, logTime: false }],
     });
@@ -120,7 +120,7 @@ describe('TimesheetMonthPageComponent', () => {
   });
 
   it('opens time entry dialog when logTime is true', async () => {
-    const createdTicket = { id: 9, type: 'DEV', externalKey: 'NEW-9', label: 'New', isCompleted: false };
+    const createdTicket = { id: 9, type: 'DEV', externalKey: 'NEW-9', label: 'New' };
     const { fixture, component, dialogOpen } = setup({
       dialogResults: [{ ticket: createdTicket, logTime: true }, undefined],
     });
@@ -135,7 +135,7 @@ describe('TimesheetMonthPageComponent', () => {
   });
 
   it('reloads data after ticket is created', async () => {
-    const createdTicket = { id: 9, type: 'DEV', externalKey: 'NEW-9', label: 'New', isCompleted: false };
+    const createdTicket = { id: 9, type: 'DEV', externalKey: 'NEW-9', label: 'New' };
     const { fixture, component, apiMock } = setup({
       dialogResults: [{ ticket: createdTicket, logTime: false }],
     });

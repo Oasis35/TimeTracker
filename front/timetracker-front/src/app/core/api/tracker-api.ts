@@ -50,10 +50,6 @@ export class TrackerApi {
     return this.http.put<TicketDto>(`/api/tickets/${ticketId}`, dto);
   }
 
-  setTicketCompletion(ticketId: number, isCompleted: boolean): Observable<TicketDto> {
-    return this.http.patch<TicketDto>(`/api/tickets/${ticketId}/completion`, { isCompleted });
-  }
-
   deleteTicket(ticketId: number): Observable<void> {
     return this.http.delete<void>(`/api/tickets/${ticketId}`);
   }
@@ -80,7 +76,7 @@ export class TrackerApi {
   }
 
   getPublicHolidaysMetropole(): Observable<Record<string, string>> {
-    return this.http.get<Record<string, string>>('https://calendrier.api.gouv.fr/jours-feries/metropole.json');
+    return this.http.get<Record<string, string>>('/api/public-holidays');
   }
 
   getSettings(): Observable<Record<string, string>> {

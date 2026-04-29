@@ -6,6 +6,6 @@
         public TicketType Type { get; set; }
         public string? ExternalKey { get; set; }
         public string? Label { get; set; }
-        public bool IsCompleted { get; set; }
+
     }
 }

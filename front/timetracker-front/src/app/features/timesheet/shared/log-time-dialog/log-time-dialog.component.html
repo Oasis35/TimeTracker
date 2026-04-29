@@ -1,20 +1,29 @@
 <h2 mat-dialog-title>{{ 'log_time_dialog_title' | translate }}</h2>
 
 <mat-dialog-content class="log-time-dialog-content">
-  <div class="field-label">{{ 'ticket_search_label' | translate }}</div>
-  <app-ticket-lookup
-    [defaultTickets]="data.defaultTickets"
-    [searchableTickets]="data.allTickets"
-    (ticketSelected)="onTicketSelected($event)"
-  />
-
-  @if (selectedTicket(); as ticket) {
-    <div class="selected-ticket">
+  @if (data.preselectedTicket; as ticket) {
+    <div class="preselected-ticket">
       <span class="ticket-ref">{{ ticket.type }} {{ ticket.externalKey }}</span>
       @if (ticket.label) {
         <span class="ticket-label"> – {{ ticket.label }}</span>
       }
     </div>
+  } @else {
+    <div class="field-label">{{ 'ticket_search_label' | translate }}</div>
+    <app-ticket-lookup
+      [defaultTickets]="data.defaultTickets"
+      [searchableTickets]="data.allTickets"
+      (ticketSelected)="onTicketSelected($event)"
+    />
+
+    @if (selectedTicket(); as ticket) {
+      <div class="selected-ticket">
+        <span class="ticket-ref">{{ ticket.type }} {{ ticket.externalKey }}</span>
+        @if (ticket.label) {
+          <span class="ticket-label"> – {{ ticket.label }}</span>
+        }
+      </div>
+    }
   }
 
   <mat-form-field appearance="outline">

@@ -65,7 +65,6 @@ Main entities:
   - `Type`
   - `ExternalKey`
   - `Label`
-  - `IsCompleted`
 - `TimeEntry`
   - `Id`
   - `TicketId`
@@ -146,8 +145,6 @@ All routes are rooted under `/api`.
   - creates a ticket, or returns the existing one when `(type, externalKey)` already exists
 - `PUT /api/tickets/{ticketId}`
   - updates a ticket
-- `PATCH /api/tickets/{ticketId}/completion`
-  - marks a ticket completed / open
 - `DELETE /api/tickets/{ticketId}`
   - deletes a ticket if business rules allow it
 - `GET /api/tickets/totals`
@@ -157,8 +154,6 @@ All routes are rooted under `/api`.
 
 Important ticket rules:
 
-- completed tickets are read-only for update and delete
-- a ticket cannot be completed until it has at least one time entry
 - deleting a ticket fails if time entries already exist
 
 ### Time Entries
@@ -170,7 +165,6 @@ Current validation rules:
 
 - `ticketId` must be positive
 - ticket must exist
-- ticket must not be completed
 - `quantityMinutes` must be between `0` and `MinutesPerDay`
 - `quantityMinutes` must use a 15-minute step
 - the resulting total for the day must not exceed `MinutesPerDay`
@@ -179,7 +173,6 @@ Possible error codes include:
 
 - `TT_TICKET_ID_INVALID`
 - `TT_TICKET_NOT_FOUND`
-- `TT_TICKET_COMPLETED_LOCKED`
 - `TT_MINUTES_OUT_OF_RANGE`
 - `TT_STEP_15`
 - `TT_OVERFLOW_DAY`

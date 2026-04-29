@@ -132,7 +132,7 @@ public sealed class TimesheetController : ControllerBase
             .AsNoTracking()
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
-            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label, t.IsCompleted))
+            .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
             .ToListAsync();
 
         return Ok(new TimesheetMetadataDto

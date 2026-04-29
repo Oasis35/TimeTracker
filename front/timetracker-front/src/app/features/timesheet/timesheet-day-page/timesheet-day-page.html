@@ -117,24 +117,19 @@
 
           <div class="rows" [attr.aria-label]="'rows_aria' | translate">
             @for (r of displayRows(); track r.ticketId) {
-              <article class="row ticket-row" [class.ticket-row-completed]="r.isCompleted">
+              <article class="row ticket-row">
                 <div class="ticket-main">
                   <div class="ticket-head">
                     <a class="ticket-title ticket-link" [routerLink]="['/ticket', r.ticketId]">
                       {{ r.type }} {{ r.externalKey }}
                     </a>
-                    @if (r.isCompleted) {
-                      <span class="ticket-state ticket-state-completed">
-                        {{ 'ticket_state_completed' | translate }}
-                      </span>
-                    }
                   </div>
                   <div class="line-2">{{ r.label }}</div>
                 </div>
 
                 <div class="ticket-meta">
                   @if (r.externalKey) {
-                    <app-ticket-ext-link [externalKey]="r.externalKey" />
+                    <app-ticket-ext-link [externalKey]="r.externalKey" [ticketType]="r.type" />
                   }
                   <div class="week-total">
                     {{ 'total_ticket_row' | translate:{ value: formatEntryValue(r.ticketTotal) } }}
@@ -142,27 +137,22 @@
                 </div>
 
                 <div class="ticket-action">
-                  <span
-                    [matTooltip]="r.isCompleted ? ('ticket_completed_no_time_entry' | translate) : ''"
-                    [matTooltipDisabled]="!r.isCompleted"
+                  <mat-form-field
+                    appearance="outline"
+                    [class.entry-active]="getCellMinutes(r, selectedDay()) > 0"
                   >
-                    <mat-form-field
-                      appearance="outline"
-                      [class.entry-active]="getCellMinutes(r, selectedDay()) > 0"
+                    <mat-select
+                      [value]="getCellMinutes(r, selectedDay())"
+                      (selectionChange)="pointMinutes(r.ticketId, $event.value)"
+                      [disabled]="busy() || !selectedDay()"
                     >
-                      <mat-select
-                        [value]="getCellMinutes(r, selectedDay())"
-                        (selectionChange)="pointMinutes(r.ticketId, $event.value)"
-                        [disabled]="busy() || !selectedDay() || r.isCompleted"
-                      >
-                        @for (option of quickPickOptions(); track option.minutes) {
-                          <mat-option [value]="option.minutes">
-                            {{ option.label }}
-                          </mat-option>
-                        }
-                      </mat-select>
-                    </mat-form-field>
-                  </span>
+                      @for (option of quickPickOptions(); track option.minutes) {
+                        <mat-option [value]="option.minutes">
+                          {{ option.label }}
+                        </mat-option>
+                      }
+                    </mat-select>
+                  </mat-form-field>
                 </div>
               </article>
             }

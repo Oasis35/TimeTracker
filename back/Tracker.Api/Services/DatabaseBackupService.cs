@@ -4,7 +4,14 @@ namespace Tracker.Api.Services;
 
 public sealed class DatabaseBackupService
 {
-    private static readonly string[] RequiredTables = ["Tickets", "TimeEntries"];
+    private static readonly string[] RequiredTables = ["Tickets", "TimeEntries", "AppSettings"];
+
+    private static readonly Dictionary<string, HashSet<string>> RequiredColumns = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Tickets"] = new(StringComparer.OrdinalIgnoreCase) { "Id", "Type", "ExternalKey", "Label" },
+        ["TimeEntries"] = new(StringComparer.OrdinalIgnoreCase) { "Id", "TicketId", "Date", "QuantityMinutes", "IsSeed" },
+        ["AppSettings"] = new(StringComparer.OrdinalIgnoreCase) { "Key", "Value" },
+    };
 
     private readonly string _databasePath;
     private readonly string _backupsDirectory;
@@ -108,17 +115,36 @@ public sealed class DatabaseBackupService
             await using var connection = OpenConnection(backupPath);
             await connection.OpenAsync(cancellationToken);
 
-            await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table';";
+            // Vérifier que toutes les tables requises existent
+            await using var tablesCmd = connection.CreateCommand();
+            tablesCmd.CommandText = "SELECT name FROM sqlite_master WHERE type = 'table';";
 
             var tables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-            while (await reader.ReadAsync(cancellationToken))
+            await using (var reader = await tablesCmd.ExecuteReaderAsync(cancellationToken))
             {
-                tables.Add(reader.GetString(0));
+                while (await reader.ReadAsync(cancellationToken))
+                    tables.Add(reader.GetString(0));
             }
 
-            return RequiredTables.All(tables.Contains);
+            if (!RequiredTables.All(tables.Contains))
+                return false;
+
+            // Vérifier que chaque table contient les colonnes attendues
+            foreach (var (table, expectedColumns) in RequiredColumns)
+            {
+                await using var columnsCmd = connection.CreateCommand();
+                columnsCmd.CommandText = $"PRAGMA table_info(\"{table}\");";
+
+                var actualColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                await using var reader = await columnsCmd.ExecuteReaderAsync(cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
+                    actualColumns.Add(reader.GetString(1)); // column 1 = name
+
+                if (!expectedColumns.IsSubsetOf(actualColumns))
+                    return false;
+            }
+
+            return true;
         }
         catch
         {

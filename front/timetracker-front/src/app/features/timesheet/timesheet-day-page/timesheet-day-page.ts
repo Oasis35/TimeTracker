@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
-import { Component, DestroyRef, Injectable, computed, effect, inject, resource, signal } from '@angular/core';
+import { Component, DestroyRef, Injectable, computed, effect, inject, resource, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -40,15 +40,16 @@ import {
   TimesheetMonthDto,
   TimesheetRowDto,
 } from '../../../core/api/models';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
-  TimeEntryDialogComponent,
-  TimeEntryDialogData,
-} from '../shared/time-entry-dialog/time-entry-dialog.component';
+  TimeSlotPickerDialogComponent,
+  TimeSlotPickerDialogData,
+  TimeSlotPickerDialogResult,
+} from '../shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
 import { TicketLookupComponent } from '../../tickets/shared/ticket-lookup/ticket-lookup.component';
 
 type MonthRequest = { y: number; m: number };
-type DisplayRow = TimesheetRowDto & { ticketTotal: number; isCompleted: boolean };
+type DisplayRow = TimesheetRowDto & { ticketTotal: number };
 
 @Injectable()
 class IsoMondayDateAdapter extends NativeDateAdapter {
@@ -183,7 +184,6 @@ export class TimesheetDayPageComponent {
         return {
           ...existing,
           ticketTotal: totalsByTicketId.get(ticket.id) ?? 0,
-          isCompleted: ticket.isCompleted,
         };
       }
 
@@ -194,7 +194,6 @@ export class TimesheetDayPageComponent {
         label: ticket.label ?? '',
         values: {},
         ticketTotal: totalsByTicketId.get(ticket.id) ?? 0,
-        isCompleted: ticket.isCompleted,
       };
     });
 
@@ -202,7 +201,7 @@ export class TimesheetDayPageComponent {
     if (pinnedIds.size > 0) {
       const allTickets = this.metadataRes.value()?.tickets ?? [];
       for (const ticket of allTickets) {
-        if (pinnedIds.has(ticket.id) && !usedTicketIds.has(ticket.id) && !ticket.isCompleted) {
+        if (pinnedIds.has(ticket.id) && !usedTicketIds.has(ticket.id)) {
           rows.push({
             ticketId: ticket.id,
             type: ticket.type,
@@ -210,7 +209,6 @@ export class TimesheetDayPageComponent {
             label: ticket.label ?? '',
             values: {},
             ticketTotal: totalsByTicketId.get(ticket.id) ?? 0,
-            isCompleted: false,
           });
         }
       }
@@ -221,7 +219,7 @@ export class TimesheetDayPageComponent {
     return rows.filter(
       (row) =>
         (row.values?.[selectedDay] ?? 0) > 0 ||
-        (!row.isCompleted && pinnedIds.has(row.ticketId)),
+        pinnedIds.has(row.ticketId),
     );
   });
 
@@ -289,14 +287,13 @@ export class TimesheetDayPageComponent {
           type: fromUsed?.type ?? row.type,
           externalKey: fromUsed?.externalKey ?? row.externalKey,
           label: fromUsed?.label ?? row.label,
-          isCompleted: fromUsed?.isCompleted ?? false,
         };
       })
-      .filter((ticket) => !ticket.isCompleted && !!(ticket.externalKey ?? '').trim());
+      .filter((ticket) => !!(ticket.externalKey ?? '').trim());
   });
   readonly daySearchAllTickets = computed<TicketDto[]>(() =>
     (this.metadataRes.value()?.tickets ?? []).filter(
-      (ticket) => !ticket.isCompleted && !!(ticket.externalKey ?? '').trim(),
+      (ticket) => !!(ticket.externalKey ?? '').trim(),
     ),
   );
 
@@ -307,6 +304,7 @@ export class TimesheetDayPageComponent {
     private readonly translate: TranslateService,
     private readonly snackBar: MatSnackBar,
     private readonly route: ActivatedRoute,
+    private readonly router: Router,
     readonly unit: UnitService,
     readonly publicHolidays: PublicHolidaysService,
   ) {
@@ -321,7 +319,16 @@ export class TimesheetDayPageComponent {
     this.route.queryParamMap.pipe(takeUntilDestroyed(destroyRef)).subscribe((params) => {
       const date = params.get('date');
       if (!date) return;
-      this.applyRouteDate(date);
+      untracked(() => this.applyRouteDate(date));
+    });
+    effect(() => {
+      const date = this.selectedDay();
+      if (!date) return;
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { date },
+        replaceUrl: true,
+      });
     });
 
     effect(() => {
@@ -462,13 +469,13 @@ export class TimesheetDayPageComponent {
       this.usedTicketsRes.reload();
       this.ticketTotalsRes.reload();
       if (result.logTime) {
-        this.openTicketEntryDialog(result.ticket);
+        this.openTicketEntryDialog(result.ticket, { withDatePicker: true });
       }
     });
   }
 
-  async pointMinutes(ticketId: number, quantityMinutes: number): Promise<void> {
-    const date = this.selectedDay();
+  async pointMinutes(ticketId: number, quantityMinutes: number, dateOverride?: string): Promise<void> {
+    const date = dateOverride ?? this.selectedDay();
 
     this.clearActionState();
 
@@ -509,36 +516,38 @@ export class TimesheetDayPageComponent {
     return row.values?.[dayIso] ?? 0;
   }
 
-  openTicketEntryDialog(ticket: TicketDto): void {
-    if (ticket.isCompleted) {
-      return;
-    }
-
+  openTicketEntryDialog(ticket: TicketDto, opts?: { withDatePicker?: boolean }): void {
     const date = this.selectedDay();
-    if (!date) {
+    if (!date && !opts?.withDatePicker) {
       this.actionError.set(this.translate.instant('day_required_before_log'));
       return;
     }
 
-    const currentMinutes = this.getTicketMinutesForDay(ticket.id, date);
-    const data: TimeEntryDialogData = {
+    const currentMinutes = date ? this.getTicketMinutesForDay(ticket.id, date) : 0;
+    const data: TimeSlotPickerDialogData = {
       ticketId: ticket.id,
       ticketRef: `${ticket.type} ${ticket.externalKey ?? ''}`.trim(),
       ticketLabel: ticket.label ?? '',
       dayLabel: this.selectedDayLabel(),
       currentMinutes,
       options: this.quickPickOptions(),
+      ...(opts?.withDatePicker ? { initialDate: date ?? toIsoDate(new Date()), dateLocale: this.dateLocale() } : {}),
     };
 
-    const dialogRef = this.dialog.open(TimeEntryDialogComponent, {
+    const dialogRef = this.dialog.open(TimeSlotPickerDialogComponent, {
       width: '460px',
       maxWidth: '95vw',
       data,
     });
 
-    dialogRef.afterClosed().subscribe((minutes) => {
-      if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
-      void this.pointMinutes(ticket.id, minutes);
+    dialogRef.afterClosed().subscribe((result: TimeSlotPickerDialogResult | undefined) => {
+      if (result === undefined || result === null) return;
+      if (typeof result === 'number') {
+        if (Number.isNaN(result)) return;
+        void this.pointMinutes(ticket.id, result);
+      } else {
+        void this.pointMinutes(ticket.id, result.minutes, result.date);
+      }
     });
   }
 

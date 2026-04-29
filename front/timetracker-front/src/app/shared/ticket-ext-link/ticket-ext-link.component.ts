@@ -12,8 +12,12 @@ import { ExternalLinkService } from '../../core/services/external-link.service';
 })
 export class TicketExtLinkComponent {
   @Input() externalKey: string = '';
+  @Input() ticketType: string = '';
 
   private readonly extLink = inject(ExternalLinkService);
 
-  readonly url = computed(() => this.extLink.buildUrl(this.externalKey));
+  readonly url = computed(() => {
+    if (this.ticketType === 'ABSENT') return '';
+    return this.extLink.buildUrl(this.externalKey);
+  });
 }

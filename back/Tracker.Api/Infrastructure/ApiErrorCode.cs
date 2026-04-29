@@ -8,8 +8,6 @@ public static class ApiErrorCodes
     public const string TicketIdInvalid = "TT_TICKET_ID_INVALID";
     public const string TicketNotFound = "TT_TICKET_NOT_FOUND";
     public const string TicketHasTimeEntries = "TT_TICKET_HAS_TIME_ENTRIES";
-    public const string TicketNoTimeEntries = "TT_TICKET_NO_TIME_ENTRIES";
-    public const string TicketCompletedLocked = "TT_TICKET_COMPLETED_LOCKED";
     public const string TicketAlreadyExists = "TT_TICKET_ALREADY_EXISTS";
     public const string TicketTypeRequired = "TT_TICKET_TYPE_REQUIRED";
     public const string TicketTypeNotAllowed = "TT_TICKET_TYPE_NOT_ALLOWED";
@@ -21,5 +19,6 @@ public static class ApiErrorCodes
     public const string Step15 = "TT_STEP_15";
     public const string OverflowDay = "TT_OVERFLOW_DAY";
     public const string SettingKeyInvalid = "TT_SETTING_KEY_INVALID";
+    public const string SettingKeyNotAllowed = "TT_SETTING_KEY_NOT_ALLOWED";
     public const string SettingValueRequired = "TT_SETTING_VALUE_REQUIRED";
 }

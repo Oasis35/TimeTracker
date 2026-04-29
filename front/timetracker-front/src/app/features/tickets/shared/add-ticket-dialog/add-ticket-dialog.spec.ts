@@ -17,7 +17,7 @@ describe('AddTicketDialogComponent', () => {
     tickets: [],
   };
 
-  const createdTicket = { id: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Test', isCompleted: false };
+  const createdTicket = { id: 1, type: 'DEV', externalKey: 'ABC-1', label: 'Test' };
 
   function setup(options?: { createError?: string; defaultType?: string }) {
     const closeSpy = vi.fn();

@@ -17,9 +17,13 @@ export class PublicHolidaysService {
   load(): Promise<void> {
     const now = Date.now();
     if (this._loadedAt !== null && now - this._loadedAt < TTL_MS) return Promise.resolve();
-    this._loadedAt = now;
     return firstValueFrom(
-      this.api.getPublicHolidaysMetropole().pipe(catchError(() => of({}))),
-    ).then(h => this._holidays.set(h));
+      this.api.getPublicHolidaysMetropole().pipe(catchError(() => of(null))),
+    ).then(h => {
+      if (h !== null) {
+        this._holidays.set(h);
+        this._loadedAt = Date.now();
+      }
+    });
   }
 }

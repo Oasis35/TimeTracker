@@ -31,20 +31,12 @@ public sealed class TimeEntriesController : ControllerBase
         if (dto.TicketId <= 0)
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketIdInvalid);
 
-        var ticket = await _db.Tickets
+        var ticketExists = await _db.Tickets
             .AsNoTracking()
-            .Where(t => t.Id == dto.TicketId)
-            .Select(t => new
-            {
-                t.Id,
-                t.IsCompleted
-            })
-            .FirstOrDefaultAsync();
+            .AnyAsync(t => t.Id == dto.TicketId);
 
-        if (ticket is null)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketNotFound);
-        if (ticket.IsCompleted)
-            return ApiProblems.BadRequest(this, ApiErrorCodes.TicketCompletedLocked);
+        if (!ticketExists)
+            return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
 
         var existing = await _db.TimeEntries
             .SingleOrDefaultAsync(e => e.TicketId == dto.TicketId && e.Date == dto.Date);

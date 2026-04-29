@@ -6,14 +6,19 @@ using Xunit;
 
 namespace Tracker.Api.Tests;
 
-public sealed class TimesheetApiTests : IClassFixture<TrackerApiFactory>
+public sealed class TimesheetApiTests : IClassFixture<TrackerApiFactory>, IAsyncLifetime
 {
+    private readonly TrackerApiFactory _factory;
     private readonly HttpClient _client;
 
     public TimesheetApiTests(TrackerApiFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient();
     }
+
+    public Task InitializeAsync() => _factory.ResetDbAsync();
+    public Task DisposeAsync() => Task.CompletedTask;
 
     [Fact]
     public async Task Get_Should_Return_MinutesPerDay_And_Zero_For_Empty_Cells()

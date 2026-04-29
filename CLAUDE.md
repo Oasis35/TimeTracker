@@ -69,10 +69,11 @@ REST API with these controllers:
 | `TimeEntriesController` | Upsert/delete time entries |
 | `TimesheetController` | Month grid + metadata |
 | `SettingsController` | Key-value user settings |
-| `BackupController` | SQLite export/restore |
+| `BackupController` | SQLite export/restore (rate-limited: 5 req/min) |
+| `PublicHolidaysController` | Proxy + 24h in-memory cache for French public holidays |
 
 Key files:
-- [Program.cs](back/Tracker.Api/Program.cs) — startup: auto-migrations, seed data, CORS, global exception handler, SPA fallback
+- [Program.cs](back/Tracker.Api/Program.cs) — startup: auto-migrations, seed data, CORS, rate limiter, `/api/health` endpoint, global exception handler, SPA fallback
 - [Data/TrackerDbContext.cs](back/Tracker.Api/Data/TrackerDbContext.cs) — EF Core context
 - [Services/TimeEntryRules.cs](back/Tracker.Api/Services/TimeEntryRules.cs) — business rule enforcement
 - [Infrastructure/](back/Tracker.Api/Infrastructure/) — standardized `TT_*` error codes and ProblemDetails responses
@@ -98,7 +99,7 @@ features/
   settings/       # Settings dialog + DB maintenance
 ```
 
-State is backend-driven: `AppSettingsService` loads all user preferences via `APP_INITIALIZER` at startup. No Redux/NgRx — component-level state with Angular Signals.
+State is backend-driven: `AppSettingsService` loads all user preferences via `provideAppInitializer()` at startup. No Redux/NgRx — component-level state with Angular Signals.
 
 **Patterns Angular à respecter :**
 
@@ -121,7 +122,7 @@ State is backend-driven: `AppSettingsService` loads all user preferences via `AP
 
 SQLite with EF Core. Three entities:
 
-- **Ticket** — Type (enum) + ExternalKey + Label + IsCompleted. Unique on `(Type, ExternalKey)`.
+- **Ticket** — Type (enum) + ExternalKey + Label. Unique on `(Type, ExternalKey)`.
 - **TimeEntry** — TicketId + Date (DateOnly) + QuantityMinutes. Unique on `(TicketId, Date)`.
 - **AppSetting** — Key-value store for user preferences.
 
@@ -136,9 +137,8 @@ SQLite with EF Core. Three entities:
 
 - Time entries must be in 15-minute increments, max `MinutesPerDay` (default 480) per day.
 - Daily total across all tickets cannot exceed `MinutesPerDay`.
-- Completed tickets are read-only (no time entry changes, no delete).
-- Cannot mark a ticket complete with zero time entries.
 - Cannot delete a ticket that has time entries.
+- Cannot create or update a ticket with type `ABSENT` (reserved for seed data).
 
 ### Configuration
 
@@ -164,6 +164,7 @@ SQLite with EF Core. Three entities:
 - Créer une base SQLite en mémoire isolée par test : `var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();`
 - Fermer la connexion dans le `Dispose` / `finally` pour libérer la mémoire
 - Tests d'API end-to-end via `TrackerApiFactory` (WebApplicationFactory) avec `"Testing"` comme environment (désactive auto-migration et seed)
+- Les classes de test qui utilisent `IClassFixture<TrackerApiFactory>` doivent aussi implémenter `IAsyncLifetime` et appeler `_factory.ResetDbAsync()` dans `InitializeAsync()` pour isoler chaque test
 
 ### i18n
 
@@ -171,4 +172,4 @@ Translation files live in `front/timetracker-front/public/i18n/` (`en.json`, `fr
 
 ### External Integration
 
-French public holidays are fetched from `https://calendrier.api.gouv.fr/jours-feries/metropole.json` and displayed in the month view.
+French public holidays are fetched from the gouvernement API and cached 24h server-side. The frontend calls `/api/public-holidays` (proxied by the backend) — never the external URL directly.

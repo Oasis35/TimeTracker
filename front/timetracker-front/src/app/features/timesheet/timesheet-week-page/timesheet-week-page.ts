@@ -1,18 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, computed, inject, Injectable, resource, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, Injectable, resource, signal, untracked } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { DateAdapter, MAT_DATE_LOCALE, MatNativeDateModule, NativeDateAdapter } from '@angular/material/core';
 import { MatDatepicker, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { PublicHolidaysService } from '../../../core/services/public-holidays.service';
@@ -24,8 +25,9 @@ import { isWeekendIso, isoWeekDays, isoWeekNumber, isoWeekYear, monthsForDays, t
 import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
 import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
 import { showSnack } from '../../../core/utils/ui-helpers';
-import { TimeEntryDialogComponent, TimeEntryDialogData } from '../shared/time-entry-dialog/time-entry-dialog.component';
+import { TimeSlotPickerDialogComponent, TimeSlotPickerDialogData, TimeSlotPickerDialogResult } from '../shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
+import { TicketExtLinkComponent } from '../../../shared/ticket-ext-link/ticket-ext-link.component';
 import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
 
 @Injectable()
@@ -62,11 +64,13 @@ export interface WeekDayRow {
     MatDatepickerModule,
     MatDialogModule,
     MatIconModule,
+    MatMenuModule,
     MatNativeDateModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTooltipModule,
     RouterLink,
+    TicketExtLinkComponent,
     TranslateModule,
   ],
   templateUrl: './timesheet-week-page.html',
@@ -82,6 +86,7 @@ export class TimesheetWeekPageComponent {
   private readonly api = inject(TrackerApi);
   private readonly translate = inject(TranslateService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   readonly unit = inject(UnitService);
@@ -91,6 +96,23 @@ export class TimesheetWeekPageComponent {
   readonly isoWeek = signal<number>(isoWeekNumber(this.todayIso()));
   readonly weekYear = signal<number>(isoWeekYear(this.todayIso()));
   readonly language = signal<AppLanguage>('fr');
+
+  readonly prevIsoWeek = computed(() => {
+    const w = this.isoWeek();
+    return w > 1 ? w - 1 : 52;
+  });
+
+  readonly drawerOpen = signal<boolean>(false);
+
+  private drawerCacheKey(): string {
+    return `tt-prev-week-drawer-${this.weekYear()}-${this.isoWeek()}`;
+  }
+
+  toggleDrawer(): void {
+    const next = !this.drawerOpen();
+    this.drawerOpen.set(next);
+    localStorage.setItem(this.drawerCacheKey(), next ? '1' : '0');
+  }
 
   readonly selectedWeekDate = computed(() => {
     const days = isoWeekDays(this.weekYear(), this.isoWeek());
@@ -119,6 +141,51 @@ export class TimesheetWeekPageComponent {
     params: () => this.monthsNeeded()[1] ?? null,
     loader: ({ params }) =>
       params ? firstValueFrom(this.api.getMonth(params.y, params.m)) : Promise.resolve(null),
+  });
+
+  readonly prevWeekDays = computed<string[]>(() => {
+    const monday = this.days()[0];
+    const prev = new Date(`${monday}T00:00:00`);
+    prev.setDate(prev.getDate() - 7);
+    return isoWeekDays(isoWeekYear(toIsoDate(prev)), isoWeekNumber(toIsoDate(prev)));
+  });
+
+  private readonly prevMonthsNeeded = computed<MonthKey[]>(() => monthsForDays(this.prevWeekDays()));
+
+  private readonly prevMonth1Res = resource<TimesheetMonthDto, MonthKey>({
+    params: () => this.prevMonthsNeeded()[0] ?? { y: this.weekYear(), m: 1 },
+    loader: ({ params }) => firstValueFrom(this.api.getMonth(params.y, params.m)),
+  });
+
+  private readonly prevMonth2Res = resource<TimesheetMonthDto | null, MonthKey | null>({
+    params: () => this.prevMonthsNeeded()[1] ?? null,
+    loader: ({ params }) =>
+      params ? firstValueFrom(this.api.getMonth(params.y, params.m)) : Promise.resolve(null),
+  });
+
+  readonly prevWeekMissingCols = computed<WeekTicketCol[]>(() => {
+    const prevDays = this.prevWeekDays();
+    const prevMonths = [this.prevMonth1Res.value(), this.prevMonth2Res.value()].filter(Boolean) as TimesheetMonthDto[];
+    const currentTicketIds = new Set(this.ticketCols().map((c) => c.ticketId));
+    const map = new Map<number, WeekTicketCol>();
+    for (const month of prevMonths) {
+      for (const row of month.rows) {
+        if (map.has(row.ticketId)) continue;
+        if (currentTicketIds.has(row.ticketId)) continue;
+        const hasEntry = prevDays.some((d) => (row.values[d] ?? 0) > 0);
+        if (hasEntry) {
+          map.set(row.ticketId, {
+            ticketId: row.ticketId,
+            type: row.type,
+            externalKey: row.externalKey,
+            label: row.label,
+          });
+        }
+      }
+    }
+    return [...map.values()].sort((a, b) =>
+      a.type.localeCompare(b.type) || (a.externalKey ?? '').localeCompare(b.externalKey ?? ''),
+    );
   });
 
   readonly metadataRes = resource<TimesheetMetadataDto, number>({
@@ -270,8 +337,25 @@ export class TimesheetWeekPageComponent {
       const year = Number(params.get('year'));
       if (!Number.isInteger(week) || !Number.isInteger(year)) return;
       if (week < 1 || week > 53 || year < 1900 || year > 3000) return;
-      this.isoWeek.set(week);
-      this.weekYear.set(year);
+      untracked(() => {
+        this.isoWeek.set(week);
+        this.weekYear.set(year);
+      });
+    });
+    effect(() => {
+      const week = this.isoWeek();
+      const year = this.weekYear();
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { year, week },
+        replaceUrl: true,
+      });
+    });
+
+    effect(() => {
+      // Restaure l'état du drawer depuis le cache à chaque changement de semaine
+      const key = `tt-prev-week-drawer-${this.weekYear()}-${this.isoWeek()}`;
+      untracked(() => this.drawerOpen.set(localStorage.getItem(key) === '1'));
     });
   }
 
@@ -313,7 +397,7 @@ export class TimesheetWeekPageComponent {
 
   onCellClick(row: WeekDayRow, col: WeekTicketCol): void {
     if (row.isWeekend || row.isHoliday) return;
-    const data: TimeEntryDialogData = {
+    const data: TimeSlotPickerDialogData = {
       ticketId: col.ticketId,
       ticketRef: `${col.type} ${col.externalKey ?? ''}`.trim(),
       ticketLabel: col.label ?? '',
@@ -321,7 +405,7 @@ export class TimesheetWeekPageComponent {
       currentMinutes: row.values.get(col.ticketId) ?? 0,
       options: this.quickPickOptions(),
     };
-    this.dialog.open(TimeEntryDialogComponent, { width: '460px', maxWidth: '95vw', data })
+    this.dialog.open(TimeSlotPickerDialogComponent, { width: '460px', maxWidth: '95vw', data })
       .afterClosed().subscribe((minutes) => {
         if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
         void firstValueFrom(
@@ -351,7 +435,7 @@ export class TimesheetWeekPageComponent {
       year: y,
       month: m,
       defaultTickets: this.ticketCols().map((c) => ({
-        id: c.ticketId, type: c.type, externalKey: c.externalKey, label: c.label, isCompleted: false,
+        id: c.ticketId, type: c.type, externalKey: c.externalKey, label: c.label,
       })),
       allTickets: this.allTicketsRes.value() ?? [],
       options: this.quickPickOptions(),
@@ -372,22 +456,55 @@ export class TimesheetWeekPageComponent {
       });
   }
 
+  openPrevWeekTicketDialog(col: WeekTicketCol): void {
+    const days = this.days();
+    const [y, m] = days[0].split('-').map(Number);
+    const ticket: TicketDto = {
+      id: col.ticketId,
+      type: col.type,
+      externalKey: col.externalKey,
+      label: col.label,
+    };
+    const data: LogTimeDialogData = {
+      year: y,
+      month: m,
+      defaultTickets: [ticket],
+      allTickets: this.allTicketsRes.value() ?? [],
+      options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      publicHolidays: this.publicHolidays.holidays() ?? {},
+      preselectedTicket: ticket,
+    };
+    this.dialog.open(LogTimeDialogComponent, { width: '460px', maxWidth: '95vw', data })
+      .afterClosed().subscribe((result: LogTimeDialogResult | undefined) => {
+        if (!result) return;
+        void firstValueFrom(
+          this.api.upsertTimeEntry({ ticketId: result.ticketId, date: result.date, quantityMinutes: result.minutes }),
+        ).then(() => {
+          showSnack(this.snackBar, this.translate.instant('time_saved'));
+          this.reloadMonths();
+        }).catch((error: unknown) => {
+          showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
+        });
+      });
+  }
+
   private openTicketEntryDialog(ticket: TicketDto): void {
-    const iso = this.todayIso();
-    const dayLabel = new Intl.DateTimeFormat(this.dateLocale(), { dateStyle: 'long' }).format(new Date(`${iso}T00:00:00`));
-    const data: TimeEntryDialogData = {
+    const data: TimeSlotPickerDialogData = {
       ticketId: ticket.id,
       ticketRef: `${ticket.type} ${ticket.externalKey ?? ''}`.trim(),
       ticketLabel: ticket.label ?? '',
-      dayLabel,
+      dayLabel: '',
       currentMinutes: 0,
       options: this.quickPickOptions(),
+      initialDate: this.todayIso(),
+      dateLocale: this.dateLocale(),
     };
-    this.dialog.open(TimeEntryDialogComponent, { width: '460px', maxWidth: '95vw', data })
-      .afterClosed().subscribe((minutes) => {
-        if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
+    this.dialog.open(TimeSlotPickerDialogComponent, { width: '460px', maxWidth: '95vw', data })
+      .afterClosed().subscribe((result: TimeSlotPickerDialogResult | undefined) => {
+        if (result === undefined || result === null || typeof result === 'number') return;
         void firstValueFrom(
-          this.api.upsertTimeEntry({ ticketId: ticket.id, date: iso, quantityMinutes: minutes }),
+          this.api.upsertTimeEntry({ ticketId: ticket.id, date: result.date, quantityMinutes: result.minutes }),
         ).then(() => this.reloadMonths())
          .catch((error: unknown) => {
            showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));

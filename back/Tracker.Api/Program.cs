@@ -1,5 +1,7 @@
 ﻿using System.Text.Json;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Tracker.Api.Data;
@@ -8,6 +10,12 @@ using Tracker.Api.Options;
 using Tracker.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.AddJsonConsole(o =>
+{
+    o.TimestampFormat = "yyyy-MM-ddTHH:mm:ssZ";
+    o.UseUtcTimestamp = true;
+});
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -25,7 +33,22 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("backup", o =>
+    {
+        o.Window = TimeSpan.FromMinutes(1);
+        o.PermitLimit = 5;
+        o.QueueLimit = 0;
+        o.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 builder.Services.AddSingleton<DatabaseBackupService>();
+builder.Services.AddSingleton<PublicHolidaysService>();
+builder.Services.AddHttpClient("gouv")
+    .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
 builder.Services.Configure<TimeTrackingOptions>(
     builder.Configuration.GetSection("TimeTracking"));
 
@@ -100,7 +123,8 @@ if (hasSpaAssets)
 }
 
 app.UseCors("AngularDev");
-app.UseAuthorization();
+app.UseRateLimiter();
+app.MapGet("/api/health", () => Results.Ok());
 app.MapControllers();
 
 if (hasSpaAssets)

@@ -5,9 +5,9 @@ import { TicketDto } from '../../../../core/api/models';
 
 describe('TicketLookupComponent', () => {
   const tickets: TicketDto[] = [
-    { id: 1, type: 'DEV', externalKey: '65010', label: 'Feature login', isCompleted: false },
-    { id: 2, type: 'DEV', externalKey: '65011', label: 'Fix crash', isCompleted: false },
-    { id: 3, type: 'SUPPORT', externalKey: 'TKT-99', label: 'Incident réseau', isCompleted: false },
+    { id: 1, type: 'DEV', externalKey: '65010', label: 'Feature login' },
+    { id: 2, type: 'DEV', externalKey: '65011', label: 'Fix crash' },
+    { id: 3, type: 'SUPPORT', externalKey: 'TKT-99', label: 'Incident réseau' },
   ];
 
   function setup() {
@@ -72,9 +72,9 @@ describe('TicketLookupComponent', () => {
   it('prioritises exact match over prefix over contains in search results', () => {
     const { component } = setup();
     component.searchableTickets = [
-      { id: 10, type: 'DEV', externalKey: 'A65010B', label: 'Contains', isCompleted: false },
-      { id: 11, type: 'DEV', externalKey: '65010X', label: 'Starts with', isCompleted: false },
-      { id: 12, type: 'DEV', externalKey: '65010', label: 'Exact', isCompleted: false },
+      { id: 10, type: 'DEV', externalKey: 'A65010B', label: 'Contains' },
+      { id: 11, type: 'DEV', externalKey: '65010X', label: 'Starts with' },
+      { id: 12, type: 'DEV', externalKey: '65010', label: 'Exact' },
     ];
     component.query.set('65010');
     const ids = component.results().map((t) => t.id);

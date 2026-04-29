@@ -48,6 +48,16 @@ public sealed class TrackerApiFactory : WebApplicationFactory<Program>
         });
     }
 
+    public async Task ResetDbAsync()
+    {
+        using var scope = Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<TrackerDbContext>();
+        db.TimeEntries.RemoveRange(db.TimeEntries);
+        db.Tickets.RemoveRange(db.Tickets);
+        db.AppSettings.RemoveRange(db.AppSettings);
+        await db.SaveChangesAsync();
+    }
+
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);

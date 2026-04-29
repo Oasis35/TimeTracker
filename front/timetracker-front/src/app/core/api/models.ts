@@ -7,7 +7,6 @@ export interface TicketDto {
   type: TicketType;
   externalKey?: string | null;
   label?: string | null;
-  isCompleted: boolean;
 }
 
 export interface TicketTotalDto {
@@ -60,7 +59,7 @@ export interface TimesheetMonthDto {
   days: string[];
   rows: TimesheetRowDto[];
   totalsByDay: Record<string, number>;
-  minutesPerDay?: number;
+  minutesPerDay: number;
 }
 
 export interface UpsertTimeEntryDto {

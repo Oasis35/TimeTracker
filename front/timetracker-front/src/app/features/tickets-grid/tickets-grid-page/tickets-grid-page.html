@@ -6,17 +6,6 @@
       </div>
       <div class="header-actions">
         @if (!loading() && !error()) {
-          <mat-form-field appearance="outline" class="completion-filter">
-            <mat-label>{{ 'completed_filter' | translate }}</mat-label>
-            <mat-select
-              [value]="completionFilter()"
-              (valueChange)="onCompletionFilterChange($event)"
-            >
-              <mat-option value="open">{{ 'completed_filter_open' | translate }}</mat-option>
-              <mat-option value="completed">{{ 'completed_filter_completed' | translate }}</mat-option>
-              <mat-option value="all">{{ 'completed_filter_all' | translate }}</mat-option>
-            </mat-select>
-          </mat-form-field>
           <mat-form-field appearance="outline" class="grid-filter">
             <mat-label>{{ 'filter' | translate }}</mat-label>
             <input matInput (input)="onFilterInput($event)" />
@@ -73,7 +62,7 @@
           <ng-container matColumnDef="extLink">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let row">
-              <app-ticket-ext-link [externalKey]="row.externalKey" />
+              <app-ticket-ext-link [externalKey]="row.externalKey" [ticketType]="row.type" />
             </td>
           </ng-container>
 
@@ -120,30 +109,6 @@
             </td>
           </ng-container>
 
-          <ng-container matColumnDef="completed">
-            <th mat-header-cell *matHeaderCellDef>{{ 'completed' | translate }}</th>
-            <td mat-cell *matCellDef="let row">
-              <button
-                mat-icon-button
-                type="button"
-                class="action-btn"
-                [class.action-completed]="row.isCompleted"
-                [class.action-open]="!row.isCompleted"
-                [matTooltip]="(row.isCompleted ? 'mark_open' : 'mark_completed') | translate"
-                [attr.aria-label]="(row.isCompleted ? 'mark_open' : 'mark_completed') | translate"
-                (click)="toggleCompletion(row)"
-                [disabled]="
-                  completionTicketId() === row.id ||
-                  deletingTicketId() === row.id ||
-                  isEditing(row.id) ||
-                  (!row.isCompleted && row.totalMinutes <= 0)
-                "
-              >
-                <mat-icon>{{ row.isCompleted ? 'task_alt' : 'radio_button_unchecked' }}</mat-icon>
-              </button>
-            </td>
-          </ng-container>
-
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let row">
@@ -176,40 +141,25 @@
                     mat-icon-button
                     type="button"
                     class="action-btn action-edit"
-                    [matTooltip]="
-                      row.isCompleted ? ('ticket_completed_locked' | translate) : ('edit_ticket' | translate)
-                    "
+                    [matTooltip]="'edit_ticket' | translate"
                     [attr.aria-label]="'edit_ticket' | translate"
                     (click)="startInlineEdit(row)"
-                    [disabled]="
-                      row.isCompleted || deletingTicketId() === row.id || completionTicketId() === row.id
-                    "
+                    [disabled]="deletingTicketId() === row.id"
                   >
                     <mat-icon>edit</mat-icon>
                   </button>
 
                   <span
                     class="delete-btn-wrap"
-                    [matTooltip]="
-                      row.isCompleted
-                        ? ('ticket_completed_locked' | translate)
-                        : row.totalMinutes > 0
-                          ? ('delete_disabled_has_time' | translate)
-                          : ''
-                    "
-                    [matTooltipDisabled]="!row.isCompleted && row.totalMinutes <= 0"
+                    [matTooltip]="row.totalMinutes > 0 ? ('delete_disabled_has_time' | translate) : ''"
+                    [matTooltipDisabled]="row.totalMinutes <= 0"
                   >
                     <button
                       mat-icon-button
                       type="button"
                       class="action-btn action-delete"
                       (click)="deleteTicket(row)"
-                      [disabled]="
-                        deletingTicketId() === row.id ||
-                        completionTicketId() === row.id ||
-                        row.totalMinutes > 0 ||
-                        row.isCompleted
-                      "
+                      [disabled]="deletingTicketId() === row.id || row.totalMinutes > 0"
                       [attr.aria-label]="'delete_ticket' | translate"
                     >
                       <mat-icon>delete</mat-icon>

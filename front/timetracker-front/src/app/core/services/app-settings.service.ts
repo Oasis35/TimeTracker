@@ -1,4 +1,5 @@
-import { computed, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { TrackerApi } from '../api/tracker-api';
@@ -8,6 +9,7 @@ import type { TimeUnit } from './unit.service';
 @Injectable({ providedIn: 'root' })
 export class AppSettingsService {
   private readonly _raw = signal<Record<string, string>>({});
+  private readonly snackBar = inject(MatSnackBar);
 
   readonly language = computed<AppLanguage>(() => {
     const v = this._raw()['language'];
@@ -28,7 +30,14 @@ export class AppSettingsService {
   load(): Promise<void> {
     return firstValueFrom(this.api.getSettings())
       .then(settings => this._raw.set(settings))
-      .catch(() => {});
+      .catch((err) => {
+        console.error('[AppSettingsService] Failed to load settings', err);
+        this.snackBar.open(
+          'Impossible de charger les paramètres. Les valeurs par défaut sont utilisées.',
+          undefined,
+          { duration: 5000, horizontalPosition: 'right', verticalPosition: 'top' },
+        );
+      });
   }
 
   set(key: string, value: string) {
