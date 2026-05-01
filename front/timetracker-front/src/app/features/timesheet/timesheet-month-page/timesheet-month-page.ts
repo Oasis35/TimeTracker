@@ -324,13 +324,6 @@ export class TimesheetMonthPageComponent {
     return this.extLinkService.buildUrl(externalKey);
   }
 
-  getTicketAllTimeTooltip(ticketId: number): string {
-    const total = this.allTimeTotalsMap().get(ticketId) ?? 0;
-    if (total === 0) return '';
-    const unit = this.unit.unitMode() === 'hour' ? 'h' : 'j';
-    return this.translate.instant('ticket_total_alltime', { value: `${this.formatValue(total)}${unit}` });
-  }
-
   getCellMinutes(row: MonthlyRow, dayIso: string): number {
     return row.values?.[dayIso] ?? 0;
   }

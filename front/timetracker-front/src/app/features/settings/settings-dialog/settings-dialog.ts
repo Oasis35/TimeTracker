@@ -49,7 +49,7 @@ export class SettingsDialogComponent implements OnDestroy {
     readonly extLink: ExternalLinkService,
   ) {
     this.externalBaseUrl.set(extLink.baseUrl());
-    const initialLang = (translate.getCurrentLang() || translate.getFallbackLang || 'fr') as AppLanguage;
+    const initialLang = (translate.getCurrentLang() || translate.getFallbackLang() || 'fr') as AppLanguage;
     this.currentLanguage.set(initialLang);
 
     this.langSubscription = this.translate.onLangChange.subscribe((event: LangChangeEvent) => {

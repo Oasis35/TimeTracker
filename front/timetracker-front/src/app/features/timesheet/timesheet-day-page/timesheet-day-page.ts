@@ -26,7 +26,7 @@ import { PublicHolidaysService } from '../../../core/services/public-holidays.se
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
-import { isWeekendIso, isoWeekNumber, toIsoDate } from '../../../core/utils/date-helpers';
+import { isWeekendIso, toIsoDate } from '../../../core/utils/date-helpers';
 import { formatMinutes } from '../../../core/utils/number-helpers';
 import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/timesheet-helpers';
 import { showSnack } from '../../../core/utils/ui-helpers';
@@ -167,8 +167,6 @@ export class TimesheetDayPageComponent {
     loader: ({ params }) =>
       params ? firstValueFrom(this.api.getMonth(params.y, params.m)) : Promise.resolve(null),
   });
-
-  readonly prevIsoWeek = computed(() => isoWeekNumber(this.selectedDay() || toIsoDate(this.now)) - 1 || 52);
 
   readonly prevDayMissingTickets = computed<PrevDayTicket[]>(() => {
     const iso = this.selectedDay();
