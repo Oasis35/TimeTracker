@@ -55,44 +55,19 @@
           ></mat-datepicker>
         </div>
         <div class="header-right">
-          <button mat-icon-button type="button" [matTooltip]="'new_ticket' | translate" (click)="openAddTicketDialog()">
-            <mat-icon>add</mat-icon>
-          </button>
-          <!-- Split button : action directe + menu déroulant -->
-          <div class="split-btn" [class.split-btn-has-prev]="prevWeekMissingCols().length > 0">
+          @if (prevWeekMissingCols().length > 0) {
             <button
               type="button"
-              class="split-btn-main"
-              [matTooltip]="'log_time_dialog_title' | translate"
-              (click)="openLogTimeDialog()"
+              class="prev-week-btn"
+              [class.prev-week-btn-active]="drawerOpen()"
+              [matTooltip]="drawerOpen() ? ('prev_week_drawer_hide' | translate) : ('prev_week_drawer_show' | translate)"
+              (click)="toggleDrawer()"
             >
-              <mat-icon>more_time</mat-icon>
+              <mat-icon class="prev-week-btn-icon">history</mat-icon>
+              <span class="prev-week-btn-label">S{{ prevIsoWeek() }}</span>
+              <span class="prev-week-btn-count">{{ prevWeekMissingCols().length }}</span>
             </button>
-            <button
-              type="button"
-              class="split-btn-arrow"
-              [matMenuTriggerFor]="actionsMenu"
-              [matTooltip]="'actions' | translate"
-            >
-              <mat-icon>arrow_drop_down</mat-icon>
-              @if (prevWeekMissingCols().length > 0) {
-                <span class="split-btn-dot"></span>
-              }
-            </button>
-          </div>
-
-          <mat-menu #actionsMenu="matMenu" xPosition="before">
-            <button mat-menu-item (click)="openLogTimeDialog()">
-              <mat-icon>more_time</mat-icon>
-              <span>{{ 'log_time_dialog_title' | translate }}</span>
-            </button>
-            @if (prevWeekMissingCols().length > 0) {
-              <button mat-menu-item (click)="toggleDrawer()">
-                <mat-icon>history</mat-icon>
-                <span>{{ 'prev_week_drawer_show' | translate }} ({{ prevWeekMissingCols().length }})</span>
-              </button>
-            }
-          </mat-menu>
+          }
         </div>
       </div>
 
@@ -204,6 +179,15 @@
             </tfoot>
           </table>
         }
+      </div>
+
+      <div class="fab-actions">
+        <button mat-fab type="button" color="primary" [matTooltip]="'new_ticket' | translate" (click)="openAddTicketDialog()">
+          <mat-icon>add</mat-icon>
+        </button>
+        <button mat-fab type="button" color="primary" [matTooltip]="'log_time_dialog_title' | translate" (click)="openLogTimeDialogForWeek()">
+          <mat-icon>more_time</mat-icon>
+        </button>
       </div>
     </mat-card>
   }

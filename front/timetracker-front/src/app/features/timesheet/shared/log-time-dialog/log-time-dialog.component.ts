@@ -21,6 +21,9 @@ export type LogTimeDialogData = {
   dateLocale: string;
   publicHolidays: Record<string, string>;
   preselectedTicket?: TicketDto;
+  preselectedDate?: Date;
+  minDate?: Date;
+  maxDate?: Date;
 };
 
 export type LogTimeDialogResult = {
@@ -72,10 +75,13 @@ export class LogTimeDialogComponent {
 
   constructor() {
     this.dateAdapter.setLocale(this.data.dateLocale);
-    this.minDate = new Date(this.data.year, this.data.month - 1, 1);
-    this.maxDate = new Date(this.data.year, this.data.month, 0);
+    this.minDate = this.data.minDate ?? new Date(this.data.year, this.data.month - 1, 1);
+    this.maxDate = this.data.maxDate ?? new Date(this.data.year, this.data.month, 0);
     if (this.data.preselectedTicket) {
       this.selectedTicket.set(this.data.preselectedTicket);
+    }
+    if (this.data.preselectedDate) {
+      this.selectedDate.set(this.data.preselectedDate);
     }
   }
 

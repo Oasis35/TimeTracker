@@ -4,41 +4,43 @@
       @if (metadataRes.value(); as meta) {
         <mat-card class="timesheet-card">
           <div class="day-toolbar">
-            <div class="toolbar-spacer" aria-hidden="true"></div>
+            <div class="toolbar-left">
+              <div class="day-nav">
+                <button mat-icon-button type="button" class="day-nav-btn" [matTooltip]="'day_previous' | translate" (click)="prevWorkday()">
+                  <mat-icon>chevron_left</mat-icon>
+                </button>
+                <button class="day-nav-label" [disabled]="isToday()" (click)="goToToday()">
+                  <mat-icon>today</mat-icon>
+                </button>
+                <button mat-icon-button type="button" class="day-nav-btn" [matTooltip]="'day_next' | translate" (click)="nextWorkday()">
+                  <mat-icon>chevron_right</mat-icon>
+                </button>
+              </div>
+            </div>
 
-            <div class="toolbar-nav">
+            <div class="toolbar-center">
+              <span class="day-label">{{ selectedDayLabel() }}</span>
               <button
-                mat-stroked-button
+                mat-icon-button
                 type="button"
-                class="day-shift-btn"
-                (click)="prevWorkday()"
-                [attr.aria-label]="'day_previous' | translate"
-                [matTooltip]="'day_previous' | translate"
+                class="day-picker-btn"
+                [matTooltip]="'day_label' | translate"
+                (click)="picker.open()"
               >
-                <mat-icon aria-hidden="true">chevron_left</mat-icon>
+                <mat-icon>calendar_month</mat-icon>
               </button>
-              <mat-form-field appearance="outline" class="day-picker-field">
-                <mat-label>{{ 'day_label' | translate }}</mat-label>
-                <input
-                  matInput
-                  [matDatepicker]="picker"
-                  [value]="selectedDateValue()"
-                  [matDatepickerFilter]="weekdayOnlyFilter"
-                  (dateChange)="onDatePicked($event)"
-                />
-                <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-                <mat-datepicker #picker></mat-datepicker>
-              </mat-form-field>
-              <button
-                mat-stroked-button
-                type="button"
-                class="day-shift-btn"
-                (click)="nextWorkday()"
-                [attr.aria-label]="'day_next' | translate"
-                [matTooltip]="'day_next' | translate"
-              >
-                <mat-icon aria-hidden="true">chevron_right</mat-icon>
-              </button>
+              <input
+                class="day-picker-input"
+                type="text"
+                [matDatepicker]="picker"
+                [value]="selectedDateValue()"
+                [matDatepickerFilter]="weekdayOnlyFilter"
+                (dateInput)="onDateInputSelected($event.value)"
+                readonly
+                aria-hidden="true"
+                tabindex="-1"
+              />
+              <mat-datepicker #picker [startAt]="selectedDateValue()"></mat-datepicker>
             </div>
 
             <div class="toolbar-actions">
@@ -55,54 +57,51 @@
                   }
                 </span>
               }
-              <button
-                mat-icon-button
-                type="button"
-                (click)="copyPreviousDay()"
-                [disabled]="copyBusy() || !selectedDay()"
-                [attr.aria-label]="'copy_previous_day' | translate"
-                [matTooltip]="'copy_previous_day' | translate"
-              >
-                <mat-icon>content_copy</mat-icon>
-              </button>
-              <button
-                mat-icon-button
-                type="button"
-                class="open-ticket-dialog create-ticket-btn"
-                (click)="openAddTicketDialog()"
-                [attr.aria-label]="'new_ticket' | translate"
-                [matTooltip]="'new_ticket' | translate"
-              >
-                <mat-icon>add</mat-icon>
-              </button>
+              @if (prevDayMissingTickets().length > 0) {
+                <button
+                  mat-icon-button
+                  type="button"
+                  class="prev-week-icon-btn"
+                  [class.prev-week-icon-btn-active]="drawerOpen()"
+                  [matTooltip]="drawerOpen() ? ('prev_week_drawer_hide' | translate) : ('prev_week_drawer_show' | translate)"
+                  (click)="toggleDrawer()"
+                >
+                  <mat-icon>history</mat-icon>
+                </button>
+              }
             </div>
           </div>
 
-          <div class="summary-row">
-            <div class="insights-strip">
-              <div class="kpi">
-                <span>{{ 'kpi_tickets' | translate }}</span>
-                <strong>{{ displayRows().length }}</strong>
+          @if (prevDayMissingTickets().length > 0 && drawerOpen()) {
+            <div class="drawer-backdrop" (click)="toggleDrawer()"></div>
+            <aside class="prev-week-drawer">
+              <div class="drawer-header">
+                <span class="drawer-title">J-1 – {{ 'prev_week_drawer_title' | translate }}</span>
+                <button mat-icon-button type="button" class="drawer-close-btn" (click)="toggleDrawer()">
+                  <mat-icon>close</mat-icon>
+                </button>
               </div>
-              <div class="kpi">
-                <span>{{ 'kpi_total_month' | translate }}</span>
-                <strong>{{ formatEntryValue(monthTotalMinutes()) }}</strong>
+              <div class="drawer-list">
+                @for (ticket of prevDayMissingTickets(); track ticket.ticketId) {
+                  <div class="drawer-item">
+                    <div class="drawer-item-info">
+                      <span class="drawer-item-ref">{{ ticket.type }}{{ ticket.externalKey ? ' ' + ticket.externalKey : '' }}</span>
+                      <span class="drawer-item-label">{{ ticket.label || '–' }}</span>
+                    </div>
+                    <button
+                      mat-icon-button
+                      type="button"
+                      class="drawer-add-btn"
+                      [matTooltip]="'log_time_dialog_title' | translate"
+                      (click)="openPrevDayTicketDialog(ticket)"
+                    >
+                      <mat-icon>more_time</mat-icon>
+                    </button>
+                  </div>
+                }
               </div>
-              <div class="kpi">
-                <span>{{ 'kpi_days_logged' | translate }}</span>
-                <strong>{{ workedDaysCount() }}</strong>
-              </div>
-            </div>
-
-            <div class="ticket-search">
-              <app-ticket-lookup
-                class="ticket-search-field"
-                [defaultTickets]="daySearchDefaultTickets()"
-                [searchableTickets]="daySearchAllTickets()"
-                (ticketSelected)="onTicketLookupSelected($event)"
-              />
-            </div>
-          </div>
+            </aside>
+          }
 
           @if (actionError() || error()) {
             <div class="feedback-strip">
@@ -158,10 +157,9 @@
             }
           </div>
 
-          <mat-divider></mat-divider>
-
           <div class="totals-footer">
-            <span>
+            <span class="footer-label">{{ 'total_day_footer_label' | translate }}</span>
+            <span class="footer-value" [class.value-active]="selectedDayTotalMinutes() > 0">
               {{
                 'total_day_footer' | translate:{
                   current: formatEntryValue(selectedDayTotalMinutes()),
@@ -170,6 +168,14 @@
               }}
             </span>
           </div>
+        <div class="fab-actions">
+          <button mat-fab type="button" color="primary" [matTooltip]="'new_ticket' | translate" (click)="openAddTicketDialog()">
+            <mat-icon>add</mat-icon>
+          </button>
+          <button mat-fab type="button" color="primary" [matTooltip]="'log_time_dialog_title' | translate" (click)="openLogTimeDialogForDay()">
+            <mat-icon>more_time</mat-icon>
+          </button>
+        </div>
         </mat-card>
       }
     </section>

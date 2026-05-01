@@ -456,6 +456,36 @@ export class TimesheetWeekPageComponent {
       });
   }
 
+  openLogTimeDialogForWeek(): void {
+    const days = this.days();
+    const [y, m] = days[0].split('-').map(Number);
+    const data: LogTimeDialogData = {
+      year: y,
+      month: m,
+      defaultTickets: this.ticketCols().map((c) => ({
+        id: c.ticketId, type: c.type, externalKey: c.externalKey, label: c.label,
+      })),
+      allTickets: this.allTicketsRes.value() ?? [],
+      options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      publicHolidays: this.publicHolidays.holidays() ?? {},
+      minDate: new Date(`${days[0]}T00:00:00`),
+      maxDate: new Date(`${days[4]}T00:00:00`),
+    };
+    this.dialog.open(LogTimeDialogComponent, { width: '460px', maxWidth: '95vw', data })
+      .afterClosed().subscribe((result: LogTimeDialogResult | undefined) => {
+        if (!result) return;
+        void firstValueFrom(
+          this.api.upsertTimeEntry({ ticketId: result.ticketId, date: result.date, quantityMinutes: result.minutes }),
+        ).then(() => {
+          showSnack(this.snackBar, this.translate.instant('time_saved'));
+          this.reloadMonths();
+        }).catch((error: unknown) => {
+          showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
+        });
+      });
+  }
+
   openPrevWeekTicketDialog(col: WeekTicketCol): void {
     const days = this.days();
     const [y, m] = days[0].split('-').map(Number);
