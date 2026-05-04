@@ -397,13 +397,17 @@ export class TimesheetWeekPageComponent {
       ticketId: col.ticketId,
       ticketRef: `${col.type} ${col.externalKey ?? ''}`.trim(),
       ticketLabel: col.label ?? '',
-      dayLabel: row.dayLabel,
+      dayLabel: '',
       currentMinutes: row.values.get(col.ticketId) ?? 0,
       options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      readonlyDate: row.iso,
     };
     this.dialog.open(TimeSlotPickerDialogComponent, { width: '460px', maxWidth: '95vw', data })
-      .afterClosed().subscribe((minutes) => {
-        if (typeof minutes !== 'number' || Number.isNaN(minutes)) return;
+      .afterClosed().subscribe((result: TimeSlotPickerDialogResult | undefined) => {
+        if (result === undefined || result === null) return;
+        const minutes = typeof result === 'number' ? result : result.minutes;
+        if (typeof result === 'number' && Number.isNaN(result)) return;
         void firstValueFrom(
           this.api.upsertTimeEntry({ ticketId: col.ticketId, date: row.iso, quantityMinutes: minutes }),
         ).then(() => this.reloadMonths())
