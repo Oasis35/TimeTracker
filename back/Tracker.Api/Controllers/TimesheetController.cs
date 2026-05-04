@@ -28,7 +28,8 @@ public sealed class TimesheetController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<TimesheetMonthDto>> Get(
         [FromQuery] int year,
-        [FromQuery] int month)
+        [FromQuery] int month,
+        CancellationToken cancellationToken)
     {
         if (month < 1 || month > 12)
             return ApiProblems.BadRequest(this, ApiErrorCodes.MonthInvalid);
@@ -56,7 +57,7 @@ public sealed class TimesheetController : ControllerBase
                     e.Ticket.Label
                 }
             })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var rows = entries
             .GroupBy(e => e.TicketId)
@@ -106,7 +107,7 @@ public sealed class TimesheetController : ControllerBase
     }
 
     [HttpGet("metadata")]
-    public async Task<ActionResult<TimesheetMetadataDto>> GetMetadata()
+    public async Task<ActionResult<TimesheetMetadataDto>> GetMetadata(CancellationToken cancellationToken)
     {
         var minutesPerDay = MinutesPerDay;
 
@@ -133,7 +134,7 @@ public sealed class TimesheetController : ControllerBase
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
             .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return Ok(new TimesheetMetadataDto
         {

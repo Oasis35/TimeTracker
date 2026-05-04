@@ -17,7 +17,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { PublicHolidaysService } from '../../../core/services/public-holidays.service';
-import { TicketDto, TicketTotalDto, TicketType, TimesheetMetadataDto, TimesheetMonthDto } from '../../../core/api/models';
+import { TimesheetCacheService } from '../../../core/services/timesheet-cache.service';
+import { TicketDto, TicketType, TimesheetMonthDto } from '../../../core/api/models';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { ExternalLinkService } from '../../../core/services/external-link.service';
@@ -81,9 +82,10 @@ export interface WeekDayRow {
   ],
 })
 export class TimesheetWeekPageComponent {
-  private readonly now = new Date();
+  private now(): Date { return new Date(); }
 
   private readonly api = inject(TrackerApi);
+  private readonly cache = inject(TimesheetCacheService);
   private readonly translate = inject(TranslateService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -93,8 +95,8 @@ export class TimesheetWeekPageComponent {
   private readonly extLinkService = inject(ExternalLinkService);
   readonly publicHolidays = inject(PublicHolidaysService);
 
-  readonly isoWeek = signal<number>(isoWeekNumber(this.todayIso()));
-  readonly weekYear = signal<number>(isoWeekYear(this.todayIso()));
+  readonly isoWeek = signal<number>(isoWeekNumber(toIsoDate(this.now())));
+  readonly weekYear = signal<number>(isoWeekYear(toIsoDate(this.now())));
   readonly language = signal<AppLanguage>('fr');
 
   readonly prevIsoWeek = computed(() => {
@@ -188,20 +190,14 @@ export class TimesheetWeekPageComponent {
     );
   });
 
-  readonly metadataRes = resource<TimesheetMetadataDto, number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getMetadata()),
-  });
+  readonly metadataRes = this.cache.metadataRes;
 
   readonly allTicketsRes = resource<TicketDto[], number>({
     params: () => 0,
     loader: () => firstValueFrom(this.api.getAllTickets()),
   });
 
-  readonly allTimeTotalsRes = resource<TicketTotalDto[], number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getTicketTotals()),
-  });
+  readonly allTimeTotalsRes = this.cache.ticketTotalsRes;
 
   readonly allTimeTotalsMap = computed(() => {
     const totals = this.allTimeTotalsRes.value() ?? [];
@@ -310,7 +306,7 @@ export class TimesheetWeekPageComponent {
     return `S${this.isoWeek()} · ${start} – ${end}`;
   });
 
-  readonly isCurrentWeek = computed(() => this.days().includes(this.todayIso()));
+  readonly isCurrentWeek = computed(() => this.days().includes(toIsoDate(this.now())));
 
   readonly monthNavParams = computed(() => {
     const [y, m] = this.days()[0].split('-').map(Number);
@@ -362,7 +358,7 @@ export class TimesheetWeekPageComponent {
   prevWeek(): void { this.shiftWeek(-1); }
   nextWeek(): void { this.shiftWeek(1); }
   goToCurrentWeek(): void {
-    const iso = this.todayIso();
+    const iso = toIsoDate(this.now());
     this.isoWeek.set(isoWeekNumber(iso));
     this.weekYear.set(isoWeekYear(iso));
   }
@@ -422,7 +418,7 @@ export class TimesheetWeekPageComponent {
       .afterClosed().subscribe((result) => {
         if (!result) return;
         showSnack(this.snackBar, this.translate.instant('ticket_saved'));
-        this.metadataRes.reload();
+        this.cache.invalidate();
         this.reloadMonths();
         if (result.logTime) this.openTicketEntryDialog(result.ticket);
       });
@@ -527,7 +523,7 @@ export class TimesheetWeekPageComponent {
       dayLabel: '',
       currentMinutes: 0,
       options: this.quickPickOptions(),
-      initialDate: this.todayIso(),
+      initialDate: toIsoDate(this.now()),
       dateLocale: this.dateLocale(),
     };
     this.dialog.open(TimeSlotPickerDialogComponent, { width: '460px', maxWidth: '95vw', data })
@@ -545,7 +541,11 @@ export class TimesheetWeekPageComponent {
   private reloadMonths(): void {
     this.month1Res.reload();
     this.month2Res.reload();
-    this.allTimeTotalsRes.reload();
+    this.cache.invalidateTotals();
+  }
+
+  todayIso(): string {
+    return toIsoDate(this.now());
   }
 
   private shiftWeek(delta: -1 | 1): void {
@@ -557,7 +557,4 @@ export class TimesheetWeekPageComponent {
     this.weekYear.set(isoWeekYear(iso));
   }
 
-  todayIso(): string {
-    return toIsoDate(this.now);
-  }
 }

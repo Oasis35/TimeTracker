@@ -16,7 +16,7 @@ public sealed class TicketsController : ControllerBase
     public TicketsController(TrackerDbContext db) => _db = db;
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<TicketDto>>> GetAll()
+    public async Task<ActionResult<IReadOnlyList<TicketDto>>> GetAll(CancellationToken cancellationToken)
     {
         var tickets = await _db.Tickets
             .AsNoTracking()
@@ -24,7 +24,7 @@ public sealed class TicketsController : ControllerBase
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
             .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return Ok(tickets);
     }
@@ -32,7 +32,8 @@ public sealed class TicketsController : ControllerBase
     [HttpGet("used")]
     public async Task<ActionResult<IReadOnlyList<TicketDto>>> GetUsedByMonth(
         [FromQuery] int year,
-        [FromQuery] int month)
+        [FromQuery] int month,
+        CancellationToken cancellationToken)
     {
         if (month < 1 || month > 12)
             return ApiProblems.BadRequest(this, ApiErrorCodes.MonthInvalid);
@@ -53,13 +54,13 @@ public sealed class TicketsController : ControllerBase
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
             .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return Ok(tickets);
     }
 
     [HttpPost]
-    public async Task<ActionResult<TicketDto>> Create([FromBody] SaveTicketDto dto)
+    public async Task<ActionResult<TicketDto>> Create([FromBody] SaveTicketDto dto, CancellationToken cancellationToken)
     {
         if (!Enum.IsDefined(dto.Type))
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketTypeRequired);
@@ -78,7 +79,7 @@ public sealed class TicketsController : ControllerBase
         {
             var existing = await _db.Tickets
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.ExternalKey == externalKey);
+                .FirstOrDefaultAsync(t => t.ExternalKey == externalKey, cancellationToken);
 
             if (existing != null)
                 return ApiProblems.Conflict(this, ApiErrorCodes.TicketAlreadyExists);
@@ -92,19 +93,19 @@ public sealed class TicketsController : ControllerBase
         };
 
         _db.Tickets.Add(entity);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(cancellationToken);
 
         return CreatedAtAction(nameof(GetAll), new { id = entity.Id },
             new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label));
     }
 
     [HttpPut("{ticketId:int}")]
-    public async Task<ActionResult<TicketDto>> Update(int ticketId, [FromBody] SaveTicketDto dto)
+    public async Task<ActionResult<TicketDto>> Update(int ticketId, [FromBody] SaveTicketDto dto, CancellationToken cancellationToken)
     {
         if (ticketId <= 0)
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketIdInvalid);
 
-        var entity = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
+        var entity = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId, cancellationToken);
         if (entity is null)
             return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
 
@@ -125,7 +126,7 @@ public sealed class TicketsController : ControllerBase
         {
             var duplicate = await _db.Tickets
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Id != ticketId && t.ExternalKey == externalKey);
+                .FirstOrDefaultAsync(t => t.Id != ticketId && t.ExternalKey == externalKey, cancellationToken);
             if (duplicate is not null)
                 return ApiProblems.Conflict(this, ApiErrorCodes.TicketAlreadyExists);
         }
@@ -133,34 +134,34 @@ public sealed class TicketsController : ControllerBase
         entity.Type = type;
         entity.ExternalKey = externalKey;
         entity.Label = label;
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(cancellationToken);
 
         return Ok(new TicketDto(entity.Id, entity.Type, entity.ExternalKey, entity.Label));
     }
 
     [HttpDelete("{ticketId:int}")]
-    public async Task<IActionResult> Delete(int ticketId)
+    public async Task<IActionResult> Delete(int ticketId, CancellationToken cancellationToken)
     {
         if (ticketId <= 0)
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketIdInvalid);
 
-        var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId);
+        var ticket = await _db.Tickets.FirstOrDefaultAsync(t => t.Id == ticketId, cancellationToken);
         if (ticket is null)
             return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
 
         var hasTimeEntries = await _db.TimeEntries
             .AsNoTracking()
-            .AnyAsync(e => e.TicketId == ticketId);
+            .AnyAsync(e => e.TicketId == ticketId, cancellationToken);
         if (hasTimeEntries)
             return ApiProblems.Conflict(this, ApiErrorCodes.TicketHasTimeEntries);
 
         _db.Tickets.Remove(ticket);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
 
     [HttpGet("totals")]
-    public async Task<ActionResult<List<TicketTotalDto>>> GetTotals([FromQuery] int? year, [FromQuery] int? month)
+    public async Task<ActionResult<List<TicketTotalDto>>> GetTotals([FromQuery] int? year, [FromQuery] int? month, CancellationToken cancellationToken)
     {
         DateOnly? start = null;
         DateOnly? end = null;
@@ -177,40 +178,34 @@ public sealed class TicketsController : ControllerBase
             end = start.Value.AddMonths(1);
         }
 
-        var rows = await _db.Tickets
+        var entriesQuery = _db.TimeEntries.AsNoTracking();
+        if (start.HasValue)
+            entriesQuery = entriesQuery.Where(e => e.Date >= start.Value && e.Date < end!.Value);
+
+        var result = await _db.Tickets
             .AsNoTracking()
-            .Select(t => new
-            {
-                t.Id,
-                t.Type,
-                ExternalKey = t.ExternalKey ?? "",
-                Label = t.Label ?? "",
-                TotalMinutes = _db.TimeEntries
-                    .Where(e => e.TicketId == t.Id
-                                && (!start.HasValue || (e.Date >= start.Value && e.Date < end!.Value)))
-                    .Sum(e => (int?)e.QuantityMinutes) ?? 0
-            })
-            .OrderByDescending(x => x.TotalMinutes)
+            .GroupJoin(
+                entriesQuery,
+                t => t.Id,
+                e => e.TicketId,
+                (t, entries) => new TicketTotalDto
+                {
+                    TicketId = t.Id,
+                    Type = t.Type,
+                    ExternalKey = t.ExternalKey ?? "",
+                    Label = t.Label ?? "",
+                    Total = entries.Sum(e => (int?)e.QuantityMinutes) ?? 0
+                })
+            .OrderByDescending(x => x.Total)
             .ThenBy(x => x.Type)
             .ThenBy(x => x.ExternalKey)
-            .ToListAsync();
-
-        var result = rows
-            .Select(x => new TicketTotalDto
-            {
-                TicketId = x.Id,
-                Type = x.Type,
-                ExternalKey = x.ExternalKey,
-                Label = x.Label,
-                Total = x.TotalMinutes
-            })
-            .ToList();
+            .ToListAsync(cancellationToken);
 
         return Ok(result);
     }
 
     [HttpGet("{ticketId:int}/detail")]
-    public async Task<ActionResult<TicketDetailDto>> GetDetail(int ticketId)
+    public async Task<ActionResult<TicketDetailDto>> GetDetail(int ticketId, CancellationToken cancellationToken)
     {
         if (ticketId <= 0)
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketIdInvalid);
@@ -219,29 +214,29 @@ public sealed class TicketsController : ControllerBase
             .AsNoTracking()
             .Where(t => t.Id == ticketId)
             .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
         if (ticket is null)
             return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
 
         var today = DateOnly.FromDateTime(DateTime.Today);
-        var prevMonth = today.AddMonths(-1);
+        var currentMonthStart = new DateOnly(today.Year, today.Month, 1);
+        var currentMonthEnd = currentMonthStart.AddMonths(1);
+        var prevMonthStart = currentMonthStart.AddMonths(-1);
 
-        var baseQuery = _db.TimeEntries.AsNoTracking().Where(e => e.TicketId == ticketId);
-
-        var totalMinutes = await baseQuery.SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
-        var currentMonthMinutes = await baseQuery
-            .Where(e => e.Date >= new DateOnly(today.Year, today.Month, 1) &&
-                        e.Date < new DateOnly(today.Year, today.Month, 1).AddMonths(1))
-            .SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
-        var previousMonthMinutes = await baseQuery
-            .Where(e => e.Date >= new DateOnly(prevMonth.Year, prevMonth.Month, 1) &&
-                        e.Date < new DateOnly(prevMonth.Year, prevMonth.Month, 1).AddMonths(1))
-            .SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
-
-        var entries = await baseQuery
+        var entries = await _db.TimeEntries
+            .AsNoTracking()
+            .Where(e => e.TicketId == ticketId)
             .OrderByDescending(e => e.Date)
             .Select(e => new TicketTimeEntryDto(e.Date, e.QuantityMinutes))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
+
+        var totalMinutes = entries.Sum(e => e.QuantityMinutes);
+        var currentMonthMinutes = entries
+            .Where(e => e.Date >= currentMonthStart && e.Date < currentMonthEnd)
+            .Sum(e => e.QuantityMinutes);
+        var previousMonthMinutes = entries
+            .Where(e => e.Date >= prevMonthStart && e.Date < currentMonthStart)
+            .Sum(e => e.QuantityMinutes);
 
         return Ok(new TicketDetailDto(
             Ticket: ticket,

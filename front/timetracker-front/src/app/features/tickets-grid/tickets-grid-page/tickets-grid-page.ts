@@ -20,7 +20,8 @@ import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-transla
 import { Subscription, firstValueFrom } from 'rxjs';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { TrackerApi } from '../../../core/api/tracker-api';
-import { CreateTicketDto, TicketDto, TicketTotalDto, TicketType, TimesheetMetadataDto } from '../../../core/api/models';
+import { TimesheetCacheService } from '../../../core/services/timesheet-cache.service';
+import { CreateTicketDto, TicketDto, TicketType } from '../../../core/api/models';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { formatNumberTrimmed } from '../../../core/utils/number-helpers';
@@ -107,6 +108,13 @@ class GridPaginatorIntl extends MatPaginatorIntl implements OnDestroy {
   styleUrl: './tickets-grid-page.scss',
 })
 export class TicketsGridPageComponent {
+  private readonly cache = inject(TimesheetCacheService);
+  private readonly api = inject(TrackerApi);
+  private readonly dialog = inject(MatDialog);
+  private readonly translate = inject(TranslateService);
+  private readonly snackBar = inject(MatSnackBar);
+  readonly unit = inject(UnitService);
+
   @ViewChild(MatSort)
   set matSort(sort: MatSort | undefined) {
     if (sort) {
@@ -142,14 +150,8 @@ export class TicketsGridPageComponent {
     params: () => 0,
     loader: () => firstValueFrom(this.api.getAllTickets()),
   });
-  readonly ticketTotalsRes = resource<TicketTotalDto[], number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getTicketTotals()),
-  });
-  readonly metadataRes = resource<TimesheetMetadataDto, number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getMetadata()),
-  });
+  readonly ticketTotalsRes = this.cache.ticketTotalsRes;
+  readonly metadataRes = this.cache.metadataRes;
 
   readonly rows = computed<GridRow[]>(() => {
     const allTickets = this.allTicketsRes.value();
@@ -191,13 +193,7 @@ export class TicketsGridPageComponent {
 
   readonly tableDataSource = new MatTableDataSource<GridRow>([]);
 
-  constructor(
-    private readonly api: TrackerApi,
-    private readonly dialog: MatDialog,
-    private readonly translate: TranslateService,
-    private readonly snackBar: MatSnackBar,
-    readonly unit: UnitService,
-  ) {
+  constructor() {
     const destroyRef = inject(DestroyRef);
     const initial =
       (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
@@ -234,7 +230,7 @@ export class TicketsGridPageComponent {
     dialogRef.afterClosed().subscribe((result) => {
       if (!result) return;
       this.allTicketsRes.reload();
-      this.ticketTotalsRes.reload();
+      this.cache.invalidateTotals();
       if (result.logTime) {
         this.openTicketEntryDialog(result.ticket);
       }
@@ -273,7 +269,7 @@ export class TicketsGridPageComponent {
     try {
       await firstValueFrom(this.api.upsertTimeEntry({ ticketId, date, quantityMinutes }));
       this.showActionMessage('time_saved');
-      this.ticketTotalsRes.reload();
+      this.cache.invalidateTotals();
     } catch (error: unknown) {
       this.actionError.set(
         this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')),
@@ -294,7 +290,7 @@ export class TicketsGridPageComponent {
       await firstValueFrom(this.api.deleteTicket(row.id));
       this.showActionMessage('ticket_deleted');
       this.allTicketsRes.reload();
-      this.ticketTotalsRes.reload();
+      this.cache.invalidateTotals();
     } catch (error: unknown) {
       this.actionError.set(
         this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_delete_ticket')),
@@ -354,7 +350,7 @@ export class TicketsGridPageComponent {
       this.showActionMessage('ticket_updated');
       this.editingTicketId.set(null);
       this.allTicketsRes.reload();
-      this.ticketTotalsRes.reload();
+      this.cache.invalidateTotals();
     } catch (error: unknown) {
       this.actionError.set(
         this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_update_ticket')),
@@ -380,7 +376,7 @@ export class TicketsGridPageComponent {
   private normalize(value: string): string {
     return value
       .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[̀-ͯ]/g, '')
       .trim()
       .toLowerCase();
   }

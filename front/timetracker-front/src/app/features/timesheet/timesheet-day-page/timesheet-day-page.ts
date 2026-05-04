@@ -23,6 +23,7 @@ import { firstValueFrom } from 'rxjs';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { PublicHolidaysService } from '../../../core/services/public-holidays.service';
+import { TimesheetCacheService } from '../../../core/services/timesheet-cache.service';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
@@ -32,9 +33,7 @@ import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/time
 import { showSnack } from '../../../core/utils/ui-helpers';
 import {
   TicketDto,
-  TicketTotalDto,
   TicketType,
-  TimesheetMetadataDto,
   TimesheetMonthDto,
   TimesheetRowDto,
 } from '../../../core/api/models';
@@ -118,21 +117,29 @@ const DAY_PAGE_DATE_FORMATS = {
   styleUrl: './timesheet-day-page.scss',
 })
 export class TimesheetDayPageComponent {
-  private readonly now = new Date();
-  private readonly todayIso = toIsoDate(this.now);
+  private readonly cache = inject(TimesheetCacheService);
+  private readonly api = inject(TrackerApi);
+  private readonly dialog = inject(MatDialog);
+  private readonly dateAdapter = inject(DateAdapter<Date>);
+  private readonly translate = inject(TranslateService);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  readonly unit = inject(UnitService);
+  readonly publicHolidays = inject(PublicHolidaysService);
 
-  readonly year = signal<number>(this.now.getFullYear());
-  readonly month = signal<number>(this.now.getMonth() + 1);
+  private now(): Date { return new Date(); }
+  private get todayIso(): string { return toIsoDate(this.now()); }
+
+  readonly year = signal<number>(this.now().getFullYear());
+  readonly month = signal<number>(this.now().getMonth() + 1);
   readonly selectedDay = signal<string>('');
 
   readonly actionError = signal<string>('');
   readonly busy = signal<boolean>(false);
   readonly language = signal<AppLanguage>('fr');
 
-  readonly metadataRes = resource<TimesheetMetadataDto, number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getMetadata()),
-  });
+  readonly metadataRes = this.cache.metadataRes;
 
   readonly monthRes = resource<TimesheetMonthDto, MonthRequest>({
     params: () => ({ y: this.year(), m: this.month() }),
@@ -144,10 +151,7 @@ export class TimesheetDayPageComponent {
     loader: ({ params }) => firstValueFrom(this.api.getUsedByMonth(params.y, params.m)),
   });
 
-  readonly ticketTotalsRes = resource<TicketTotalDto[], number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getTicketTotals()),
-  });
+  readonly ticketTotalsRes = this.cache.ticketTotalsRes;
 
   readonly drawerOpen = signal<boolean>(false);
 
@@ -306,19 +310,9 @@ export class TimesheetDayPageComponent {
     ),
   );
 
-  constructor(
-    private readonly api: TrackerApi,
-    private readonly dialog: MatDialog,
-    private readonly dateAdapter: DateAdapter<Date>,
-    private readonly translate: TranslateService,
-    private readonly snackBar: MatSnackBar,
-    private readonly route: ActivatedRoute,
-    private readonly router: Router,
-    readonly unit: UnitService,
-    readonly publicHolidays: PublicHolidaysService,
-  ) {
+  constructor() {
     const destroyRef = inject(DestroyRef);
-    void publicHolidays.load();
+    void this.publicHolidays.load();
     const initial =
       (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
@@ -358,7 +352,6 @@ export class TimesheetDayPageComponent {
           : firstWeekday;
       this.selectedDay.set(defaultDay);
     });
-
   }
 
   setSelectedDay(day: string): void {
@@ -387,8 +380,9 @@ export class TimesheetDayPageComponent {
   }
 
   goToToday(): void {
-    this.year.set(this.now.getFullYear());
-    this.month.set(this.now.getMonth() + 1);
+    const n = this.now();
+    this.year.set(n.getFullYear());
+    this.month.set(n.getMonth() + 1);
     this.setSelectedDay(this.todayIso);
   }
 
@@ -441,7 +435,7 @@ export class TimesheetDayPageComponent {
           this.showActionMessage('time_saved');
           this.monthRes.reload();
           this.usedTicketsRes.reload();
-          this.ticketTotalsRes.reload();
+          this.cache.invalidateTotals();
         }).catch((error: unknown) => {
           this.actionError.set(this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
         });
@@ -456,10 +450,9 @@ export class TimesheetDayPageComponent {
     dialogRef.afterClosed().subscribe((result) => {
       if (!result) return;
       this.showActionMessage('ticket_saved');
-      this.metadataRes.reload();
+      this.cache.invalidate();
       this.monthRes.reload();
       this.usedTicketsRes.reload();
-      this.ticketTotalsRes.reload();
       if (result.logTime) {
         this.openTicketEntryDialog(result.ticket, { withDatePicker: true });
       }
@@ -488,7 +481,7 @@ export class TimesheetDayPageComponent {
       this.showActionMessage('time_saved');
       this.monthRes.reload();
       this.usedTicketsRes.reload();
-      this.ticketTotalsRes.reload();
+      this.cache.invalidateTotals();
     } catch (error: unknown) {
       this.actionError.set(
         this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')),
@@ -569,7 +562,7 @@ export class TimesheetDayPageComponent {
           this.showActionMessage('time_saved');
           this.monthRes.reload();
           this.usedTicketsRes.reload();
-          this.ticketTotalsRes.reload();
+          this.cache.invalidateTotals();
         }).catch((error: unknown) => {
           this.actionError.set(this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
         });

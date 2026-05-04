@@ -178,7 +178,7 @@ public sealed class DatabaseBackupService
         {
             try
             {
-                File.Delete(path);
+                await Task.Run(() => File.Delete(path));
                 return;
             }
             catch (IOException)

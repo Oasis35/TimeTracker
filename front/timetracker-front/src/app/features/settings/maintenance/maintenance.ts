@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpResponse } from '@angular/common/http';
-import { Component, ElementRef, ViewChild, signal } from '@angular/core';
+import { Component, ElementRef, ViewChild, inject, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
@@ -26,6 +26,11 @@ import { TrackerApi } from '../../../core/api/tracker-api';
   styleUrl: './maintenance.scss',
 })
 export class MaintenancePageComponent {
+  private readonly api = inject(TrackerApi);
+  private readonly translate = inject(TranslateService);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
+
   readonly exportBusy = signal(false);
   readonly restoreBusy = signal(false);
   readonly selectedBackupFileName = signal('');
@@ -34,13 +39,6 @@ export class MaintenancePageComponent {
   private selectedBackupFile: File | null = null;
 
   @ViewChild('backupInput') private backupInput?: ElementRef<HTMLInputElement>;
-
-  constructor(
-    private readonly api: TrackerApi,
-    private readonly translate: TranslateService,
-    private readonly snackBar: MatSnackBar,
-    private readonly dialog: MatDialog,
-  ) {}
 
   // —————————————————————————————————————————
   //    EXPORT DATABASE

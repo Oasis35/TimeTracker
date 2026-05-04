@@ -1,4 +1,4 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { catchError, firstValueFrom } from 'rxjs';
 import { of } from 'rxjs';
 import { TrackerApi } from '../api/tracker-api';
@@ -10,9 +10,9 @@ export class PublicHolidaysService {
   private readonly _holidays = signal<Record<string, string>>({});
   private _loadedAt: number | null = null;
 
-  readonly holidays = computed(() => this._holidays());
+  private readonly api = inject(TrackerApi);
 
-  constructor(private readonly api: TrackerApi) {}
+  readonly holidays = computed(() => this._holidays());
 
   load(): Promise<void> {
     const now = Date.now();

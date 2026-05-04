@@ -8,8 +8,10 @@ import type { TimeUnit } from './unit.service';
 
 @Injectable({ providedIn: 'root' })
 export class AppSettingsService {
-  private readonly _raw = signal<Record<string, string>>({});
+  private readonly api = inject(TrackerApi);
   private readonly snackBar = inject(MatSnackBar);
+
+  private readonly _raw = signal<Record<string, string>>({});
 
   readonly language = computed<AppLanguage>(() => {
     const v = this._raw()['language'];
@@ -24,8 +26,6 @@ export class AppSettingsService {
   readonly externalBaseUrl = computed<string>(() => {
     return this._raw()['externalBaseUrl'] ?? '';
   });
-
-  constructor(private readonly api: TrackerApi) {}
 
   load(): Promise<void> {
     return firstValueFrom(this.api.getSettings())
