@@ -154,5 +154,9 @@
   "prev_week_drawer_show": "Prev. week carry-over",
   "prev_week_drawer_hide": "Hide",
   "prev_month_drawer_show": "Prev. month carry-over",
-  "actions": "Actions"
+  "actions": "Actions",
+  "incomplete_days_ok": "All days are logged",
+  "incomplete_days_warning": "{{count}} incomplete day(s) in the last 30 days",
+  "incomplete_days_tooltip_ok": "All working days in the last 30 days are complete",
+  "incomplete_days_tooltip_warning": "{{count}} incomplete day(s):\n{{days}}"
 }

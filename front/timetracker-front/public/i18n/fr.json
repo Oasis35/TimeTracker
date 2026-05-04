@@ -154,5 +154,9 @@
   "prev_week_drawer_show": "Report semaine préc.",
   "prev_week_drawer_hide": "Masquer",
   "prev_month_drawer_show": "Report mois préc.",
-  "actions": "Actions"
+  "actions": "Actions",
+  "incomplete_days_ok": "Tous les jours sont saisis",
+  "incomplete_days_warning": "{{count}} jour(s) incomplet(s) sur les 30 derniers jours",
+  "incomplete_days_tooltip_ok": "Tous les jours ouvrés des 30 derniers jours sont complets",
+  "incomplete_days_tooltip_warning": "{{count}} jour(s) incomplet(s) :\n{{days}}"
 }

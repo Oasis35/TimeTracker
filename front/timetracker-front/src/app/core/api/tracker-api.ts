@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   BackupRestoreResponseDto,
   CreateTicketDto,
+  IncompleteDaysDto,
   TicketDetailDto,
   TicketDto,
   TicketTotalDto,
@@ -73,6 +74,10 @@ export class TrackerApi {
     const formData = new FormData();
     formData.append('file', file, file.name);
     return this.http.post<BackupRestoreResponseDto>('/api/backup/restore', formData);
+  }
+
+  getIncompleteDays(): Observable<IncompleteDaysDto> {
+    return this.http.get<IncompleteDaysDto>('/api/timesheet/incomplete-days');
   }
 
   getPublicHolidaysMetropole(): Observable<Record<string, string>> {

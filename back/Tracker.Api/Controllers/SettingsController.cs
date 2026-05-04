@@ -37,11 +37,10 @@ public sealed class SettingsController : ControllerBase
         if (dto.Value is null)
             return ApiProblems.BadRequest(this, ApiErrorCodes.SettingValueRequired);
 
-        var updated = await _db.AppSettings
-            .Where(s => s.Key == key)
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Value, dto.Value), cancellationToken);
-
-        if (updated == 0)
+        var existing = await _db.AppSettings.FindAsync([key], cancellationToken);
+        if (existing is not null)
+            existing.Value = dto.Value;
+        else
             _db.AppSettings.Add(new AppSetting { Key = key, Value = dto.Value });
 
         await _db.SaveChangesAsync(cancellationToken);

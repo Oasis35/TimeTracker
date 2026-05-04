@@ -23,3 +23,7 @@ body {
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
 }
+
+.incomplete-days-tooltip {
+  white-space: pre-line;
+}

@@ -5,9 +5,16 @@ import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { App } from './app';
 import { AppSettingsService } from './core/services/app-settings.service';
+import { TrackerApi } from './core/api/tracker-api';
 import { UnitService } from './core/services/unit.service';
 import { SettingsDialogComponent } from './features/settings/settings-dialog/settings-dialog';
 import { of } from 'rxjs';
+
+const apiMock = {
+  getIncompleteDays: vi.fn(() => of({ incompleteDays: [] })),
+  getMetadata: vi.fn(() => of({ minutesPerDay: 480, allowedMinutesDayMode: [], allowedMinutesHourMode: [], defaultUnit: 'day', defaultType: 'DEV', tickets: [] })),
+  getTicketTotals: vi.fn(() => of([])),
+};
 
 function makeAppSettingsMock(initial: Record<string, string> = {}) {
   const raw = signal(initial);
@@ -43,6 +50,7 @@ describe('App', () => {
       providers: [
         provideRouter([]),
         { provide: AppSettingsService, useValue: makeAppSettingsMock() },
+        { provide: TrackerApi, useValue: apiMock },
       ],
     }).compileComponents();
   });
@@ -87,6 +95,7 @@ describe('App', () => {
       providers: [
         provideRouter([]),
         { provide: AppSettingsService, useValue: makeAppSettingsMock({ language: 'en' }) },
+        { provide: TrackerApi, useValue: apiMock },
       ],
     }).compileComponents();
 
