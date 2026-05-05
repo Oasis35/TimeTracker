@@ -71,3 +71,7 @@ export interface UpsertTimeEntryDto {
 export interface BackupRestoreResponseDto {
   safetyBackupFileName: string;
 }
+
+export interface IncompleteDaysDto {
+  incompleteDays: string[];
+}

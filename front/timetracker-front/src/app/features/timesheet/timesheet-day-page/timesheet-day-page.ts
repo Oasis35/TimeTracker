@@ -4,10 +4,8 @@ import { Component, DestroyRef, Injectable, computed, effect, inject, resource, 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatDatepickerInputEvent, MatDatepickerModule } from '@angular/material/datepicker';
-import { MatDividerModule } from '@angular/material/divider';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
 import {
   DateAdapter,
   MAT_DATE_FORMATS,
@@ -15,7 +13,6 @@ import {
   MatNativeDateModule,
   NativeDateAdapter,
 } from '@angular/material/core';
-import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
@@ -26,6 +23,7 @@ import { firstValueFrom } from 'rxjs';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { PublicHolidaysService } from '../../../core/services/public-holidays.service';
+import { TimesheetCacheService } from '../../../core/services/timesheet-cache.service';
 import { AddTicketDialogComponent } from '../../tickets/shared/add-ticket-dialog/add-ticket-dialog';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
@@ -35,8 +33,7 @@ import { buildQuickPickOptions, QuickPickOption } from '../../../core/utils/time
 import { showSnack } from '../../../core/utils/ui-helpers';
 import {
   TicketDto,
-  TicketTotalDto,
-  TimesheetMetadataDto,
+  TicketType,
   TimesheetMonthDto,
   TimesheetRowDto,
 } from '../../../core/api/models';
@@ -46,10 +43,18 @@ import {
   TimeSlotPickerDialogData,
   TimeSlotPickerDialogResult,
 } from '../shared/time-slot-picker-dialog/time-slot-picker-dialog.component';
-import { TicketLookupComponent } from '../../tickets/shared/ticket-lookup/ticket-lookup.component';
+import { LogTimeDialogComponent, LogTimeDialogData, LogTimeDialogResult } from '../shared/log-time-dialog/log-time-dialog.component';
+
 
 type MonthRequest = { y: number; m: number };
 type DisplayRow = TimesheetRowDto & { ticketTotal: number };
+
+export interface PrevDayTicket {
+  ticketId: number;
+  type: TicketType;
+  externalKey: string;
+  label: string;
+}
 
 @Injectable()
 class IsoMondayDateAdapter extends NativeDateAdapter {
@@ -92,11 +97,8 @@ const DAY_PAGE_DATE_FORMATS = {
     MatButtonModule,
     MatCardModule,
     MatDatepickerModule,
-    MatDividerModule,
     MatDialogModule,
-    MatFormFieldModule,
     MatNativeDateModule,
-    MatInputModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatSelectModule,
@@ -104,7 +106,6 @@ const DAY_PAGE_DATE_FORMATS = {
     MatTooltipModule,
     RouterLink,
     TicketExtLinkComponent,
-    TicketLookupComponent,
     TranslateModule,
   ],
   providers: [
@@ -116,21 +117,29 @@ const DAY_PAGE_DATE_FORMATS = {
   styleUrl: './timesheet-day-page.scss',
 })
 export class TimesheetDayPageComponent {
-  private readonly now = new Date();
-  private readonly todayIso = toIsoDate(this.now);
+  private readonly cache = inject(TimesheetCacheService);
+  private readonly api = inject(TrackerApi);
+  private readonly dialog = inject(MatDialog);
+  private readonly dateAdapter = inject(DateAdapter<Date>);
+  private readonly translate = inject(TranslateService);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  readonly unit = inject(UnitService);
+  readonly publicHolidays = inject(PublicHolidaysService);
 
-  readonly year = signal<number>(this.now.getFullYear());
-  readonly month = signal<number>(this.now.getMonth() + 1);
+  private now(): Date { return new Date(); }
+  private get todayIso(): string { return toIsoDate(this.now()); }
+
+  readonly year = signal<number>(this.now().getFullYear());
+  readonly month = signal<number>(this.now().getMonth() + 1);
   readonly selectedDay = signal<string>('');
 
   readonly actionError = signal<string>('');
   readonly busy = signal<boolean>(false);
   readonly language = signal<AppLanguage>('fr');
 
-  readonly metadataRes = resource<TimesheetMetadataDto, number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getMetadata()),
-  });
+  readonly metadataRes = this.cache.metadataRes;
 
   readonly monthRes = resource<TimesheetMonthDto, MonthRequest>({
     params: () => ({ y: this.year(), m: this.month() }),
@@ -142,14 +151,54 @@ export class TimesheetDayPageComponent {
     loader: ({ params }) => firstValueFrom(this.api.getUsedByMonth(params.y, params.m)),
   });
 
-  readonly ticketTotalsRes = resource<TicketTotalDto[], number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getTicketTotals()),
+  readonly ticketTotalsRes = this.cache.ticketTotalsRes;
+
+  readonly drawerOpen = signal<boolean>(false);
+
+  private prevDayRequest = computed<MonthRequest | null>(() => {
+    const iso = this.selectedDay();
+    if (!iso) return null;
+    const holidays = this.publicHolidays.holidays() ?? {};
+    let cursor = new Date(`${iso}T00:00:00`);
+    do { cursor.setDate(cursor.getDate() - 1); }
+    while (isWeekendIso(toIsoDate(cursor)) || toIsoDate(cursor) in holidays);
+    const prev = toIsoDate(cursor);
+    return { y: parseInt(prev.slice(0, 4), 10), m: parseInt(prev.slice(5, 7), 10) };
   });
 
+  private readonly prevMonthRes = resource<TimesheetMonthDto | null, MonthRequest | null>({
+    params: () => this.prevDayRequest(),
+    loader: ({ params }) =>
+      params ? firstValueFrom(this.api.getMonth(params.y, params.m)) : Promise.resolve(null),
+  });
 
-  readonly pinnedTicketIds = signal<Set<number>>(new Set());
-  readonly copyBusy = signal<boolean>(false);
+  readonly prevDayMissingTickets = computed<PrevDayTicket[]>(() => {
+    const iso = this.selectedDay();
+    if (!iso) return [];
+    const req = this.prevDayRequest();
+    if (!req) return [];
+    const holidays = this.publicHolidays.holidays() ?? {};
+    let cursor = new Date(`${iso}T00:00:00`);
+    do { cursor.setDate(cursor.getDate() - 1); }
+    while (isWeekendIso(toIsoDate(cursor)) || toIsoDate(cursor) in holidays);
+    const prevIso = toIsoDate(cursor);
+
+    const prevMonth = this.prevMonthRes.value();
+    if (!prevMonth) return [];
+
+    const currentTicketIds = new Set(this.displayRows().map((r) => r.ticketId));
+    const result: PrevDayTicket[] = [];
+    for (const row of prevMonth.rows) {
+      if (currentTicketIds.has(row.ticketId)) continue;
+      if ((row.values?.[prevIso] ?? 0) === 0) continue;
+      result.push({ ticketId: row.ticketId, type: row.type, externalKey: row.externalKey, label: row.label });
+    }
+    return result;
+  });
+
+  toggleDrawer(): void {
+    this.drawerOpen.set(!this.drawerOpen());
+  }
 
   readonly loading = computed(() =>
     this.metadataRes.isLoading() ||
@@ -163,7 +212,6 @@ export class TimesheetDayPageComponent {
     const month = this.monthRes.value();
     const totals = this.ticketTotalsRes.value();
     const selectedDay = this.selectedDay();
-    const pinnedIds = this.pinnedTicketIds();
     if (!usedTickets || !month) return [];
 
     const totalsByTicketId = new Map<number, number>();
@@ -175,8 +223,6 @@ export class TimesheetDayPageComponent {
     for (const row of month.rows) {
       rowsByTicketId.set(row.ticketId, row);
     }
-
-    const usedTicketIds = new Set(usedTickets.map((t) => t.id));
 
     const rows = usedTickets.map((ticket) => {
       const existing = rowsByTicketId.get(ticket.id);
@@ -197,30 +243,9 @@ export class TimesheetDayPageComponent {
       };
     });
 
-    // Ajouter les tickets épinglés qui ne sont pas dans usedTickets du mois courant
-    if (pinnedIds.size > 0) {
-      const allTickets = this.metadataRes.value()?.tickets ?? [];
-      for (const ticket of allTickets) {
-        if (pinnedIds.has(ticket.id) && !usedTicketIds.has(ticket.id)) {
-          rows.push({
-            ticketId: ticket.id,
-            type: ticket.type,
-            externalKey: ticket.externalKey ?? '',
-            label: ticket.label ?? '',
-            values: {},
-            ticketTotal: totalsByTicketId.get(ticket.id) ?? 0,
-          });
-        }
-      }
-    }
-
     if (!selectedDay) return [];
 
-    return rows.filter(
-      (row) =>
-        (row.values?.[selectedDay] ?? 0) > 0 ||
-        pinnedIds.has(row.ticketId),
-    );
+    return rows.filter((row) => (row.values?.[selectedDay] ?? 0) > 0);
   });
 
   readonly error = computed(() => {
@@ -234,18 +259,6 @@ export class TimesheetDayPageComponent {
     const day = this.selectedDay();
     if (!month || !day) return 0;
     return month.totalsByDay?.[day] ?? 0;
-  });
-
-  readonly monthTotalMinutes = computed<number>(() => {
-    const month = this.monthRes.value();
-    if (!month) return 0;
-    return Object.values(month.totalsByDay ?? {}).reduce((sum, value) => sum + value, 0);
-  });
-
-  readonly workedDaysCount = computed<number>(() => {
-    const month = this.monthRes.value();
-    if (!month) return 0;
-    return Object.values(month.totalsByDay ?? {}).filter((value) => value > 0).length;
   });
 
   readonly quickPickOptions = computed<QuickPickOption[]>(() => {
@@ -297,19 +310,9 @@ export class TimesheetDayPageComponent {
     ),
   );
 
-  constructor(
-    private readonly api: TrackerApi,
-    private readonly dialog: MatDialog,
-    private readonly dateAdapter: DateAdapter<Date>,
-    private readonly translate: TranslateService,
-    private readonly snackBar: MatSnackBar,
-    private readonly route: ActivatedRoute,
-    private readonly router: Router,
-    readonly unit: UnitService,
-    readonly publicHolidays: PublicHolidaysService,
-  ) {
+  constructor() {
     const destroyRef = inject(DestroyRef);
-    void publicHolidays.load();
+    void this.publicHolidays.load();
     const initial =
       (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
@@ -349,12 +352,6 @@ export class TimesheetDayPageComponent {
           : firstWeekday;
       this.selectedDay.set(defaultDay);
     });
-
-    // Effacer les tickets épinglés quand le jour change
-    effect(() => {
-      this.selectedDay();
-      this.pinnedTicketIds.set(new Set());
-    });
   }
 
   setSelectedDay(day: string): void {
@@ -378,10 +375,19 @@ export class TimesheetDayPageComponent {
     return !isWeekendIso(toIsoDate(date));
   };
 
-  onDatePicked(event: MatDatepickerInputEvent<Date>): void {
-    const date = event.value;
-    if (!date || !this.weekdayOnlyFilter(date)) return;
+  isToday(): boolean {
+    return this.selectedDay() === this.todayIso;
+  }
 
+  goToToday(): void {
+    const n = this.now();
+    this.year.set(n.getFullYear());
+    this.month.set(n.getMonth() + 1);
+    this.setSelectedDay(this.todayIso);
+  }
+
+  onDateInputSelected(date: Date | null): void {
+    if (!date || !this.weekdayOnlyFilter(date)) return;
     this.year.set(date.getFullYear());
     this.month.set(date.getMonth() + 1);
     this.setSelectedDay(toIsoDate(date));
@@ -405,55 +411,35 @@ export class TimesheetDayPageComponent {
     this.actionError.set('');
   }
 
-  async copyPreviousDay(): Promise<void> {
-    const selectedDay = this.selectedDay();
-    if (!selectedDay || this.copyBusy()) return;
-
-    this.copyBusy.set(true);
-    try {
-      const ticketIds = await this.resolveTicketsToCopy(selectedDay);
-      if (!ticketIds || ticketIds.size === 0) {
-        this.showActionMessage('no_previous_day_data');
-        return;
-      }
-      this.pinnedTicketIds.set(ticketIds);
-    } catch {
-      this.actionError.set(this.translate.instant('cannot_load_data'));
-    } finally {
-      this.copyBusy.set(false);
-    }
-  }
-
-  private async resolveTicketsToCopy(selectedDay: string): Promise<Set<number> | null> {
-    const prevDay = this.getPreviousWorkingDay(selectedDay);
-    const prevYear = parseInt(prevDay.slice(0, 4), 10);
-    const prevMonth = parseInt(prevDay.slice(5, 7), 10);
-    const isSameMonth = prevYear === this.year() && prevMonth === this.month();
-
-    const prevMonthData: TimesheetMonthDto | null | undefined = isSameMonth
-      ? this.monthRes.value()
-      : await firstValueFrom(this.api.getMonth(prevYear, prevMonth));
-
-    if ((prevMonthData?.totalsByDay?.[prevDay] ?? 0) === 0) return null;
-
-    return this.extractTicketIds(prevMonthData!, prevDay);
-  }
-
-  private extractTicketIds(monthData: TimesheetMonthDto, day: string): Set<number> {
-    return new Set(
-      monthData.rows
-        .filter((row) => (row.values?.[day] ?? 0) > 0)
-        .map((row) => row.ticketId),
-    );
-  }
-
-  private getPreviousWorkingDay(fromIso: string): string {
-    const holidays = this.publicHolidays.holidays() ?? {};
-    let cursor = new Date(`${fromIso}T00:00:00`);
-    do {
-      cursor.setDate(cursor.getDate() - 1);
-    } while (isWeekendIso(toIsoDate(cursor)) || toIsoDate(cursor) in holidays);
-    return toIsoDate(cursor);
+  openLogTimeDialogForDay(): void {
+    const iso = this.selectedDay();
+    const day = iso ? new Date(`${iso}T00:00:00`) : new Date();
+    const data: LogTimeDialogData = {
+      year: this.year(),
+      month: this.month(),
+      defaultTickets: this.usedTicketsRes.value() ?? [],
+      allTickets: this.metadataRes.value()?.tickets ?? [],
+      options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      publicHolidays: this.publicHolidays.holidays() ?? {},
+      preselectedDate: day,
+      minDate: day,
+      maxDate: day,
+    };
+    this.dialog.open(LogTimeDialogComponent, { width: '460px', maxWidth: '95vw', data })
+      .afterClosed().subscribe((result: LogTimeDialogResult | undefined) => {
+        if (!result) return;
+        void firstValueFrom(
+          this.api.upsertTimeEntry({ ticketId: result.ticketId, date: result.date, quantityMinutes: result.minutes }),
+        ).then(() => {
+          this.showActionMessage('time_saved');
+          this.monthRes.reload();
+          this.usedTicketsRes.reload();
+          this.cache.invalidateTotals();
+        }).catch((error: unknown) => {
+          this.actionError.set(this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
+        });
+      });
   }
 
   openAddTicketDialog(): void {
@@ -464,10 +450,9 @@ export class TimesheetDayPageComponent {
     dialogRef.afterClosed().subscribe((result) => {
       if (!result) return;
       this.showActionMessage('ticket_saved');
-      this.metadataRes.reload();
+      this.cache.invalidate();
       this.monthRes.reload();
       this.usedTicketsRes.reload();
-      this.ticketTotalsRes.reload();
       if (result.logTime) {
         this.openTicketEntryDialog(result.ticket, { withDatePicker: true });
       }
@@ -496,7 +481,7 @@ export class TimesheetDayPageComponent {
       this.showActionMessage('time_saved');
       this.monthRes.reload();
       this.usedTicketsRes.reload();
-      this.ticketTotalsRes.reload();
+      this.cache.invalidateTotals();
     } catch (error: unknown) {
       this.actionError.set(
         this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')),
@@ -549,6 +534,39 @@ export class TimesheetDayPageComponent {
         void this.pointMinutes(ticket.id, result.minutes, result.date);
       }
     });
+  }
+
+  openPrevDayTicketDialog(ticket: PrevDayTicket): void {
+    const iso = this.selectedDay();
+    const day = iso ? new Date(`${iso}T00:00:00`) : new Date();
+    const ticketDto: TicketDto = { id: ticket.ticketId, type: ticket.type, externalKey: ticket.externalKey, label: ticket.label };
+    const data: LogTimeDialogData = {
+      year: this.year(),
+      month: this.month(),
+      defaultTickets: [ticketDto],
+      allTickets: this.metadataRes.value()?.tickets ?? [],
+      options: this.quickPickOptions(),
+      dateLocale: this.dateLocale(),
+      publicHolidays: this.publicHolidays.holidays() ?? {},
+      preselectedTicket: ticketDto,
+      preselectedDate: day,
+      minDate: day,
+      maxDate: day,
+    };
+    this.dialog.open(LogTimeDialogComponent, { width: '460px', maxWidth: '95vw', data })
+      .afterClosed().subscribe((result: LogTimeDialogResult | undefined) => {
+        if (!result) return;
+        void firstValueFrom(
+          this.api.upsertTimeEntry({ ticketId: result.ticketId, date: result.date, quantityMinutes: result.minutes }),
+        ).then(() => {
+          this.showActionMessage('time_saved');
+          this.monthRes.reload();
+          this.usedTicketsRes.reload();
+          this.cache.invalidateTotals();
+        }).catch((error: unknown) => {
+          this.actionError.set(this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
+        });
+      });
   }
 
   private showActionMessage(key: string): void {

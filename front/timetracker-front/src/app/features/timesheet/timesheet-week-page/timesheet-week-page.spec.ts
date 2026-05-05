@@ -258,8 +258,8 @@ describe('TimesheetWeekPageComponent', () => {
     expect(dialogOpen).toHaveBeenCalledTimes(2);
   });
 
-  it('calls upsertTimeEntry with correct args on cell click', async () => {
-    const { fixture, component, apiMock } = setup({ dialogResults: [480] });
+  it('opens TimeSlotPickerDialog and calls upsertTimeEntry on cell click', async () => {
+    const { fixture, component, apiMock, dialogOpen } = setup({ dialogResults: [480] });
     fixture.detectChanges();
     await fixture.whenStable();
 
@@ -271,6 +271,7 @@ describe('TimesheetWeekPageComponent', () => {
     component.onCellClick(rows[0], cols[0]);
     await fixture.whenStable();
 
+    expect(dialogOpen).toHaveBeenCalled();
     expect(apiMock.upsertTimeEntry).toHaveBeenCalledWith(
       expect.objectContaining({ ticketId: cols[0].ticketId, quantityMinutes: 480 }),
     );

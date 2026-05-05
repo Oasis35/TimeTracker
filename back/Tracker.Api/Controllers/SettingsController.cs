@@ -17,16 +17,16 @@ public sealed class SettingsController : ControllerBase
     public SettingsController(TrackerDbContext db) => _db = db;
 
     [HttpGet]
-    public async Task<ActionResult<Dictionary<string, string>>> GetAll()
+    public async Task<ActionResult<Dictionary<string, string>>> GetAll(CancellationToken cancellationToken)
     {
         var settings = await _db.AppSettings
             .AsNoTracking()
-            .ToDictionaryAsync(s => s.Key, s => s.Value);
+            .ToDictionaryAsync(s => s.Key, s => s.Value, cancellationToken);
         return Ok(settings);
     }
 
     [HttpPut("{key}")]
-    public async Task<IActionResult> Upsert(string key, [FromBody] UpsertSettingDto dto)
+    public async Task<IActionResult> Upsert(string key, [FromBody] UpsertSettingDto dto, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(key) || key.Length > 64)
             return ApiProblems.BadRequest(this, ApiErrorCodes.SettingKeyInvalid);
@@ -37,29 +37,28 @@ public sealed class SettingsController : ControllerBase
         if (dto.Value is null)
             return ApiProblems.BadRequest(this, ApiErrorCodes.SettingValueRequired);
 
-        var updated = await _db.AppSettings
-            .Where(s => s.Key == key)
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Value, dto.Value));
-
-        if (updated == 0)
+        var existing = await _db.AppSettings.FindAsync([key], cancellationToken);
+        if (existing is not null)
+            existing.Value = dto.Value;
+        else
             _db.AppSettings.Add(new AppSetting { Key = key, Value = dto.Value });
 
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }
 
     [HttpDelete("{key}")]
-    public async Task<IActionResult> Delete(string key)
+    public async Task<IActionResult> Delete(string key, CancellationToken cancellationToken)
     {
         if (!AllowedKeys.Contains(key))
             return ApiProblems.BadRequest(this, ApiErrorCodes.SettingKeyNotAllowed);
 
-        var existing = await _db.AppSettings.FindAsync(key);
+        var existing = await _db.AppSettings.FindAsync([key], cancellationToken);
         if (existing is not null)
         {
             _db.AppSettings.Remove(existing);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(cancellationToken);
         }
         return NoContent();
     }

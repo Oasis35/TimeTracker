@@ -460,6 +460,71 @@ tfoot td {
   pointer-events: none;
 }
 
+/* ── Bouton report semaine précédente ── */
+.prev-week-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 32px;
+  padding: 0 0.6rem 0 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--mat-sys-outline) 35%, transparent);
+  border-radius: 999px;
+  background: none;
+  cursor: pointer;
+  color: color-mix(in srgb, var(--mat-sys-on-surface) 65%, transparent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+
+  &:hover {
+    background: color-mix(in srgb, var(--mat-sys-primary) 8%, transparent);
+    border-color: color-mix(in srgb, var(--mat-sys-primary) 40%, transparent);
+    color: var(--mat-sys-primary);
+  }
+
+  &.prev-week-btn-active {
+    background: color-mix(in srgb, var(--mat-sys-primary-container) 50%, transparent);
+    border-color: color-mix(in srgb, var(--mat-sys-primary) 50%, transparent);
+    color: color-mix(in srgb, var(--mat-sys-primary) 85%, var(--mat-sys-on-surface));
+  }
+}
+
+.prev-week-btn-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  opacity: 0.75;
+}
+
+.prev-week-btn-label {
+  font-weight: 700;
+}
+
+.prev-week-btn-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mat-sys-primary) 18%, transparent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--mat-sys-primary) 90%, var(--mat-sys-on-surface));
+}
+
+/* ── FAB actions ── */
+.fab-actions {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  z-index: 100;
+}
+
 /* ── Drawer overlay S-1 ── */
 .sheet-card {
   position: relative;

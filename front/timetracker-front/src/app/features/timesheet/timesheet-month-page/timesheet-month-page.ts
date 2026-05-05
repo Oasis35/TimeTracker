@@ -15,7 +15,8 @@ import { firstValueFrom } from 'rxjs';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
 import { PublicHolidaysService } from '../../../core/services/public-holidays.service';
-import { TicketDto, TicketTotalDto, TimesheetMetadataDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
+import { TimesheetCacheService } from '../../../core/services/timesheet-cache.service';
+import { TicketDto, TimesheetMonthDto, TimesheetRowDto } from '../../../core/api/models';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { isWeekendIso, isoWeekNumber, isoWeekYear } from '../../../core/utils/date-helpers';
@@ -56,16 +57,25 @@ type MonthlyRow = TimesheetRowDto & { total: number };
   styleUrl: './timesheet-month-page.scss',
 })
 export class TimesheetMonthPageComponent {
-  private readonly now = new Date();
+  private readonly cache = inject(TimesheetCacheService);
+  private readonly api = inject(TrackerApi);
+  private readonly translate = inject(TranslateService);
+  private readonly dateAdapter = inject(DateAdapter<Date>);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
+  readonly unit = inject(UnitService);
+  private readonly extLinkService = inject(ExternalLinkService);
+  readonly publicHolidays = inject(PublicHolidaysService);
 
-  readonly year = signal<number>(this.now.getFullYear());
-  readonly month = signal<number>(this.now.getMonth() + 1);
+  private now(): Date { return new Date(); }
+
+  readonly year = signal<number>(this.now().getFullYear());
+  readonly month = signal<number>(this.now().getMonth() + 1);
   readonly language = signal<AppLanguage>('fr');
 
-  readonly metadataRes = resource<TimesheetMetadataDto, number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getMetadata()),
-  });
+  readonly metadataRes = this.cache.metadataRes;
   readonly monthRes = resource<TimesheetMonthDto, MonthRequest>({
     params: () => ({ y: this.year(), m: this.month() }),
     loader: ({ params }) => firstValueFrom(this.api.getMonth(params.y, params.m)),
@@ -79,10 +89,7 @@ export class TimesheetMonthPageComponent {
     loader: () => firstValueFrom(this.api.getAllTickets()),
   });
 
-  readonly allTimeTotalsRes = resource<TicketTotalDto[], number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getTicketTotals()),
-  });
+  readonly allTimeTotalsRes = this.cache.ticketTotalsRes;
   readonly allTimeTotalsMap = computed(() => {
     const totals = this.allTimeTotalsRes.value() ?? [];
     return new Map(totals.map((t) => [t.ticketId, t.total]));
@@ -148,7 +155,7 @@ export class TimesheetMonthPageComponent {
           showSnack(this.snackBar, this.translate.instant('time_saved'));
           this.monthRes.reload();
           this.usedTicketsRes.reload();
-          this.allTimeTotalsRes.reload();
+          this.cache.invalidateTotals();
         }).catch((error: unknown) => {
           showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
         });
@@ -196,9 +203,10 @@ export class TimesheetMonthPageComponent {
     return label.charAt(0).toUpperCase() + label.slice(1);
   });
   readonly selectedMonthDate = computed(() => new Date(this.year(), this.month() - 1, 1));
-  readonly isCurrentMonth = computed(
-    () => this.year() === this.now.getFullYear() && this.month() === this.now.getMonth() + 1,
-  );
+  readonly isCurrentMonth = computed(() => {
+    const n = this.now();
+    return this.year() === n.getFullYear() && this.month() === n.getMonth() + 1;
+  });
   readonly monthTotal = computed(() => this.rows().reduce((sum, row) => sum + row.total, 0));
 
   readonly quickPickOptions = computed<QuickPickOption[]>(() => {
@@ -207,20 +215,9 @@ export class TimesheetMonthPageComponent {
     return buildQuickPickOptions(meta, this.unit.unitMode());
   });
 
-  constructor(
-    private readonly api: TrackerApi,
-    private readonly translate: TranslateService,
-    private readonly dateAdapter: DateAdapter<Date>,
-    private readonly route: ActivatedRoute,
-    private readonly router: Router,
-    private readonly dialog: MatDialog,
-    private readonly snackBar: MatSnackBar,
-    readonly unit: UnitService,
-    private readonly extLinkService: ExternalLinkService,
-    readonly publicHolidays: PublicHolidaysService,
-  ) {
+  constructor() {
     const destroyRef = inject(DestroyRef);
-    void publicHolidays.load();
+    void this.publicHolidays.load();
     const initial = (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
     this.translate.onLangChange.pipe(takeUntilDestroyed(destroyRef)).subscribe((event: LangChangeEvent) => {
@@ -272,9 +269,9 @@ export class TimesheetMonthPageComponent {
   }
 
   goToCurrentMonth(): void {
-    const now = new Date();
-    this.year.set(now.getFullYear());
-    this.month.set(now.getMonth() + 1);
+    const n = this.now();
+    this.year.set(n.getFullYear());
+    this.month.set(n.getMonth() + 1);
   }
 
   readonly weekBlocks = computed<{ week: number; weekYear: number; span: number; startIndex: number }[]>(() => {
@@ -324,13 +321,6 @@ export class TimesheetMonthPageComponent {
     return this.extLinkService.buildUrl(externalKey);
   }
 
-  getTicketAllTimeTooltip(ticketId: number): string {
-    const total = this.allTimeTotalsMap().get(ticketId) ?? 0;
-    if (total === 0) return '';
-    const unit = this.unit.unitMode() === 'hour' ? 'h' : 'j';
-    return this.translate.instant('ticket_total_alltime', { value: `${this.formatValue(total)}${unit}` });
-  }
-
   getCellMinutes(row: MonthlyRow, dayIso: string): number {
     return row.values?.[dayIso] ?? 0;
   }
@@ -356,7 +346,7 @@ export class TimesheetMonthPageComponent {
     dialogRef.afterClosed().subscribe((result) => {
       if (!result) return;
       showSnack(this.snackBar, this.translate.instant('ticket_saved'));
-      this.metadataRes.reload();
+      this.cache.invalidate();
       this.monthRes.reload();
       this.usedTicketsRes.reload();
       if (result.logTime) {
@@ -388,6 +378,7 @@ export class TimesheetMonthPageComponent {
         showSnack(this.snackBar, this.translate.instant('time_saved'));
         this.monthRes.reload();
         this.usedTicketsRes.reload();
+        this.cache.invalidateTotals();
       }).catch((error: unknown) => {
         showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
       });
@@ -433,7 +424,7 @@ export class TimesheetMonthPageComponent {
       ).then(() => {
         this.monthRes.reload();
         this.usedTicketsRes.reload();
-        this.allTimeTotalsRes.reload();
+        this.cache.invalidateTotals();
       }).catch((error: unknown) => {
         showSnack(this.snackBar, this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')));
       });
@@ -450,5 +441,4 @@ export class TimesheetMonthPageComponent {
   private dateLocale(): string {
     return this.language() === 'fr' ? 'fr-FR' : 'en-US';
   }
-
 }

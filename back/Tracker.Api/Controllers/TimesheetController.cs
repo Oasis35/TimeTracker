@@ -7,6 +7,7 @@ using Tracker.Api.Dtos.Timesheet;
 using Tracker.Api.Infrastructure;
 using Tracker.Api.Models;
 using Tracker.Api.Options;
+using Tracker.Api.Services;
 
 namespace Tracker.Api.Controllers;
 
@@ -16,11 +17,13 @@ public sealed class TimesheetController : ControllerBase
 {
     private readonly TrackerDbContext _db;
     private readonly TimeTrackingOptions _opts;
+    private readonly PublicHolidaysService _holidays;
 
-    public TimesheetController(TrackerDbContext db, IOptions<TimeTrackingOptions> opts)
+    public TimesheetController(TrackerDbContext db, IOptions<TimeTrackingOptions> opts, PublicHolidaysService holidays)
     {
         _db = db;
         _opts = opts.Value;
+        _holidays = holidays;
     }
 
     private int MinutesPerDay => _opts.MinutesPerDay;
@@ -28,7 +31,8 @@ public sealed class TimesheetController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<TimesheetMonthDto>> Get(
         [FromQuery] int year,
-        [FromQuery] int month)
+        [FromQuery] int month,
+        CancellationToken cancellationToken)
     {
         if (month < 1 || month > 12)
             return ApiProblems.BadRequest(this, ApiErrorCodes.MonthInvalid);
@@ -56,7 +60,7 @@ public sealed class TimesheetController : ControllerBase
                     e.Ticket.Label
                 }
             })
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         var rows = entries
             .GroupBy(e => e.TicketId)
@@ -105,8 +109,45 @@ public sealed class TimesheetController : ControllerBase
         });
     }
 
+    [HttpGet("incomplete-days")]
+    public async Task<ActionResult<IncompleteDaysDto>> GetIncompleteDays(CancellationToken cancellationToken)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var from = today.AddDays(-30);
+
+        var holidays = await _holidays.GetAsync(cancellationToken);
+        var holidaySet = new HashSet<DateOnly>(
+            holidays.Keys.Select(k => DateOnly.ParseExact(k, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)));
+
+        var workdays = Enumerable
+            .Range(0, today.DayNumber - from.DayNumber)
+            .Select(i => from.AddDays(i))
+            .Where(d => d.DayOfWeek is not DayOfWeek.Saturday and not DayOfWeek.Sunday)
+            .Where(d => !holidaySet.Contains(d))
+            .ToList();
+
+        if (workdays.Count == 0)
+            return Ok(new IncompleteDaysDto());
+
+        var totalsByDay = await _db.TimeEntries
+            .AsNoTracking()
+            .Where(e => e.Date >= from && e.Date < today)
+            .GroupBy(e => e.Date)
+            .Select(g => new { Date = g.Key, Total = g.Sum(x => x.QuantityMinutes) })
+            .ToListAsync(cancellationToken);
+
+        var totalsMap = totalsByDay.ToDictionary(x => x.Date, x => x.Total);
+
+        var incomplete = workdays
+            .Where(d => (totalsMap.TryGetValue(d, out var total) ? total : 0) < MinutesPerDay)
+            .Select(d => d.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture))
+            .ToList();
+
+        return Ok(new IncompleteDaysDto { IncompleteDays = incomplete });
+    }
+
     [HttpGet("metadata")]
-    public async Task<ActionResult<TimesheetMetadataDto>> GetMetadata()
+    public async Task<ActionResult<TimesheetMetadataDto>> GetMetadata(CancellationToken cancellationToken)
     {
         var minutesPerDay = MinutesPerDay;
 
@@ -133,7 +174,7 @@ public sealed class TimesheetController : ControllerBase
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
             .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return Ok(new TimesheetMetadataDto
         {

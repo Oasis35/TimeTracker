@@ -30,7 +30,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.GetAll();
+        var result = await controller.GetAll(CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
 
@@ -66,7 +66,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.GetAll();
+        var result = await controller.GetAll(CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
 
@@ -83,7 +83,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.GetDetail(0);
+        var result = await controller.GetDetail(0, CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -99,7 +99,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.GetDetail(9999);
+        var result = await controller.GetDetail(9999, CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(404, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -139,7 +139,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.GetDetail(ticket.Id);
+        var result = await controller.GetDetail(ticket.Id, CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<TicketDetailDto>(ok.Value);
 
@@ -183,7 +183,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.GetDetail(ticket.Id);
+        var result = await controller.GetDetail(ticket.Id, CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<TicketDetailDto>(ok.Value);
 
@@ -206,7 +206,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Create(new SaveTicketDto(Type: (TicketType)(-1), ExternalKey: null, Label: null));
+        var result = await controller.Create(new SaveTicketDto(Type: (TicketType)(-1), ExternalKey: null, Label: null), CancellationToken.None);
 
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
@@ -223,7 +223,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Create(new SaveTicketDto(Type: TicketType.ABSENT, ExternalKey: "CP", Label: "Congés"));
+        var result = await controller.Create(new SaveTicketDto(Type: TicketType.ABSENT, ExternalKey: "CP", Label: "Congés"), CancellationToken.None);
 
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
@@ -240,7 +240,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Create(new SaveTicketDto(Type: TicketType.SUPPORT, ExternalKey: "ABC-1", Label: "   "));
+        var result = await controller.Create(new SaveTicketDto(Type: TicketType.SUPPORT, ExternalKey: "ABC-1", Label: "   "), CancellationToken.None);
 
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
@@ -260,7 +260,7 @@ public sealed class TicketsControllerTests
         var result = await controller.Create(new SaveTicketDto(
             Type: TicketType.SUPPORT,
             ExternalKey: "  ABC-123  ",
-            Label: "  ABC-123 - Login bug  "));
+            Label: "  ABC-123 - Login bug  "), CancellationToken.None);
 
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         var dto = Assert.IsType<TicketDto>(created.Value);
@@ -291,7 +291,7 @@ public sealed class TicketsControllerTests
         var result = await controller.Create(new SaveTicketDto(
             Type: TicketType.SUPPORT,
             ExternalKey: "ABC-123",
-            Label: "New label"));
+            Label: "New label"), CancellationToken.None);
 
         var badRequest = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(409, badRequest.StatusCode);
@@ -314,7 +314,7 @@ public sealed class TicketsControllerTests
         var controller = new TicketsController(db);
 
         // externalKey null => ton code ne "dedupe" pas (il dedupe uniquement si externalKey != null)
-        var result = await controller.Create(new SaveTicketDto(Type: TicketType.SUPPORT, ExternalKey: null, Label: "L2"));
+        var result = await controller.Create(new SaveTicketDto(Type: TicketType.SUPPORT, ExternalKey: null, Label: "L2"), CancellationToken.None);
 
         var created = Assert.IsType<CreatedAtActionResult>(result.Result);
         var dto = Assert.IsType<TicketDto>(created.Value);
@@ -339,7 +339,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(0, new SaveTicketDto(TicketType.DEV, "X-1", "Label"));
+        var result = await controller.Update(0, new SaveTicketDto(TicketType.DEV, "X-1", "Label"), CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -355,7 +355,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(999, new SaveTicketDto(TicketType.DEV, "X-1", "Label"));
+        var result = await controller.Update(999, new SaveTicketDto(TicketType.DEV, "X-1", "Label"), CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(404, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -375,7 +375,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new SaveTicketDto((TicketType)(-1), "X-1", "Label"));
+        var result = await controller.Update(ticket.Id, new SaveTicketDto((TicketType)(-1), "X-1", "Label"), CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -395,7 +395,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.DEV, "X-1", "   "));
+        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.DEV, "X-1", "   "), CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -416,7 +416,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(t2.Id, new SaveTicketDto(TicketType.DEV, "X-1", "New label"));
+        var result = await controller.Update(t2.Id, new SaveTicketDto(TicketType.DEV, "X-1", "New label"), CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(409, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -436,7 +436,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.DEV, "  X-2  ", "  Nouveau  "));
+        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.DEV, "  X-2  ", "  Nouveau  "), CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var dto = Assert.IsType<TicketDto>(ok.Value);
 
@@ -464,7 +464,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.ABSENT, "RTT-1", "Congé"));
+        var result = await controller.Update(ticket.Id, new SaveTicketDto(TicketType.ABSENT, "RTT-1", "Congé"), CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(result.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -484,7 +484,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Delete(0);
+        var result = await controller.Delete(0, CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -500,7 +500,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Delete(999);
+        var result = await controller.Delete(999, CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(result);
         Assert.Equal(404, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -528,7 +528,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Delete(ticket.Id);
+        var result = await controller.Delete(ticket.Id, CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(result);
         Assert.Equal(409, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -550,7 +550,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.Delete(ticket.Id);
+        var result = await controller.Delete(ticket.Id, CancellationToken.None);
         Assert.IsType<NoContentResult>(result);
         Assert.Empty(db.Tickets);
     }
@@ -570,7 +570,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var r = await controller.GetUsedByMonth(year: 2026, month: month);
+        var r = await controller.GetUsedByMonth(year: 2026, month: month, CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(r.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -600,7 +600,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.GetUsedByMonth(year: 2026, month: 2);
+        var result = await controller.GetUsedByMonth(year: 2026, month: 2, CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
 
@@ -630,7 +630,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.GetUsedByMonth(year: 2026, month: 2);
+        var result = await controller.GetUsedByMonth(year: 2026, month: 2, CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
 
@@ -646,13 +646,13 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var r1 = await controller.GetTotals(year: 2026, month: null);
+        var r1 = await controller.GetTotals(year: 2026, month: null, CancellationToken.None);
         var bad1 = Assert.IsType<ObjectResult>(r1.Result);
         Assert.Equal(400, bad1.StatusCode);
         var p1 = Assert.IsType<ApiErrorResponse>(bad1.Value);
         Assert.Equal(ApiErrorCodes.FilterYearMonthRequired, p1.Code);
 
-        var r2 = await controller.GetTotals(year: null, month: 2);
+        var r2 = await controller.GetTotals(year: null, month: 2, CancellationToken.None);
         var bad2 = Assert.IsType<ObjectResult>(r2.Result);
         Assert.Equal(400, bad2.StatusCode);
         var p2 = Assert.IsType<ApiErrorResponse>(bad2.Value);
@@ -670,7 +670,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var r = await controller.GetTotals(year: 2026, month: month);
+        var r = await controller.GetTotals(year: 2026, month: month, CancellationToken.None);
         var bad = Assert.IsType<ObjectResult>(r.Result);
         Assert.Equal(400, bad.StatusCode);
         var error = Assert.IsType<ApiErrorResponse>(bad.Value);
@@ -698,7 +698,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.GetTotals(year: null, month: null);
+        var result = await controller.GetTotals(year: null, month: null, CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsType<List<TicketTotalDto>>(ok.Value);
 
@@ -732,7 +732,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.GetTotals(year: 2026, month: 2);
+        var result = await controller.GetTotals(year: 2026, month: 2, CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsType<List<TicketTotalDto>>(ok.Value);
 
@@ -753,7 +753,7 @@ public sealed class TicketsControllerTests
 
         var controller = new TicketsController(db);
 
-        var result = await controller.GetTotals(year: null, month: null);
+        var result = await controller.GetTotals(year: null, month: null, CancellationToken.None);
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsType<List<TicketTotalDto>>(ok.Value);
 

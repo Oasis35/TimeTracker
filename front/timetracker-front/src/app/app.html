@@ -45,6 +45,24 @@
     </nav>
 
     <div class="topbar-actions">
+      @if (!incompleteDays.incompleteDaysRes.isLoading()) {
+        <button
+          type="button"
+          class="incomplete-days-btn"
+          [class.incomplete-days-btn-ok]="incompleteDays.count() === 0"
+          [class.incomplete-days-btn-warn]="incompleteDays.count() > 0"
+          [matTooltip]="incompleteDaysTooltip()"
+          matTooltipClass="incomplete-days-tooltip"
+          matTooltipPosition="below"
+        >
+          @if (incompleteDays.count() > 0) {
+            <mat-icon class="incomplete-days-icon">warning</mat-icon>
+            <span class="incomplete-days-count">{{ incompleteDays.count() }}</span>
+          } @else {
+            <mat-icon class="incomplete-days-icon">check_circle</mat-icon>
+          }
+        </button>
+      }
       <button
         mat-icon-button
         type="button"

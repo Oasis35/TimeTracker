@@ -19,6 +19,18 @@ describe('TimeSlotPickerDialogComponent', () => {
     ],
   };
 
+  const dataWithDatePicker: TimeSlotPickerDialogData = {
+    ...defaultData,
+    initialDate: '2026-04-14',
+    dateLocale: 'fr-FR',
+  };
+
+  const dataWithReadonlyDate: TimeSlotPickerDialogData = {
+    ...defaultData,
+    readonlyDate: '2026-04-14',
+    dateLocale: 'fr-FR',
+  };
+
   function setup(data: TimeSlotPickerDialogData = defaultData) {
     const closeSpy = vi.fn();
     TestBed.configureTestingModule({
@@ -67,5 +79,66 @@ describe('TimeSlotPickerDialogComponent', () => {
     component.selectedMinutes.set(0);
     component.save();
     expect(closeSpy).toHaveBeenCalledWith(0);
+  });
+
+  describe('showDatePicker / showReadonlyDate', () => {
+    it('showDatePicker is false when initialDate is not set', () => {
+      const { component } = setup(defaultData);
+      expect(component.showDatePicker).toBe(false);
+    });
+
+    it('showDatePicker is true when initialDate is provided', () => {
+      const { component } = setup(dataWithDatePicker);
+      expect(component.showDatePicker).toBe(true);
+    });
+
+    it('showReadonlyDate is false when readonlyDate is not set', () => {
+      const { component } = setup(defaultData);
+      expect(component.showReadonlyDate).toBe(false);
+    });
+
+    it('showReadonlyDate is true when readonlyDate is provided', () => {
+      const { component } = setup(dataWithReadonlyDate);
+      expect(component.showReadonlyDate).toBe(true);
+    });
+
+    it('readonlyDateValue is null when readonlyDate is not set', () => {
+      const { component } = setup(defaultData);
+      expect(component.readonlyDateValue).toBeNull();
+    });
+
+    it('readonlyDateValue is the parsed Date when readonlyDate is set', () => {
+      const { component } = setup(dataWithReadonlyDate);
+      expect(component.readonlyDateValue).toBeInstanceOf(Date);
+      expect(component.readonlyDateValue?.getFullYear()).toBe(2026);
+      expect(component.readonlyDateValue?.getMonth()).toBe(3); // April = 3
+      expect(component.readonlyDateValue?.getDate()).toBe(14);
+    });
+  });
+
+  describe('save() with date picker mode', () => {
+    it('closes with { minutes, date } when date is selected', () => {
+      const { component, closeSpy } = setup(dataWithDatePicker);
+      component.selectedDate.set(new Date('2026-04-14T00:00:00'));
+      component.selectedMinutes.set(240);
+      component.save();
+      expect(closeSpy).toHaveBeenCalledWith({ minutes: 240, date: '2026-04-14' });
+    });
+
+    it('does not close when date picker is shown but no date is selected', () => {
+      const { component, closeSpy } = setup(dataWithDatePicker);
+      component.selectedDate.set(null);
+      component.save();
+      expect(closeSpy).not.toHaveBeenCalled();
+    });
+
+    it('initializes selectedDate from initialDate', () => {
+      const { component } = setup(dataWithDatePicker);
+      const date = component.selectedDate();
+      expect(date).not.toBeNull();
+      expect(date?.getFullYear()).toBe(2026);
+      expect(date?.getMonth()).toBe(3); // April
+      expect(date?.getDate()).toBe(14);
+    });
   });
 });

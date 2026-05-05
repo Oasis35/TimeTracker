@@ -64,12 +64,6 @@
               <span class="prev-month-btn-count">{{ prevMonthMissingRows().length }}</span>
             </button>
           }
-          <button mat-icon-button type="button" [matTooltip]="'new_ticket' | translate" (click)="openAddTicketDialog()">
-            <mat-icon>add</mat-icon>
-          </button>
-          <button mat-icon-button type="button" [matTooltip]="'log_time_dialog_title' | translate" (click)="openLogTimeDialog()">
-            <mat-icon>more_time</mat-icon>
-          </button>
         </div>
       </div>
 
@@ -254,6 +248,15 @@
             </tr>
           </tfoot>
         </table>
+      </div>
+
+      <div class="fab-actions">
+        <button mat-fab type="button" color="primary" [matTooltip]="'new_ticket' | translate" (click)="openAddTicketDialog()">
+          <mat-icon>add</mat-icon>
+        </button>
+        <button mat-fab type="button" color="primary" [matTooltip]="'log_time_dialog_title' | translate" (click)="openLogTimeDialog()">
+          <mat-icon>more_time</mat-icon>
+        </button>
       </div>
     </mat-card>
   }

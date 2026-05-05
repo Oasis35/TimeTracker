@@ -113,10 +113,18 @@ State is backend-driven: `AppSettingsService` loads all user preferences via `pr
   // Recharger manuellement : this.detailRes.reload()
   // Accès : this.detailRes.value(), this.detailRes.isLoading(), this.detailRes.error()
   ```
-- **Injection** : préférer `inject()` (style moderne) ou constructeur avec `private readonly`. Les deux coexistent dans le projet.
+- **Injection** : utiliser exclusivement `inject()` au niveau des champs de classe — pas d'injection par paramètre constructeur. Le constructeur ne contient que la logique d'initialisation (effets, subscriptions, lecture de route...).
+  ```ts
+  private readonly api = inject(TrackerApi);
+  private readonly translate = inject(TranslateService);
+  constructor() { /* logique d'init seulement */ }
+  ```
+- **Subscriptions RxJS** : utiliser `takeUntilDestroyed(inject(DestroyRef))` dans le constructeur — jamais `OnDestroy` + `Subscription` manuelle. Pour les appels one-shot, `firstValueFrom()`.
 - **Pas de subscriptions RxJS dans les composants** : convertir avec `firstValueFrom()` pour les appels one-shot, ou `resource()` pour les données réactives.
 - **Standalone components** : tous les composants déclarent `standalone: true` et listent leurs dépendances dans `imports: [...]`.
 - **Lazy loading** : toutes les pages sont chargées via `loadComponent()` dans [app.routes.ts](front/timetracker-front/src/app/app.routes.ts).
+- **Cache partagé** : `TimesheetCacheService` (`core/services/timesheet-cache.service.ts`) centralise les `resource()` pour `metadata` et `ticketTotals`. Tous les composants s'y branchent — ne pas recréer ces ressources localement. Invalider avec `cache.invalidate()` (metadata + totals) ou `cache.invalidateTotals()` (totals uniquement).
+- **Date courante** : ne jamais capturer `new Date()` dans un champ `readonly` — utiliser une méthode `private now(): Date { return new Date(); }` ou `get todayIso(): string { return toIsoDate(new Date()); }` pour que la valeur soit toujours fraîche.
 
 ### Database
 
@@ -156,7 +164,9 @@ SQLite with EF Core. Three entities:
 ### Patterns de test
 
 **Frontend (Vitest + TestBed) :**
+- Lancer les tests via `npm run test:ci` (= `ng test --watch=false`) — ne pas utiliser `npx vitest run` directement (bypass la compilation Angular, les globals Vitest ne sont pas injectés)
 - Fournir un mock de `TrackerApi` via `{ provide: TrackerApi, useValue: apiMock }` — les méthodes retournent des `Observable` avec `of(...)`
+- Les composants qui utilisent `TimesheetCacheService` nécessitent aussi un mock : `{ provide: TimesheetCacheService, useValue: cacheMock }` avec `metadataRes` et `ticketTotalsRes` simulant un `resource()` (propriétés `value`, `isLoading`, `error` sous forme de signals)
 - Appeler `fixture.detectChanges()` puis `await fixture.whenStable()` puis `fixture.detectChanges()` à nouveau pour laisser les `resource()` se résoudre
 - Asserter sur `fixture.nativeElement` (DOM) ou les instances de signal/computed
 

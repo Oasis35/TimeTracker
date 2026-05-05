@@ -40,13 +40,13 @@ public static class DbSeeder
             new() { Type = TicketType.ABSENT, ExternalKey = SingleLeaveExternalKey, Label = "Congés" }
         };
 
+        var existingKeys = db.Tickets
+            .Select(t => new { t.Type, t.ExternalKey })
+            .ToHashSet();
+
         foreach (var ticket in requiredTickets)
         {
-            var exists = db.Tickets.Any(t =>
-                t.Type == ticket.Type &&
-                t.ExternalKey == ticket.ExternalKey);
-
-            if (!exists)
+            if (!existingKeys.Contains(new { ticket.Type, ticket.ExternalKey }))
                 db.Tickets.Add(ticket);
         }
 
@@ -167,37 +167,33 @@ public static class DbSeeder
         if (cpTicket is null)
             return;
 
-        var leaveTickets = db.Tickets
+        var leaveTicketIds = db.Tickets
             .Where(t => t.Type == TicketType.ABSENT)
-            .ToList();
-        var leaveTicketsById = leaveTickets.ToDictionary(t => t.Id);
+            .Select(t => t.Id)
+            .ToHashSet();
 
         var seededLeaveEntries = db.TimeEntries
-            .Where(e => e.IsSeed && e.TicketId != null)
-            .ToList();
-        var seededLeaveEntryPairs = seededLeaveEntries
-            .Where(e => e.TicketId is int ticketId && leaveTicketsById.ContainsKey(ticketId))
-            .Select(e => new { Entry = e, Ticket = leaveTicketsById[e.TicketId!.Value] })
+            .Where(e => e.IsSeed && e.TicketId != null && leaveTicketIds.Contains(e.TicketId!.Value))
             .ToList();
 
-        if (seededLeaveEntryPairs.Count > 0)
+        if (seededLeaveEntries.Count > 0)
         {
-            var cpDates = seededLeaveEntryPairs
-                .Where(x => x.Ticket.Id == cpTicket.Id)
-                .Select(x => x.Entry.Date)
+            var cpDates = seededLeaveEntries
+                .Where(e => e.TicketId == cpTicket.Id)
+                .Select(e => e.Date)
                 .ToHashSet();
 
             var toDelete = new List<TimeEntry>();
-            foreach (var item in seededLeaveEntryPairs.Where(x => x.Ticket.Id != cpTicket.Id))
+            foreach (var entry in seededLeaveEntries.Where(e => e.TicketId != cpTicket.Id))
             {
-                if (cpDates.Contains(item.Entry.Date))
+                if (cpDates.Contains(entry.Date))
                 {
-                    toDelete.Add(item.Entry);
+                    toDelete.Add(entry);
                     continue;
                 }
 
-                item.Entry.TicketId = cpTicket.Id;
-                cpDates.Add(item.Entry.Date);
+                entry.TicketId = cpTicket.Id;
+                cpDates.Add(entry.Date);
             }
 
             if (toDelete.Count > 0)
@@ -206,9 +202,16 @@ public static class DbSeeder
             db.SaveChanges();
         }
 
+        var ticketIdsWithEntries = db.TimeEntries
+            .Where(e => e.TicketId != null)
+            .Select(e => e.TicketId!.Value)
+            .Distinct()
+            .ToHashSet();
+
         var removableLegacyLeaveTickets = db.Tickets
             .Where(t => t.Type == TicketType.ABSENT && t.Id != cpTicket.Id)
-            .Where(t => !db.TimeEntries.Any(e => e.TicketId == t.Id))
+            .ToList()
+            .Where(t => !ticketIdsWithEntries.Contains(t.Id))
             .ToList();
 
         if (removableLegacyLeaveTickets.Count == 0)

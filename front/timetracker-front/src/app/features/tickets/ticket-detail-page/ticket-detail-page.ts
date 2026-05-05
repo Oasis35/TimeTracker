@@ -13,9 +13,10 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { LangChangeEvent, TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { resolveApiErrorTranslationKey } from '../../../core/api/api-error-messages';
-import { TicketDetailDto, TicketDto, TicketTimeEntryDto, TimesheetMetadataDto } from '../../../core/api/models';
+import { TicketDetailDto, TicketDto, TicketTimeEntryDto } from '../../../core/api/models';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { PublicHolidaysService } from '../../../core/services/public-holidays.service';
+import { TimesheetCacheService } from '../../../core/services/timesheet-cache.service';
 import { AppLanguage } from '../../../core/i18n/app-language';
 import { UnitService } from '../../../core/services/unit.service';
 import { isWeekendIso, toIsoDate } from '../../../core/utils/date-helpers';
@@ -49,16 +50,23 @@ type MonthEntryDraft = Record<string, number>;
   styleUrl: './ticket-detail-page.scss',
 })
 export class TicketDetailPageComponent {
+  private readonly cache = inject(TimesheetCacheService);
+  private readonly api = inject(TrackerApi);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly translate = inject(TranslateService);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
+  readonly unit = inject(UnitService);
+  readonly publicHolidays = inject(PublicHolidaysService);
+
   readonly ticketId = signal<number | null>(null);
   readonly language = signal<AppLanguage>('fr');
   readonly busy = signal<boolean>(false);
   readonly actionError = signal<string>('');
   readonly expandedMonths = signal<Record<string, boolean>>({});
 
-  readonly metadataRes = resource<TimesheetMetadataDto, number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getMetadata()),
-  });
+  readonly metadataRes = this.cache.metadataRes;
   readonly detailRes = resource<TicketDetailDto | null, number | null>({
     params: () => this.ticketId(),
     loader: ({ params }) => {
@@ -105,7 +113,7 @@ export class TicketDetailPageComponent {
     return null;
   });
 
-  readonly todayIso = toIsoDate(new Date());
+  get todayIso(): string { return toIsoDate(new Date()); }
   readonly currentMonthMinutes = computed(() => this.detailRes.value()?.currentMonthMinutes ?? 0);
   readonly previousMonthMinutes = computed(() => this.detailRes.value()?.previousMonthMinutes ?? 0);
 
@@ -121,18 +129,9 @@ export class TicketDetailPageComponent {
     ),
   );
 
-  constructor(
-    private readonly api: TrackerApi,
-    private readonly route: ActivatedRoute,
-    private readonly router: Router,
-    private readonly translate: TranslateService,
-    private readonly snackBar: MatSnackBar,
-    private readonly dialog: MatDialog,
-    readonly unit: UnitService,
-    readonly publicHolidays: PublicHolidaysService,
-  ) {
+  constructor() {
     const destroyRef = inject(DestroyRef);
-    void publicHolidays.load();
+    void this.publicHolidays.load();
     const initial = (this.translate.getCurrentLang() || this.translate.getFallbackLang() || 'fr') as AppLanguage;
     this.language.set(initial);
     this.translate.onLangChange.pipe(takeUntilDestroyed(destroyRef)).subscribe((event: LangChangeEvent) => {
@@ -214,7 +213,7 @@ export class TicketDetailPageComponent {
       }
       this.showActionMessage('time_saved');
       this.detailRes.reload();
-      this.metadataRes.reload();
+      this.cache.invalidateTotals();
     } catch (error: unknown) {
       this.actionError.set(
         this.translate.instant(resolveApiErrorTranslationKey(error, 'cannot_log_time')),

@@ -26,24 +26,24 @@ public sealed class TimeEntriesController : ControllerBase
     private int MinutesPerDay => _opts.MinutesPerDay;
 
     [HttpPost("upsert")]
-    public async Task<IActionResult> Upsert([FromBody] UpsertTimeEntryDto dto)
+    public async Task<IActionResult> Upsert([FromBody] UpsertTimeEntryDto dto, CancellationToken cancellationToken)
     {
         if (dto.TicketId <= 0)
             return ApiProblems.BadRequest(this, ApiErrorCodes.TicketIdInvalid);
 
         var ticketExists = await _db.Tickets
             .AsNoTracking()
-            .AnyAsync(t => t.Id == dto.TicketId);
+            .AnyAsync(t => t.Id == dto.TicketId, cancellationToken);
 
         if (!ticketExists)
             return ApiProblems.NotFound(this, ApiErrorCodes.TicketNotFound);
 
         var existing = await _db.TimeEntries
-            .SingleOrDefaultAsync(e => e.TicketId == dto.TicketId && e.Date == dto.Date);
+            .SingleOrDefaultAsync(e => e.TicketId == dto.TicketId && e.Date == dto.Date, cancellationToken);
 
         var dayTotal = await _db.TimeEntries
             .Where(e => e.Date == dto.Date)
-            .SumAsync(e => (int?)e.QuantityMinutes) ?? 0;
+            .SumAsync(e => (int?)e.QuantityMinutes, cancellationToken) ?? 0;
 
         var existingMinutes = existing?.QuantityMinutes ?? 0;
         var ruleError = TimeEntryRules.Validate(
@@ -62,7 +62,7 @@ public sealed class TimeEntriesController : ControllerBase
                 return NoContent();
 
             _db.TimeEntries.Remove(existing);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(cancellationToken);
             return NoContent();
         }
 
@@ -76,13 +76,13 @@ public sealed class TimeEntriesController : ControllerBase
             };
 
             _db.TimeEntries.Add(entry);
-            await _db.SaveChangesAsync();
+            await _db.SaveChangesAsync(cancellationToken);
 
             return Created("", new { entry.Id });
         }
 
         existing.QuantityMinutes = dto.QuantityMinutes;
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(cancellationToken);
 
         return NoContent();
     }

@@ -135,8 +135,8 @@
     color-mix(in srgb, var(--mat-sys-surface-container-low) 60%, var(--mat-sys-surface)) 0%,
     var(--mat-sys-surface) 62%
   );
-  --col-type-w: 72px;
-  --col-num-w: 90px;
+  --col-type-w: 52px;
+  --col-num-w: 68px;
   --col-label-w: 220px;
   --col-total-w: 72px;
   --offday-bg: color-mix(in srgb, #9ca3ad 24%, var(--mat-sys-surface));
@@ -624,6 +624,17 @@ th.col-week-number {
   color: color-mix(in srgb, var(--mat-sys-primary) 90%, var(--mat-sys-on-surface));
 }
 
+/* ── FAB actions ── */
+.fab-actions {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  z-index: 100;
+}
+
 /* ── Drawer overlay mois précédent ── */
 .month-card {
   position: relative;
@@ -642,7 +653,7 @@ th.col-week-number {
   left: 0;
   bottom: 0;
   z-index: 11;
-  width: 260px;
+  width: 300px;
   display: flex;
   flex-direction: column;
   background: var(--mat-sys-surface);
@@ -661,7 +672,7 @@ th.col-week-number {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.4rem 0.4rem 0.4rem 0.85rem;
+  padding: 0.55rem 0.4rem 0.55rem 0.85rem;
   border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 55%, transparent);
   background: linear-gradient(
     180deg,
@@ -677,8 +688,9 @@ th.col-week-number {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--mat-sys-on-surface) 55%, transparent);
-  white-space: nowrap;
+  color: color-mix(in srgb, var(--mat-sys-on-surface) 78%, transparent);
+  white-space: normal;
+  line-height: 1.3;
 }
 
 .drawer-close-btn {
@@ -721,16 +733,16 @@ th.col-week-number {
 .drawer-item-ref {
   font-size: 0.78rem;
   font-weight: 700;
-  color: color-mix(in srgb, var(--mat-sys-primary) 75%, var(--mat-sys-on-surface));
+  color: var(--mat-sys-primary);
   white-space: nowrap;
 }
 
 .drawer-item-label {
   font-size: 0.74rem;
-  color: color-mix(in srgb, var(--mat-sys-on-surface) 55%, transparent);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: color-mix(in srgb, var(--mat-sys-on-surface) 75%, transparent);
+  white-space: normal;
+  line-height: 1.35;
+  overflow-wrap: break-word;
 }
 
 .drawer-add-btn {

@@ -76,6 +76,246 @@ public sealed class DatabaseBackupServiceTests
         }
     }
 
+    // ——————————————————————————————————————
+    // IsValidBackupAsync — table validation
+    // ——————————————————————————————————————
+
+    [Fact]
+    public async Task RestoreAsync_Should_Throw_When_Required_Table_Is_Missing()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var activeDbPath = Path.Combine(root, "tracker.db");
+            await CreateDatabaseAsync(activeDbPath, "ACTIVE-1");
+
+            // Create a SQLite file that is missing the TimeEntries table
+            var incompleteDbPath = Path.Combine(root, "incomplete.db");
+            await CreateDatabaseWithoutTableAsync(incompleteDbPath, "TimeEntries");
+
+            var service = CreateService(root, activeDbPath);
+
+            await using var stream = File.OpenRead(incompleteDbPath);
+            await Assert.ThrowsAsync<InvalidBackupException>(() => service.RestoreAsync(stream));
+        }
+        finally
+        {
+            TryDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task RestoreAsync_Should_Throw_When_Required_Column_Is_Missing()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var activeDbPath = Path.Combine(root, "tracker.db");
+            await CreateDatabaseAsync(activeDbPath, "ACTIVE-1");
+
+            // Create a SQLite file where TimeEntries is missing the TicketId column
+            var incompleteDbPath = Path.Combine(root, "incomplete.db");
+            await CreateDatabaseWithMissingColumnAsync(incompleteDbPath);
+
+            var service = CreateService(root, activeDbPath);
+
+            await using var stream = File.OpenRead(incompleteDbPath);
+            await Assert.ThrowsAsync<InvalidBackupException>(() => service.RestoreAsync(stream));
+        }
+        finally
+        {
+            TryDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task RestoreAsync_Should_Accept_Schema_With_Extra_Columns()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var activeDbPath = Path.Combine(root, "tracker.db");
+            await CreateDatabaseAsync(activeDbPath, "ACTIVE-1");
+
+            // Create a valid database with an extra column — should still be accepted
+            var extraDbPath = Path.Combine(root, "extra.db");
+            await CreateDatabaseWithExtraColumnAsync(extraDbPath, "EXTRA-1");
+
+            var service = CreateService(root, activeDbPath);
+
+            await using var stream = File.OpenRead(extraDbPath);
+            var result = await service.RestoreAsync(stream);
+
+            Assert.StartsWith("pre-restore-", result.SafetyBackupFileName);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            TryDeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task RestoreAsync_Should_Accept_Column_Names_Case_Insensitively()
+    {
+        var root = CreateTempDirectory();
+        try
+        {
+            var activeDbPath = Path.Combine(root, "tracker.db");
+            await CreateDatabaseAsync(activeDbPath, "ACTIVE-1");
+
+            // Create a database whose column names use different casing (e.g. "ticketid" instead of "TicketId")
+            var caseDbPath = Path.Combine(root, "case.db");
+            await CreateDatabaseWithLowercaseColumnsAsync(caseDbPath, "CASE-1");
+
+            var service = CreateService(root, activeDbPath);
+
+            await using var stream = File.OpenRead(caseDbPath);
+            var result = await service.RestoreAsync(stream);
+
+            Assert.StartsWith("pre-restore-", result.SafetyBackupFileName);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            TryDeleteDirectory(root);
+        }
+    }
+
+    // ——————————————————————————————————————
+    // Constructor validation
+    // ——————————————————————————————————————
+
+    [Fact]
+    public void Constructor_Should_Throw_When_Connection_String_Is_Memory()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["ConnectionStrings:Main"] = "Data Source=:memory:"
+            })
+            .Build();
+
+        Assert.Throws<InvalidOperationException>(
+            () => new DatabaseBackupService(configuration, new FakeWebHostEnv(Path.GetTempPath())));
+    }
+
+    [Fact]
+    public void Constructor_Should_Throw_When_Connection_String_Is_Missing()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>())
+            .Build();
+
+        Assert.Throws<InvalidOperationException>(
+            () => new DatabaseBackupService(configuration, new FakeWebHostEnv(Path.GetTempPath())));
+    }
+
+    // ——————————————————————————————————————
+    // Schema creation helpers
+    // ——————————————————————————————————————
+
+    private static async Task CreateDatabaseWithoutTableAsync(string dbPath, string missingTable)
+    {
+        await using var connection = new SqliteConnection($"Data Source={dbPath}");
+        await connection.OpenAsync();
+
+        // Create all required tables except the one to omit
+        var allTables = new Dictionary<string, string>
+        {
+            ["Tickets"] = "CREATE TABLE Tickets (Id INTEGER PRIMARY KEY, Type TEXT NOT NULL, ExternalKey TEXT NOT NULL, Label TEXT NOT NULL);",
+            ["TimeEntries"] = "CREATE TABLE TimeEntries (Id INTEGER PRIMARY KEY, TicketId INTEGER NOT NULL, Date TEXT NOT NULL, QuantityMinutes INTEGER NOT NULL, IsSeed INTEGER NOT NULL);",
+            ["AppSettings"] = "CREATE TABLE AppSettings (Key TEXT PRIMARY KEY, Value TEXT NOT NULL);"
+        };
+
+        foreach (var (table, ddl) in allTables)
+        {
+            if (table.Equals(missingTable, StringComparison.OrdinalIgnoreCase))
+                continue;
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = ddl;
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        SqliteConnection.ClearAllPools();
+    }
+
+    private static async Task CreateDatabaseWithMissingColumnAsync(string dbPath)
+    {
+        await using var connection = new SqliteConnection($"Data Source={dbPath}");
+        await connection.OpenAsync();
+
+        // TimeEntries is missing the TicketId column
+        var ddls = new[]
+        {
+            "CREATE TABLE Tickets (Id INTEGER PRIMARY KEY, Type TEXT NOT NULL, ExternalKey TEXT NOT NULL, Label TEXT NOT NULL);",
+            "CREATE TABLE TimeEntries (Id INTEGER PRIMARY KEY, Date TEXT NOT NULL, QuantityMinutes INTEGER NOT NULL, IsSeed INTEGER NOT NULL);",
+            "CREATE TABLE AppSettings (Key TEXT PRIMARY KEY, Value TEXT NOT NULL);"
+        };
+
+        foreach (var ddl in ddls)
+        {
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = ddl;
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        SqliteConnection.ClearAllPools();
+    }
+
+    private static async Task CreateDatabaseWithExtraColumnAsync(string dbPath, string externalKey)
+    {
+        await using var connection = new SqliteConnection($"Data Source={dbPath}");
+        await connection.OpenAsync();
+
+        var ddls = new[]
+        {
+            "CREATE TABLE Tickets (Id INTEGER PRIMARY KEY, Type TEXT NOT NULL, ExternalKey TEXT NOT NULL, Label TEXT NOT NULL, ExtraColumn TEXT);",
+            "CREATE TABLE TimeEntries (Id INTEGER PRIMARY KEY, TicketId INTEGER NOT NULL, Date TEXT NOT NULL, QuantityMinutes INTEGER NOT NULL, IsSeed INTEGER NOT NULL);",
+            "CREATE TABLE AppSettings (Key TEXT PRIMARY KEY, Value TEXT NOT NULL);"
+        };
+
+        foreach (var ddl in ddls)
+        {
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = ddl;
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        await using var insert = connection.CreateCommand();
+        insert.CommandText = $"INSERT INTO Tickets (Type, ExternalKey, Label) VALUES ('DEV', '{externalKey}', '{externalKey}');";
+        await insert.ExecuteNonQueryAsync();
+
+        SqliteConnection.ClearAllPools();
+    }
+
+    private static async Task CreateDatabaseWithLowercaseColumnsAsync(string dbPath, string externalKey)
+    {
+        await using var connection = new SqliteConnection($"Data Source={dbPath}");
+        await connection.OpenAsync();
+
+        // Column names in lowercase — RequiredColumns uses OrdinalIgnoreCase so these should be accepted
+        var ddls = new[]
+        {
+            "CREATE TABLE Tickets (id INTEGER PRIMARY KEY, type TEXT NOT NULL, externalkey TEXT NOT NULL, label TEXT NOT NULL);",
+            "CREATE TABLE TimeEntries (id INTEGER PRIMARY KEY, ticketid INTEGER NOT NULL, date TEXT NOT NULL, quantityminutes INTEGER NOT NULL, isseed INTEGER NOT NULL);",
+            "CREATE TABLE AppSettings (key TEXT PRIMARY KEY, value TEXT NOT NULL);"
+        };
+
+        foreach (var ddl in ddls)
+        {
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = ddl;
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        await using var insert = connection.CreateCommand();
+        insert.CommandText = $"INSERT INTO Tickets (type, externalkey, label) VALUES ('DEV', '{externalKey}', '{externalKey}');";
+        await insert.ExecuteNonQueryAsync();
+
+        SqliteConnection.ClearAllPools();
+    }
+
     private static DatabaseBackupService CreateService(string contentRoot, string dbPath)
     {
         var configuration = new ConfigurationBuilder()

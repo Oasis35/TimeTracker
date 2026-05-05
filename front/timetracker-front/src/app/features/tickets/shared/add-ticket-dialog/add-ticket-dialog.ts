@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, effect, resource, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -8,8 +8,9 @@ import { MatSelectChange, MatSelectModule } from '@angular/material/select';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { resolveApiErrorTranslationKey } from '../../../../core/api/api-error-messages';
-import { TicketDto, TicketType, TimesheetMetadataDto } from '../../../../core/api/models';
+import { TicketDto, TicketType } from '../../../../core/api/models';
 import { TrackerApi } from '../../../../core/api/tracker-api';
+import { TimesheetCacheService } from '../../../../core/services/timesheet-cache.service';
 
 @Component({
   selector: 'app-add-ticket-dialog',
@@ -27,6 +28,11 @@ import { TrackerApi } from '../../../../core/api/tracker-api';
   styleUrl: './add-ticket-dialog.scss',
 })
 export class AddTicketDialogComponent {
+  private readonly api = inject(TrackerApi);
+  private readonly cache = inject(TimesheetCacheService);
+  private readonly dialogRef = inject(MatDialogRef<AddTicketDialogComponent, { ticket: TicketDto; logTime: boolean } | false>);
+  private readonly translate = inject(TranslateService);
+
   readonly ticketTypeOptions: readonly TicketType[] = ['DEV', 'SUPPORT'];
   readonly busy = signal<boolean>(false);
   readonly actionError = signal<string>('');
@@ -35,16 +41,9 @@ export class AddTicketDialogComponent {
   readonly newTicketExternalKey = signal<string>('');
   readonly newTicketLabel = signal<string>('');
 
-  readonly metadataRes = resource<TimesheetMetadataDto, number>({
-    params: () => 0,
-    loader: () => firstValueFrom(this.api.getMetadata()),
-  });
+  readonly metadataRes = this.cache.metadataRes;
 
-  constructor(
-    private readonly api: TrackerApi,
-    private readonly dialogRef: MatDialogRef<AddTicketDialogComponent, { ticket: TicketDto; logTime: boolean } | false>,
-    private readonly translate: TranslateService,
-  ) {
+  constructor() {
     effect(() => {
       const meta = this.metadataRes.value();
       if (!meta || this.newTicketType().trim()) return;
