@@ -94,5 +94,49 @@ public sealed class IncompleteDaysApiTests : IClassFixture<TrackerApiFactory>, I
         Assert.Contains(mondayStr, dto!.IncompleteDays);
     }
 
+    [Fact]
+    public async Task Does_Not_Return_Weekends()
+    {
+        // Find a recent Saturday (within the 30-day window, never today)
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var saturday = today.AddDays(-1);
+        while (saturday.DayOfWeek != DayOfWeek.Saturday)
+            saturday = saturday.AddDays(-1);
+        var saturdayStr = saturday.ToString("yyyy-MM-dd");
+
+        // Create an incomplete entry on that Saturday
+        var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "SAT-1", "Test");
+        await ApiTestHelpers.UpsertAsync(_client, ticketId, saturdayStr, 240);
+
+        var r = await _client.GetAsync("/api/timesheet/incomplete-days");
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+
+        var dto = await r.Content.ReadFromJsonAsync<IncompleteDaysViewDto>();
+        Assert.NotNull(dto);
+        Assert.DoesNotContain(saturdayStr, dto!.IncompleteDays);
+    }
+
+    [Fact]
+    public async Task Does_Not_Return_Day_Older_Than_30_Days()
+    {
+        // Find a weekday that is 31+ days ago (outside the 30-day window)
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var oldDay = today.AddDays(-31);
+        while (oldDay.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            oldDay = oldDay.AddDays(-1);
+        var oldDayStr = oldDay.ToString("yyyy-MM-dd");
+
+        // Create an incomplete entry on that old day
+        var ticketId = await ApiTestHelpers.CreateTicketAsync(_client, TicketType.DEV, "OLD-1", "Test");
+        await ApiTestHelpers.UpsertAsync(_client, ticketId, oldDayStr, 240);
+
+        var r = await _client.GetAsync("/api/timesheet/incomplete-days");
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+
+        var dto = await r.Content.ReadFromJsonAsync<IncompleteDaysViewDto>();
+        Assert.NotNull(dto);
+        Assert.DoesNotContain(oldDayStr, dto!.IncompleteDays);
+    }
+
     private sealed record IncompleteDaysViewDto(List<string> IncompleteDays);
 }
