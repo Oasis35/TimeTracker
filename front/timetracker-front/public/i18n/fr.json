@@ -158,5 +158,9 @@
   "incomplete_days_ok": "Tous les jours sont saisis",
   "incomplete_days_warning": "{{count}} jour(s) incomplet(s) sur les 30 derniers jours",
   "incomplete_days_tooltip_ok": "Tous les jours ouvrés des 30 derniers jours sont complets",
-  "incomplete_days_tooltip_warning": "{{count}} jour(s) incomplet(s) :\n{{days}}"
+  "incomplete_days_tooltip_warning": "{{count}} jour(s) incomplet(s) :\n{{days}}",
+  "settings_hours_per_day": "Heures par jour",
+  "settings_hours_per_day_label": "Heures / jour",
+  "settings_hours_per_day_invalid": "Valeur invalide : entier entre 1 et 24, multiple de 4.",
+  "settings_hours_per_day_conflict": "{{count}} jour(s) ont déjà plus de temps saisi que cette nouvelle limite. Continuer quand même ?"
 }

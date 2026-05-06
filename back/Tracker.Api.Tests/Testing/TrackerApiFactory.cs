@@ -1,11 +1,11 @@
-﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Data.Common;
 using Tracker.Api.Data;
+using Tracker.Api.Models;
 
 namespace Tracker.Api.Tests.Testing;
 
@@ -16,14 +16,6 @@ public sealed class TrackerApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
-
-        builder.ConfigureAppConfiguration((context, config) =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["TimeTracking:MinutesPerDay"] = "480"
-            });
-        });
 
         builder.ConfigureServices(services =>
         {
@@ -45,6 +37,8 @@ public sealed class TrackerApiFactory : WebApplicationFactory<Program>
             using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<TrackerDbContext>();
             db.Database.EnsureCreated();
+            db.AppSettings.Add(new AppSetting { Key = AppSettingKeys.MinutesPerDay, Value = "480" });
+            db.SaveChanges();
         });
     }
 
@@ -55,6 +49,8 @@ public sealed class TrackerApiFactory : WebApplicationFactory<Program>
         db.TimeEntries.RemoveRange(db.TimeEntries);
         db.Tickets.RemoveRange(db.Tickets);
         db.AppSettings.RemoveRange(db.AppSettings);
+        await db.SaveChangesAsync();
+        db.AppSettings.Add(new AppSetting { Key = AppSettingKeys.MinutesPerDay, Value = "480" });
         await db.SaveChangesAsync();
     }
 

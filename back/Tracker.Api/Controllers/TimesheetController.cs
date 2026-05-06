@@ -1,12 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.Tickets;
 using Tracker.Api.Dtos.Timesheet;
 using Tracker.Api.Infrastructure;
 using Tracker.Api.Models;
-using Tracker.Api.Options;
 using Tracker.Api.Services;
 
 namespace Tracker.Api.Controllers;
@@ -16,17 +14,15 @@ namespace Tracker.Api.Controllers;
 public sealed class TimesheetController : ControllerBase
 {
     private readonly TrackerDbContext _db;
-    private readonly TimeTrackingOptions _opts;
+    private readonly MinutesPerDayResolver _minutesResolver;
     private readonly PublicHolidaysService _holidays;
 
-    public TimesheetController(TrackerDbContext db, IOptions<TimeTrackingOptions> opts, PublicHolidaysService holidays)
+    public TimesheetController(TrackerDbContext db, MinutesPerDayResolver minutesResolver, PublicHolidaysService holidays)
     {
         _db = db;
-        _opts = opts.Value;
+        _minutesResolver = minutesResolver;
         _holidays = holidays;
     }
-
-    private int MinutesPerDay => _opts.MinutesPerDay;
 
     [HttpGet]
     public async Task<ActionResult<TimesheetMonthDto>> Get(
@@ -37,6 +33,7 @@ public sealed class TimesheetController : ControllerBase
         if (month < 1 || month > 12)
             return ApiProblems.BadRequest(this, ApiErrorCodes.MonthInvalid);
 
+        var minutesPerDay = await _minutesResolver.ResolveAsync(cancellationToken);
         var start = new DateOnly(year, month, 1);
         var end = start.AddMonths(1);
 
@@ -102,7 +99,7 @@ public sealed class TimesheetController : ControllerBase
         {
             Year = year,
             Month = month,
-            MinutesPerDay = MinutesPerDay,
+            MinutesPerDay = minutesPerDay,
             Days = days,
             Rows = rows,
             TotalsByDay = totalsByDay
@@ -112,6 +109,7 @@ public sealed class TimesheetController : ControllerBase
     [HttpGet("incomplete-days")]
     public async Task<ActionResult<IncompleteDaysDto>> GetIncompleteDays(CancellationToken cancellationToken)
     {
+        var minutesPerDay = await _minutesResolver.ResolveAsync(cancellationToken);
         var today = DateOnly.FromDateTime(DateTime.Today);
         var from = today.AddDays(-30);
 
@@ -139,7 +137,7 @@ public sealed class TimesheetController : ControllerBase
         var totalsMap = totalsByDay.ToDictionary(x => x.Date, x => x.Total);
 
         var incomplete = workdays
-            .Where(d => (totalsMap.TryGetValue(d, out var total) ? total : 0) < MinutesPerDay)
+            .Where(d => (totalsMap.TryGetValue(d, out var total) ? total : 0) < minutesPerDay)
             .Select(d => d.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture))
             .ToList();
 
@@ -149,7 +147,7 @@ public sealed class TimesheetController : ControllerBase
     [HttpGet("metadata")]
     public async Task<ActionResult<TimesheetMetadataDto>> GetMetadata(CancellationToken cancellationToken)
     {
-        var minutesPerDay = MinutesPerDay;
+        var minutesPerDay = await _minutesResolver.ResolveAsync(cancellationToken);
 
         if (minutesPerDay <= 0 || minutesPerDay % 4 != 0)
             return ApiProblems.BadRequest(this, ApiErrorCodes.ConfigMinutesPerDayInvalid);

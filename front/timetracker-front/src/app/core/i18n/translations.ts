@@ -123,6 +123,10 @@ export const TRANSLATION_KEYS = [
   'ticket_detail_empty',
   'ticket_add_entry',
   'setting_key_not_allowed',
+  'settings_hours_per_day',
+  'settings_hours_per_day_label',
+  'settings_hours_per_day_invalid',
+  'settings_hours_per_day_conflict',
 ] as const;
 
 export type TranslationKey = (typeof TRANSLATION_KEYS)[number];

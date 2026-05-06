@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   BackupRestoreResponseDto,
   CreateTicketDto,
+  DaysExceedingDto,
   IncompleteDaysDto,
   TicketDetailDto,
   TicketDto,
@@ -94,5 +95,10 @@ export class TrackerApi {
 
   deleteSetting(key: string): Observable<void> {
     return this.http.delete<void>(`/api/settings/${key}`);
+  }
+
+  getDaysExceeding(minutes: number): Observable<DaysExceedingDto> {
+    const params = new HttpParams().set('minutes', minutes);
+    return this.http.get<DaysExceedingDto>('/api/timeentries/days-exceeding', { params });
   }
 }

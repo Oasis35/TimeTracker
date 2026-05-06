@@ -75,3 +75,7 @@ export interface BackupRestoreResponseDto {
 export interface IncompleteDaysDto {
   incompleteDays: string[];
 }
+
+export interface DaysExceedingDto {
+  count: number;
+}

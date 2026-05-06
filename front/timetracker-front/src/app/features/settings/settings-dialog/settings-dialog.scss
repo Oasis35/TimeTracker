@@ -49,6 +49,22 @@ app-maintenance-page {
   width: 100%;
 }
 
+.hours-field {
+  width: 9rem;
+
+  &--error {
+    --mat-form-field-label-text-color: var(--mat-sys-error);
+    --mdc-outlined-text-field-label-text-color: var(--mat-sys-error);
+    --mdc-outlined-text-field-outline-color: var(--mat-sys-error);
+    --mdc-outlined-text-field-hover-outline-color: var(--mat-sys-error);
+    --mdc-outlined-text-field-focus-outline-color: var(--mat-sys-error);
+  }
+}
+
+.hours-error {
+  color: var(--mat-sys-error);
+}
+
 .url-preview {
   display: flex;
   align-items: center;

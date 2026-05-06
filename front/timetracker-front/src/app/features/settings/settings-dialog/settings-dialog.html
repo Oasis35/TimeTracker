@@ -38,6 +38,29 @@
     </mat-button-toggle-group>
   </section>
 
+  <!-- HEURES PAR JOUR -->
+  <section class="setting-group">
+    <mat-form-field
+      appearance="outline"
+      class="hours-field"
+      [class.hours-field--error]="hoursPerDayError()"
+    >
+      <mat-label>{{ 'settings_hours_per_day_label' | translate }}</mat-label>
+      <input
+        matInput
+        type="number"
+        min="1"
+        max="24"
+        step="4"
+        [value]="hoursPerDay()"
+        (input)="onHoursPerDayInput($any($event.target).value)"
+        (change)="onHoursPerDayCommit($any($event.target).value)"
+      />
+      @if (hoursPerDayError()) {
+        <mat-hint class="hours-error">{{ hoursPerDayError() | translate }}</mat-hint>
+      }
+    </mat-form-field>
+  </section>
 
   <!-- LIEN EXTERNE -->
   <section class="setting-group">
