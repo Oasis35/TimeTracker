@@ -1,11 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.TimeEntries;
 using Tracker.Api.Infrastructure;
 using Tracker.Api.Models;
-using Tracker.Api.Options;
 using Tracker.Api.Services;
 
 namespace Tracker.Api.Controllers;
@@ -15,15 +13,26 @@ namespace Tracker.Api.Controllers;
 public sealed class TimeEntriesController : ControllerBase
 {
     private readonly TrackerDbContext _db;
-    private readonly TimeTrackingOptions _opts;
+    private readonly MinutesPerDayResolver _minutesResolver;
 
-    public TimeEntriesController(TrackerDbContext db, IOptions<TimeTrackingOptions> opts)
+    public TimeEntriesController(TrackerDbContext db, MinutesPerDayResolver minutesResolver)
     {
         _db = db;
-        _opts = opts.Value;
+        _minutesResolver = minutesResolver;
     }
 
-    private int MinutesPerDay => _opts.MinutesPerDay;
+    [HttpGet("days-exceeding")]
+    public async Task<ActionResult<DaysExceedingDto>> GetDaysExceeding([FromQuery] int minutes, CancellationToken cancellationToken)
+    {
+        if (minutes <= 0)
+            return ApiProblems.BadRequest(this, ApiErrorCodes.MinutesOutOfRange);
+
+        var count = await _db.TimeEntries.AsNoTracking()
+            .GroupBy(e => e.Date)
+            .CountAsync(g => g.Sum(e => e.QuantityMinutes) > minutes, cancellationToken);
+
+        return Ok(new DaysExceedingDto { Count = count });
+    }
 
     [HttpPost("upsert")]
     public async Task<IActionResult> Upsert([FromBody] UpsertTimeEntryDto dto, CancellationToken cancellationToken)
@@ -45,11 +54,12 @@ public sealed class TimeEntriesController : ControllerBase
             .Where(e => e.Date == dto.Date)
             .SumAsync(e => (int?)e.QuantityMinutes, cancellationToken) ?? 0;
 
+        var minutesPerDay = await _minutesResolver.ResolveAsync(cancellationToken);
         var existingMinutes = existing?.QuantityMinutes ?? 0;
         var ruleError = TimeEntryRules.Validate(
             ticketId: dto.TicketId,
             quantityMinutes: dto.QuantityMinutes,
-            minutesPerDay: MinutesPerDay,
+            minutesPerDay: minutesPerDay,
             dayTotalMinutes: dayTotal,
             existingMinutes: existingMinutes);
 

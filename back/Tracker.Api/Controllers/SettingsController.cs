@@ -37,10 +37,17 @@ public sealed class SettingsController : ControllerBase
         if (dto.Value is null)
             return ApiProblems.BadRequest(this, ApiErrorCodes.SettingValueRequired);
 
-        var existing = await _db.AppSettings.FindAsync([key], cancellationToken);
-        if (existing is not null)
-            existing.Value = dto.Value;
-        else
+        if (key == MinutesPerDay)
+        {
+            if (!int.TryParse(dto.Value, out var minutes) || minutes <= 0 || minutes % 4 != 0)
+                return ApiProblems.BadRequest(this, ApiErrorCodes.MinutesPerDayInvalid);
+        }
+
+        var rows = await _db.AppSettings
+            .Where(s => s.Key == key)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Value, dto.Value), cancellationToken);
+
+        if (rows == 0)
             _db.AppSettings.Add(new AppSetting { Key = key, Value = dto.Value });
 
         await _db.SaveChangesAsync(cancellationToken);

@@ -158,5 +158,9 @@
   "incomplete_days_ok": "All days are logged",
   "incomplete_days_warning": "{{count}} incomplete day(s) in the last 30 days",
   "incomplete_days_tooltip_ok": "All working days in the last 30 days are complete",
-  "incomplete_days_tooltip_warning": "{{count}} incomplete day(s):\n{{days}}"
+  "incomplete_days_tooltip_warning": "{{count}} incomplete day(s):\n{{days}}",
+  "settings_hours_per_day": "Hours per day",
+  "settings_hours_per_day_label": "Hours / day",
+  "settings_hours_per_day_invalid": "Invalid value: integer between 1 and 24, multiple of 4.",
+  "settings_hours_per_day_conflict": "{{count}} day(s) already have more time logged than this new limit. Continue anyway?"
 }

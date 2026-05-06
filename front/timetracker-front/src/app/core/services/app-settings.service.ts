@@ -27,6 +27,13 @@ export class AppSettingsService {
     return this._raw()['externalBaseUrl'] ?? '';
   });
 
+  readonly minutesPerDay = computed<number | null>(() => {
+    const v = this._raw()['minutesPerDay'];
+    if (v === undefined) return null;
+    const n = parseInt(v, 10);
+    return Number.isFinite(n) && n > 0 && n % 4 === 0 ? n : null;
+  });
+
   load(): Promise<void> {
     return firstValueFrom(this.api.getSettings())
       .then(settings => this._raw.set(settings))

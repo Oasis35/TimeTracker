@@ -47,6 +47,7 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddSingleton<DatabaseBackupService>();
 builder.Services.AddSingleton<PublicHolidaysService>();
+builder.Services.AddScoped<MinutesPerDayResolver>();
 builder.Services.AddHttpClient("gouv")
     .ConfigureHttpClient(c => c.Timeout = TimeSpan.FromSeconds(10));
 builder.Services.Configure<TimeTrackingOptions>(

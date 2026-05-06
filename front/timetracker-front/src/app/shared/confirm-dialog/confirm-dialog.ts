@@ -5,6 +5,7 @@ import { TranslateModule } from '@ngx-translate/core';
 
 export interface ConfirmDialogData {
   messageKey: string;
+  messageParams?: Record<string, unknown>;
 }
 
 @Component({
@@ -12,7 +13,7 @@ export interface ConfirmDialogData {
   standalone: true,
   imports: [MatDialogModule, MatButtonModule, TranslateModule],
   template: `
-    <mat-dialog-content>{{ data.messageKey | translate }}</mat-dialog-content>
+    <mat-dialog-content>{{ data.messageKey | translate: (data.messageParams ?? {}) }}</mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="ref.close(false)">{{ 'cancel' | translate }}</button>
       <button mat-flat-button color="warn" (click)="ref.close(true)">{{ 'confirm' | translate }}</button>

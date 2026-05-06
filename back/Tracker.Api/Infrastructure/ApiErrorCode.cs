@@ -21,4 +21,5 @@ public static class ApiErrorCodes
     public const string SettingKeyInvalid = "TT_SETTING_KEY_INVALID";
     public const string SettingKeyNotAllowed = "TT_SETTING_KEY_NOT_ALLOWED";
     public const string SettingValueRequired = "TT_SETTING_VALUE_REQUIRED";
+    public const string MinutesPerDayInvalid = "TT_MINUTES_PER_DAY_INVALID";
 }
