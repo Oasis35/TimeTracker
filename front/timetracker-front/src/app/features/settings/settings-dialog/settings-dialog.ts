@@ -14,6 +14,7 @@ import { TimeUnit, UnitService } from '../../../core/services/unit.service';
 import { ExternalLinkService } from '../../../core/services/external-link.service';
 import { AppSettingsService } from '../../../core/services/app-settings.service';
 import { TrackerApi } from '../../../core/api/tracker-api';
+import { TimesheetCacheService } from '../../../core/services/timesheet-cache.service';
 import { ConfirmDialogComponent } from '../../../shared/confirm-dialog/confirm-dialog';
 import { MaintenancePageComponent } from '../maintenance/maintenance';
 
@@ -41,6 +42,7 @@ export class SettingsDialogComponent {
   private readonly translate = inject(TranslateService);
   private readonly matDialog = inject(MatDialog);
   private readonly api = inject(TrackerApi);
+  private readonly cache = inject(TimesheetCacheService);
   readonly unit = inject(UnitService);
   readonly extLink = inject(ExternalLinkService);
   readonly appSettings = inject(AppSettingsService);
@@ -84,7 +86,7 @@ export class SettingsDialogComponent {
 
   onHoursPerDayInput(raw: string): void {
     const parsed = parseInt(raw, 10);
-    if (!raw || !Number.isFinite(parsed) || parsed < 1 || parsed > 24 || parsed % 4 !== 0) {
+    if (!raw || !Number.isFinite(parsed) || parsed < 1 || parsed > 24) {
       this.hoursPerDayError.set('settings_hours_per_day_invalid');
     } else {
       this.hoursPerDayError.set('');
@@ -93,7 +95,7 @@ export class SettingsDialogComponent {
 
   async onHoursPerDayCommit(raw: string): Promise<void> {
     const parsed = parseInt(raw, 10);
-    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 24 || parsed % 4 !== 0) {
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 24) {
       const current = this.appSettings.minutesPerDay();
       this.hoursPerDay.set(current != null ? current / 60 : DEFAULT_HOURS_PER_DAY);
       this.hoursPerDayError.set('');
@@ -120,6 +122,7 @@ export class SettingsDialogComponent {
     this.hoursPerDay.set(parsed);
     this.hoursPerDayError.set('');
     await firstValueFrom(this.appSettings.set('minutesPerDay', String(newMinutes)));
+    this.cache.invalidate();
   }
 
   close(): void {

@@ -3,8 +3,9 @@ import { MatAutocompleteModule, MatAutocompleteSelectedEvent, MatAutocompleteTri
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { TranslateModule } from '@ngx-translate/core';
-import { TicketDto } from '../../../../core/api/models';
+import { TicketDto, TicketType } from '../../../../core/api/models';
 
 @Component({
   selector: 'app-ticket-lookup',
@@ -14,6 +15,7 @@ import { TicketDto } from '../../../../core/api/models';
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatSelectModule,
     TranslateModule,
   ],
   templateUrl: './ticket-lookup.component.html',
@@ -27,11 +29,18 @@ export class TicketLookupComponent {
   @Output() readonly ticketSelected = new EventEmitter<TicketDto>();
 
   readonly query = signal<string>('');
+  readonly typeFilter = signal<TicketType | null>(null);
+
   readonly results = computed<TicketDto[]>(() => {
     const query = this.query().trim().toLowerCase();
+    const typeFilter = this.typeFilter();
     const source = query ? this.searchableTickets : this.defaultTickets;
-    const deduped = this.distinctById(source)
+    let deduped = this.distinctById(source)
       .filter((ticket) => !!ticket.externalKey?.trim());
+
+    if (typeFilter) {
+      deduped = deduped.filter((ticket) => ticket.type === typeFilter);
+    }
 
     if (!query) {
       return deduped
@@ -57,6 +66,11 @@ export class TicketLookupComponent {
       .sort((a, b) => rank(a) - rank(b) || this.compareByTicketNumber(a, b))
       .slice(0, this.maxResults);
   });
+
+  clearType(event: Event): void {
+    event.stopPropagation();
+    this.typeFilter.set(null);
+  }
 
   onInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value ?? '';
