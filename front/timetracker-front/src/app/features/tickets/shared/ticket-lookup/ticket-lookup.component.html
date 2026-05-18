@@ -1,26 +1,53 @@
-<mat-form-field appearance="outline">
-  <input
-    matInput
-    [value]="query()"
-    (input)="onInput($event)"
-    [placeholder]="'ticket_search_placeholder' | translate"
-    [matAutocomplete]="ticketLookupAuto"
-    #ticketLookupTrigger="matAutocompleteTrigger"
-    (focus)="openPanel(ticketLookupTrigger)"
-    (click)="openPanel(ticketLookupTrigger)"
-  />
-  @if (query().trim()) {
-    <button
-      mat-icon-button
-      matSuffix
-      type="button"
-      [attr.aria-label]="'cancel' | translate"
-      (click)="clear()"
+<div class="lookup-header">
+  <mat-form-field appearance="outline">
+    <mat-select
+      [value]="typeFilter()"
+      (selectionChange)="typeFilter.set($event.value)"
+      placeholder="Type"
     >
-      <mat-icon aria-hidden="true">close</mat-icon>
-    </button>
-  }
-</mat-form-field>
+      <mat-option value="DEV">Dev</mat-option>
+      <mat-option value="SUPPORT">Support</mat-option>
+      <mat-option value="ABSENT">Absent</mat-option>
+    </mat-select>
+    @if (typeFilter()) {
+      <button
+        mat-icon-button
+        matSuffix
+        type="button"
+        [attr.aria-label]="'cancel' | translate"
+        (click)="clearType($event)"
+      >
+        <mat-icon aria-hidden="true">close</mat-icon>
+      </button>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <input
+      matInput
+      [value]="query()"
+      (input)="onInput($event)"
+      [placeholder]="'ticket_search_placeholder' | translate"
+      [matAutocomplete]="ticketLookupAuto"
+      #ticketLookupTrigger="matAutocompleteTrigger"
+      (focus)="openPanel(ticketLookupTrigger)"
+      (click)="openPanel(ticketLookupTrigger)"
+    />
+    @if (query().trim()) {
+      <button
+        mat-icon-button
+        matSuffix
+        type="button"
+        [attr.aria-label]="'cancel' | translate"
+        (click)="clear()"
+      >
+        <mat-icon aria-hidden="true">close</mat-icon>
+      </button>
+    }
+  </mat-form-field>
+
+</div>
+
 <mat-autocomplete
   #ticketLookupAuto="matAutocomplete"
   [displayWith]="displayValue"

@@ -37,7 +37,7 @@ public static class DbSeeder
             new() { Type = TicketType.DEV, ExternalKey = "65022", Label = "Ajout endpoint statistiques" },
             new() { Type = TicketType.DEV, ExternalKey = "65023", Label = "Mise à niveau Angular" },
             new() { Type = TicketType.DEV, ExternalKey = "65024", Label = "Tests de non-régression" },
-            new() { Type = TicketType.ABSENT, ExternalKey = SingleLeaveExternalKey, Label = "Congés" }
+            new() { Type = TicketType.ABSENT, ExternalKey = SingleLeaveExternalKey, Label = "Congé" }
         };
 
         var existingKeys = db.Tickets

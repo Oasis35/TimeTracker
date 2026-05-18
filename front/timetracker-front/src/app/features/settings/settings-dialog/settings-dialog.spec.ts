@@ -6,6 +6,7 @@ import { of } from 'rxjs';
 import { vi } from 'vitest';
 import { TrackerApi } from '../../../core/api/tracker-api';
 import { AppSettingsService } from '../../../core/services/app-settings.service';
+import { TimesheetCacheService } from '../../../core/services/timesheet-cache.service';
 import { SettingsDialogComponent } from './settings-dialog';
 
 describe('SettingsDialogComponent', () => {
@@ -29,6 +30,8 @@ describe('SettingsDialogComponent', () => {
     open: vi.fn().mockReturnValue({ afterClosed: () => of(true) }),
   };
 
+  const cacheMock = { invalidate: vi.fn() };
+
   beforeEach(async () => {
     vi.clearAllMocks();
     apiMock.getDaysExceeding.mockReturnValue(of({ count: 0 }));
@@ -42,6 +45,7 @@ describe('SettingsDialogComponent', () => {
         { provide: MatDialogRef, useValue: dialogRefMock },
         { provide: TrackerApi, useValue: apiMock },
         { provide: AppSettingsService, useValue: appSettingsMock },
+        { provide: TimesheetCacheService, useValue: cacheMock },
       ],
     })
       .overrideProvider(MatDialog, { useValue: matDialogMock })
@@ -66,7 +70,7 @@ describe('SettingsDialogComponent', () => {
     const fixture = TestBed.createComponent(SettingsDialogComponent);
     fixture.detectChanges();
     const comp = fixture.componentInstance;
-    comp.onHoursPerDayInput('3');
+    comp.onHoursPerDayInput('0');
     expect(comp.hoursPerDayError()).toBe('settings_hours_per_day_invalid');
   });
 
@@ -89,6 +93,7 @@ describe('SettingsDialogComponent', () => {
     expect(apiMock.getDaysExceeding).toHaveBeenCalledWith(480);
     expect(matDialogMock.open).not.toHaveBeenCalled();
     expect(appSettingsMock.set).toHaveBeenCalledWith('minutesPerDay', '480');
+    expect(cacheMock.invalidate).toHaveBeenCalled();
     expect(comp.hoursPerDay()).toBe(8);
   });
 
