@@ -20,7 +20,6 @@ public sealed class TicketsController : ControllerBase
     {
         var tickets = await _db.Tickets
             .AsNoTracking()
-            .Where(t => t.Type != TicketType.ABSENT)
             .OrderBy(t => t.Type)
             .ThenBy(t => t.ExternalKey)
             .Select(t => new TicketDto(t.Id, t.Type, t.ExternalKey, t.Label))
