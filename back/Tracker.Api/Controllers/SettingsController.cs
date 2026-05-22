@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Tracker.Api.Data;
 using Tracker.Api.Dtos.Settings;
@@ -43,14 +44,20 @@ public sealed class SettingsController : ControllerBase
                 return ApiProblems.BadRequest(this, ApiErrorCodes.MinutesPerDayInvalid);
         }
 
-        var rows = await _db.AppSettings
-            .Where(s => s.Key == key)
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.Value, dto.Value), cancellationToken);
-
-        if (rows == 0)
+        var existing = await _db.AppSettings.FindAsync([key], cancellationToken);
+        if (existing is not null)
+            existing.Value = dto.Value;
+        else
             _db.AppSettings.Add(new AppSetting { Key = key, Value = dto.Value });
 
-        await _db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqliteException { SqliteErrorCode: 19 })
+        {
+            // Race condition : une requête concurrente a inséré la clé entre le FindAsync et le SaveChanges.
+        }
 
         return NoContent();
     }

@@ -52,7 +52,7 @@ public sealed class TicketsControllerTests
     }
 
     [Fact]
-    public async Task GetAll_Should_Exclude_Conges_Type()
+    public async Task GetAll_Should_Include_Conges_Type()
     {
         var (db, conn) = DbTestHelper.CreateSqliteInMemoryDb();
         await using var _ = db;
@@ -70,8 +70,9 @@ public sealed class TicketsControllerTests
         var ok = Assert.IsType<OkObjectResult>(result.Result);
         var list = Assert.IsAssignableFrom<IReadOnlyList<TicketDto>>(ok.Value);
 
-        Assert.Single(list);
-        Assert.Equal(TicketType.DEV, list[0].Type);
+        Assert.Equal(2, list.Count);
+        Assert.Contains(list, t => t.Type == TicketType.ABSENT);
+        Assert.Contains(list, t => t.Type == TicketType.DEV);
     }
 
     [Fact]
